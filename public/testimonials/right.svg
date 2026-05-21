@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="800" viewBox="0 0 1200 800" fill="none">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1200" y2="800" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0f172a" />
+      <stop offset="1" stop-color="#111827" />
+    </linearGradient>
+    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#22c55e" stop-opacity="0.9" />
+      <stop offset="1" stop-color="#3b82f6" stop-opacity="0.75" />
+    </linearGradient>
+    <filter id="soft" x="-20%" y="-20%" width="140%" height="140%" color-interpolation-filters="sRGB">
+      <feGaussianBlur stdDeviation="12" />
+    </filter>
+  </defs>
+
+  <rect width="1200" height="800" fill="url(#bg)" />
+
+  <g opacity="0.85">
+    <circle cx="260" cy="210" r="140" fill="url(#accent)" filter="url(#soft)" />
+    <circle cx="980" cy="610" r="180" fill="url(#accent)" filter="url(#soft)" />
+  </g>
+
+  <g opacity="0.95">
+    <rect x="120" y="110" width="960" height="580" rx="48" fill="#0b1224" stroke="#334155" stroke-opacity="0.35" />
+    <path d="M180 580C260 470 360 450 440 490C520 530 560 610 650 610C760 610 790 520 860 490C940 450 1040 470 1120 560" stroke="#94a3b8" stroke-opacity="0.28" stroke-width="10" />
+  </g>
+
+  <g opacity="0.92">
+    <circle cx="410" cy="360" r="120" fill="#111827" stroke="#22c55e" stroke-opacity="0.35" stroke-width="8" />
+    <circle cx="410" cy="345" r="52" fill="#1f2937" />
+    <path d="M330 440C360 395 395 375 410 375C425 375 460 395 490 440" stroke="#94a3b8" stroke-width="10" stroke-linecap="round" />
+
+    <circle cx="760" cy="360" r="120" fill="#111827" stroke="#3b82f6" stroke-opacity="0.35" stroke-width="8" />
+    <circle cx="760" cy="345" r="52" fill="#1f2937" />
+    <path d="M680 440C710 395 745 375 760 375C775 375 810 395 840 440" stroke="#94a3b8" stroke-width="10" stroke-linecap="round" />
+  </g>
+
+  <g opacity="0.9">
+    <rect x="120" y="640" width="960" height="50" rx="25" fill="#0f172a" stroke="#22c55e" stroke-opacity="0.35" />
+    <rect x="160" y="658" width="560" height="14" rx="7" fill="#22c55e" fill-opacity="0.35" />
+    <rect x="734" y="658" width="310" height="14" rx="7" fill="#3b82f6" fill-opacity="0.22" />
+  </g>
+
+  <text x="120" y="92" font-family="ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif" font-size="30" fill="#e2e8f0" fill-opacity="0.9">
+    Right colors (placeholder)
+  </text>
+</svg>
+

@@ -1,53 +1,84 @@
+'use client';
+
+import { motion } from 'framer-motion';
 import { ShoppingBag, Sparkles, Wallet } from 'lucide-react';
 
 const benefits = [
   {
-    title: 'Shopping Efficiency (Цаг хэмнэнэ)',
-    description:
-      'Дэлгүүр хэсэхдээ өөрт зохихгүй өнгөнүүдийг шууд хассанаар сонголт хийх алхмыг 2 дахин хурдасгаж, цагаа хэмнэнэ.',
-    icon: ShoppingBag,
-    iconStyle: 'bg-blue-50 text-blue-600 ring-blue-100',
-  },
-  {
-    title: 'Confidence Boost (Илүү итгэлтэй)',
-    description:
-      'Төрөлх арьсны өнгөнд тань төгс зохицох өнгийг өмссөнөөр таны царай гэрэлтэж, хаана ч өөртөө итгэлтэй, эрчим хүчтэй харагдах болно.',
     icon: Sparkles,
-    iconStyle: 'bg-pink-50 text-pink-600 ring-pink-100',
+    label: '01',
+    title: 'Өөртөө итгэлтэй',
+    description: 'Арьсны өнгөнд тань яг зохицох өнгийг өмссөнөөр царай гэрэлтэж, хаана ч өөртөө итгэлтэй харагдана.',
+    gradient: 'from-violet-500 to-pink-500',
+    bg: 'bg-violet-50',
+    text: 'text-violet-600',
   },
   {
-    title: 'Economic (Мөнгөө хэмнэнэ)',
-    description:
-      'Зохидоггүй өнгийн хувцас, нүүр будалтын бүтээгдэхүүн авч ашиглахгүй хаях эрсдэлээс сэргийлж, урт хугацаанд санхүүгээ хэмнэнэ.',
+    icon: ShoppingBag,
+    label: '02',
+    title: 'Цаг хэмнэнэ',
+    description: 'Өөрт зохихгүй өнгийг урьдчилан мэдсэнээр дэлгүүр хэсэх бүр шийдлээ хурдан гаргах боломжтой болно.',
+    gradient: 'from-rose-400 to-orange-400',
+    bg: 'bg-rose-50',
+    text: 'text-rose-600',
+  },
+  {
     icon: Wallet,
-    iconStyle: 'bg-orange-50 text-orange-600 ring-orange-100',
+    label: '03',
+    title: 'Мөнгөө хэмнэнэ',
+    description: 'Зохидоггүй өнгийн хувцас, бүтээгдэхүүн авч ашиглахгүй хаях эрсдэлээс сэргийлж санхүүгээ хамгаална.',
+    gradient: 'from-amber-400 to-yellow-400',
+    bg: 'bg-amber-50',
+    text: 'text-amber-600',
   },
 ] as const;
 
+const fadeUp = {
+  hidden: { opacity: 0, y: 24 },
+  visible: (i: number) => ({
+    opacity: 1, y: 0,
+    transition: { delay: i * 0.12, duration: 0.6, ease: 'easeOut' as const },
+  }),
+};
+
 export default function Benefits() {
   return (
-    <section className="bg-white py-24">
-      <div className="mx-auto max-w-7xl px-6">
-        <div className="mx-auto max-w-2xl text-center">
-          <h2 className="text-3xl font-bold text-slate-900">Ашиг тус</h2>
-        </div>
+    <section className="relative bg-white py-28 overflow-hidden">
+      <div className="pointer-events-none absolute inset-0">
+        <div className="absolute -top-32 -right-32 w-[500px] h-[500px] rounded-full bg-violet-100/40 blur-[100px]" />
+        <div className="absolute -bottom-32 -left-32 w-[400px] h-[400px] rounded-full bg-rose-100/30 blur-[100px]" />
+      </div>
 
-        <div className="mt-12 grid grid-cols-1 gap-8 md:grid-cols-3">
-          {benefits.map((item, index) => (
-            <div
-              key={index}
-              className="rounded-2xl border border-slate-200/60 bg-white p-8 text-left shadow-sm shadow-slate-200/30 transition-shadow hover:shadow-md"
+      <div className="relative mx-auto max-w-7xl px-6">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }} transition={{ duration: 0.6 }}
+          className="mx-auto max-w-2xl text-center mb-16"
+        >
+          <span className="inline-block mb-4 text-[11px] font-semibold uppercase tracking-[0.18em] text-violet-500">
+            Яагаад хэрэгтэй вэ
+          </span>
+          <h2 className="font-serif text-4xl font-bold text-slate-900 leading-tight">
+            Таны амьдралд хэрхэн <em className="not-italic bg-gradient-to-r from-violet-500 to-pink-500 bg-clip-text text-transparent">өөрчлөлт</em> авчрах вэ
+          </h2>
+        </motion.div>
+
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
+          {benefits.map((item, i) => (
+            <motion.div
+              key={i}
+              custom={i} initial="hidden" whileInView="visible" viewport={{ once: true }}
+              variants={fadeUp}
+              className="group relative rounded-3xl border border-slate-100 bg-white p-8 shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-300"
             >
-              <div
-                className={`mb-6 flex h-12 w-12 items-center justify-center rounded-full ring-1 ${item.iconStyle}`}
-              >
-                <item.icon className="h-6 w-6" />
+              <div className={`absolute inset-x-0 top-0 h-0.5 rounded-t-3xl bg-gradient-to-r ${item.gradient} opacity-0 group-hover:opacity-100 transition-opacity duration-300`} />
+              <span className="text-[11px] font-bold tracking-widest text-slate-300">{item.label}</span>
+              <div className={`mt-4 mb-6 inline-flex h-12 w-12 items-center justify-center rounded-2xl ${item.bg}`}>
+                <item.icon className={`h-5 w-5 ${item.text}`} strokeWidth={1.5} />
               </div>
-              <h3 className="mb-3 text-xl font-semibold text-slate-900">
-                {item.title}
-              </h3>
-              <p className="leading-relaxed text-slate-600">{item.description}</p>
-            </div>
+              <h3 className="text-lg font-bold text-slate-900 mb-3">{item.title}</h3>
+              <p className="text-sm leading-relaxed text-slate-500">{item.description}</p>
+            </motion.div>
           ))}
         </div>
       </div>
