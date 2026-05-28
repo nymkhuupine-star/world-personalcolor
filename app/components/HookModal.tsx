@@ -90,7 +90,7 @@ export default function HookModal({ result, onDismiss }: Props) {
 
             {/* Hook message */}
             <p className="text-sm text-slate-600 leading-relaxed mb-6">
-              Үр дүнгээ хадгалж, дараа  ньнь хүссэн үедээ нэвтэрч харахыг хүсвэл{' '}
+              Үр дүнгээ хадгалж, дараа  хүссэн үедээ нэвтэрч харахыг хүсвэл{' '}
               <span className="font-semibold text-slate-900">бүртгүүлнэ үү.</span>{' '}
               Нэвтэрсний дараа таны хариулт автоматаар хадгалагдаж, имэйлээр PDF тайлан илгээгдэнэ.
             </p>
