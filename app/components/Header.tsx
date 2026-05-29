@@ -30,8 +30,8 @@ export default function Header() {
   }, [open]);
 
   return (
-    <header className="sticky top-4 z-50 px-4 lg:px-8">
-      <div className="relative mx-auto flex w-full max-w-7xl items-center justify-between rounded-2xl border border-white/70 bg-white/70 px-6 py-4 shadow-lg shadow-slate-200/40 backdrop-blur-xl">
+   <header className="sticky top-0 z-50  px-4 pt-4 lg:px-8">
+      <div className="relative mx-auto flex w-full max-w-7xl items-center justify-between rounded-4xl border border-white/70 bg-white/70 px-6 py-4 shadow-lg shadow-slate-200/40 backdrop-blur-xl">
         <Link
           href="/"
           className="group flex items-center gap-3 pr-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-400/60"
@@ -44,7 +44,7 @@ export default function Header() {
             <div className="text-sm font-semibold tracking-tight text-slate-900">
               Personal Color
             </div>
-            <div className="text-[11px] font-medium text-slate-500">AI шинжилгээ</div>
+            
           </div>
         </Link>
 

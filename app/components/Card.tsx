@@ -221,11 +221,11 @@ export default function Card() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.85, delay: 0.25, ease: [0.22, 1, 0.36, 1] }}
       >
-        <div className="flex flex-col gap-5 rounded-[2rem] border border-white/80 bg-white/50 p-8 shadow-[0_24px_64px_-12px_rgba(0,0,0,0.1),0_0_0_1px_rgba(255,255,255,0.6)] backdrop-blur-2xl">
+        <div className="flex flex-col gap-5 rounded-[2rem] border border-pink-100 p-8 shadow-[0_24px_64px_-12px_rgba(0,0,0,0.1),0_0_0_1px_rgba(255,255,255,0.6)] backdrop-blur-2xl" style={{ backgroundColor: 'oklch(97% 0.018 18.334)' }}>
 
           {/* Upload zone */}
           <div
-            className="group relative cursor-pointer overflow-hidden rounded-2xl border border-dashed border-slate-200 bg-white/50 transition-all duration-300 hover:border-violet-300/70 hover:bg-violet-50/20"
+            className="group relative cursor-pointer overflow-hidden rounded-2xl border border-dashed border-slate-200 bg-white/60 transition-all duration-300 hover:border-violet-300/70 hover:bg-violet-50/30"
             style={{ minHeight: '240px' }}
             onClick={() => fileRef.current?.click()}
             onDrop={handleDrop}
@@ -237,11 +237,11 @@ export default function Card() {
             ) : (
               <div className="flex h-full flex-col items-center justify-center gap-4 py-14">
                 <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-slate-100 bg-white shadow-sm transition-all duration-300 group-hover:border-violet-200 group-hover:shadow-md group-hover:shadow-violet-100/60">
-                  <Upload className="h-5 w-5 text-slate-300 transition-colors duration-300 group-hover:text-violet-400" strokeWidth={1.5} />
+                  <Upload className="h-5 w-5 text-slate-500 transition-colors duration-300 group-hover:text-violet-500" strokeWidth={1.5} />
                 </div>
                 <div className="text-center space-y-1">
-                  <p className="text-sm font-medium text-slate-500">Зургаа оруулахын тулд дарна уу</p>
-                  <p className="text-xs text-slate-300">Нүүр тод харагдах хөрөг зураг</p>
+                  <p className="text-sm font-semibold text-slate-700">Зургаа оруулахын тулд дарна уу</p>
+                  <p className="text-xs text-slate-500">Нүүр тод харагдах хөрөг зураг</p>
                 </div>
               </div>
             )}
@@ -277,16 +277,16 @@ export default function Card() {
           {/* Tips */}
           <div className="grid grid-cols-3 gap-2">
             {requirements.map(({ icon: Icon, label }) => (
-              <div key={label} className="flex flex-col items-center gap-1.5 rounded-xl border border-slate-100/80 bg-white/50 px-2 py-3">
-                <Icon className="h-3.5 w-3.5 text-slate-300" strokeWidth={1.5} />
-                <span className="text-center text-[11px] text-slate-400">{label}</span>
+              <div key={label} className="flex flex-col items-center gap-1.5 rounded-xl border border-slate-100/80 bg-white/60 px-2 py-3">
+                <Icon className="h-3.5 w-3.5 text-slate-500" strokeWidth={1.5} />
+                <span className="text-center text-[11px] font-medium text-slate-600">{label}</span>
               </div>
             ))}
           </div>
 
           {/* Email */}
           <div className="space-y-2">
-            <label htmlFor="email" className="block text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">
+            <label htmlFor="email" className="block text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-600">
               Имэйл хаяг
             </label>
             <input
@@ -299,7 +299,7 @@ export default function Card() {
               value={email}
               onChange={(e) => { setEmail(e.target.value); setEmailError(null); }}
               disabled={uploading}
-              className="w-full rounded-xl border border-slate-200/80 bg-white/70 px-4 py-3 text-sm text-slate-800 placeholder-slate-300 outline-none transition-all duration-200 focus:border-violet-300 focus:ring-2 focus:ring-violet-200/40 disabled:opacity-60"
+              className="w-full rounded-xl border border-slate-200/80 bg-white/70 px-4 py-3 text-sm text-slate-800 placeholder-slate-400 outline-none transition-all duration-200 focus:border-violet-300 focus:ring-2 focus:ring-violet-200/40 disabled:opacity-60"
               aria-invalid={emailError ? 'true' : 'false'}
             />
             {emailError && <p className="text-xs text-rose-400">{emailError}</p>}

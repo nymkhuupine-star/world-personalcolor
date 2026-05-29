@@ -42,7 +42,7 @@ const SEASON_COLOR: Record<string, string> = {
 
 export default function Testimonials() {
   return (
-    <section className="py-28 bg-slate-50/60">
+    <section className="py-28 bg-pink-100/100">
       <div className="max-w-7xl mx-auto px-6">
         <motion.div
           initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }}

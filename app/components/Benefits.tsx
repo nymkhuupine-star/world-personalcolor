@@ -6,27 +6,24 @@ import { ShoppingBag, Sparkles, Wallet } from 'lucide-react';
 const benefits = [
   {
     icon: Sparkles,
-    label: '01',
     title: 'Өөртөө итгэлтэй',
-    description: 'Арьсны өнгөнд тань яг зохицох өнгийг өмссөнөөр царай гэрэлтэж, хаана ч өөртөө итгэлтэй харагдана.',
+    description: 'Өөрийн арьсны өнгөнд төгс зохицох өнгийг сонгон хувцасласнаар царай тань илүү гэрэлтэж, хаана ч өөртөө итгэлтэй харагдах болно.',
     gradient: 'from-violet-500 to-pink-500',
     bg: 'bg-violet-50',
     text: 'text-violet-600',
   },
   {
     icon: ShoppingBag,
-    label: '02',
     title: 'Цаг хэмнэнэ',
-    description: 'Өөрт зохихгүй өнгийг урьдчилан мэдсэнээр дэлгүүр хэсэх бүр шийдлээ хурдан гаргах боломжтой болно.',
+    description: 'Уг үйлчилгээ нь зөвхөн арьс төдийгүй үс, нүдний өнгийг цогцоор нь шинжилдэг тул үр дүн нь өндөр нарийвчлалтай, оновчтой гардаг.',
     gradient: 'from-rose-400 to-orange-400',
     bg: 'bg-rose-50',
     text: 'text-rose-600',
   },
   {
     icon: Wallet,
-    label: '03',
     title: 'Мөнгөө хэмнэнэ',
-    description: 'Зохидоггүй өнгийн хувцас, бүтээгдэхүүн авч ашиглахгүй хаях эрсдэлээс сэргийлж санхүүгээ хамгаална.',
+    description: 'Үйлчлүүлэгч оношилгоо дууссаны дараа төлбөрөө гүйцэтгэх бөгөөд төлбөр орсон даруйд тайлан мэйлээр илгээгдэхийг анхаарна уу.',
     gradient: 'from-amber-400 to-yellow-400',
     bg: 'bg-amber-50',
     text: 'text-amber-600',
@@ -72,7 +69,7 @@ export default function Benefits() {
               className="group relative rounded-3xl border border-slate-100 bg-white p-8 shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-300"
             >
               <div className={`absolute inset-x-0 top-0 h-0.5 rounded-t-3xl bg-gradient-to-r ${item.gradient} opacity-0 group-hover:opacity-100 transition-opacity duration-300`} />
-              <span className="text-[11px] font-bold tracking-widest text-slate-300">{item.label}</span>
+              <span className="text-[11px] font-bold tracking-widest text-slate-300"></span>
               <div className={`mt-4 mb-6 inline-flex h-12 w-12 items-center justify-center rounded-2xl ${item.bg}`}>
                 <item.icon className={`h-5 w-5 ${item.text}`} strokeWidth={1.5} />
               </div>

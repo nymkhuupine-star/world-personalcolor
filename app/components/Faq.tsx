@@ -19,11 +19,11 @@ const faqs = [
   },
   {
     question: 'Үр дүн хэр нарийн вэ?',
-    answer: 'Манай AI тэргүүний vision загвар ашиглан таны арьсны өнгө, нүдний гэрэл, үсний өнгийг цогцоор шинжилдэг тул дундаж нарийвчлал 95%-с дээш байдаг.',
+    answer: 'Уг үйлчилгээ нь зөвхөн арьс төдийгүй үс, нүдний өнгийг цогцоор нь шинжилдэг тул үр дүн нь өндөр нарийвчлалтай, оновчтой гардаг.',
   },
   {
     question: 'Төлбөрөө яаж төлөх вэ?',
-    answer: 'Та оношлогоо дууссаны дараа QPay эсвэл SocialPay-ээр төлбөрөө төлөх боломжтой. Төлбөр төлөгдсөн даруйд тайлан мэйл хаягаар очих болно.',
+    answer: 'Үйлчлүүлэгч оношилгоо дууссаны дараа төлбөрөө гүйцэтгэх бөгөөд төлбөр орсон даруйд тайлан мэйлээр илгээгдэхийг анхаарна уу.',
   },
 ];
 
@@ -31,7 +31,7 @@ export default function FAQ() {
   const [openIndex, setOpenIndex] = useState<number | null>(null);
 
   return (
-    <section className="py-28 bg-slate-50/60" id="faq">
+    <section className="py-28 bg-pink-100/100" id="faq">
       <div className="max-w-3xl mx-auto px-6">
         <motion.div
           initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }}
