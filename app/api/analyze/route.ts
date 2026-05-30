@@ -28,7 +28,7 @@ const groq = new OpenAI({
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
 const BUCKET = 'reports';
@@ -43,9 +43,14 @@ function isEmail(v: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
 }
 
-function isHttpUrl(v: string) {
-  try { const u = new URL(v); return u.protocol === 'http:' || u.protocol === 'https:'; }
-  catch { return false; }
+function isAllowedImageUrl(v: string) {
+  try {
+    const u = new URL(v);
+    if (u.protocol !== 'https:') return false;
+    // Зөвхөн Supabase storage-аас зураг авна (SSRF хамгаалалт)
+    const supabaseHost = new URL(process.env.NEXT_PUBLIC_SUPABASE_URL!).hostname;
+    return u.hostname === supabaseHost;
+  } catch { return false; }
 }
 
 // ── Groq: photo quality check (vision) ───────────────────────────────────────
@@ -139,7 +144,7 @@ export async function POST(req: Request) {
     // Validate inputs
     if (typeof email !== 'string' || !isEmail(email))
       return Response.json({ error: 'Зөв имэйл хаяг оруулна уу.' }, { status: 400 });
-    if (typeof imageUrl !== 'string' || !isHttpUrl(imageUrl))
+    if (typeof imageUrl !== 'string' || !isAllowedImageUrl(imageUrl))
       return Response.json({ error: 'Valid image URL required.' }, { status: 400 });
     if (!colorMetrics || typeof colorMetrics !== 'object')
       return Response.json({ error: 'colorMetrics required.' }, { status: 400 });
@@ -218,7 +223,7 @@ export async function POST(req: Request) {
 
     if (emailError) {
       console.error('Resend error:', emailError);
-      return Response.json({ error: 'Failed to send email.', message: emailError.message }, { status: 502 });
+      return Response.json({ error: 'Имэйл илгээхэд алдаа гарлаа. Дахин оролдоно уу.' }, { status: 502 });
     }
 
     // 8. Save to analyses table
@@ -243,8 +248,7 @@ export async function POST(req: Request) {
     });
 
   } catch (error: unknown) {
-    const msg = error instanceof Error ? error.message : 'Unknown error';
     console.error('API Error:', error);
-    return Response.json({ error: 'Internal server error.', message: msg }, { status: 500 });
+    return Response.json({ error: 'Дотоод алдаа гарлаа. Дахин оролдоно уу.' }, { status: 500 });
   }
 }

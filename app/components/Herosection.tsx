@@ -58,9 +58,7 @@ export default function HeroSection() {
               гоо үзэсгэлэн
             </em>
             <br />
-            <span className="font-serif font-bold leading-tight text-slate-900">
-              Зургаар тань тодорхойлъё
-            </span>
+          
           </motion.h1>
 
           <motion.div

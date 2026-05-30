@@ -5,9 +5,10 @@ import { normalizeSubtypeKey, seasonKeyFromSeasonName } from '@/utils/reportPdfs
 
 export const runtime = 'nodejs';
 
+// Service role key ашиглана — RLS bypass хийж, server-side-д л байна
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
 type AnalysisResult = {
@@ -98,8 +99,7 @@ export async function POST(req: Request) {
 
     return Response.json({ success: true });
   } catch (error: unknown) {
-    const msg = error instanceof Error ? error.message : 'Unknown error';
     console.error('Save analysis error:', error);
-    return Response.json({ error: msg }, { status: 500 });
+    return Response.json({ error: 'Дотоод алдаа гарлаа.' }, { status: 500 });
   }
 }

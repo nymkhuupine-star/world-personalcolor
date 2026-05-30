@@ -4,21 +4,18 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { useEffect, useRef, useState, type ChangeEvent, type DragEvent } from 'react';
 import Image from 'next/image';
 import { useUser } from '@clerk/nextjs';
-import { CheckCircle, Droplets, Eye, Sun, Upload } from 'lucide-react';
+import { CheckCircle, Droplets, Eye, Sun, Upload, X } from 'lucide-react';
 import supabase from '@/utils/supabase';
 import HookModal from './HookModal';
 import Questionnaire from './Questionnaire';
 import type { QuestionnaireAnswers } from '@/lib/personal-color/questionnaire';
+import { isQuestionnaireComplete } from '@/lib/personal-color/questionnaire';
 
 type AnalysisResult = {
   season: 'Spring' | 'Summer' | 'Autumn' | 'Winter';
   subType: string;
   reasoning: string;
   recommendedColors: string[];
-};
-
-const SEASON_MN: Record<AnalysisResult['season'], string> = {
-  Spring: 'Хавар', Summer: 'Зун', Autumn: 'Намар', Winter: 'Өвөл',
 };
 
 const PENDING_KEY = 'pendingAnalysis';
@@ -71,7 +68,6 @@ export default function Card() {
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [dbSaved, setDbSaved] = useState(false);
-
   const fileRef = useRef<HTMLInputElement | null>(null);
   const emailRef = useRef<HTMLInputElement | null>(null);
   const isProcessing = useRef(false);
@@ -100,6 +96,19 @@ export default function Card() {
       }).then(() => setDbSaved(true));
     } catch { localStorage.removeItem(PENDING_KEY); }
   }, [isSignedIn, user]);
+
+  const resetCard = () => {
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
+    setFile(null);
+    setPreviewUrl(null);
+    setEmail('');
+    setAnalysisResult(null);
+    setSentEmail(null);
+    setDbSaved(false);
+    setImageUrl(null);
+    setShowModal(false);
+    setQuestionnaireAnswers({});
+  };
 
   const handleFileSelect = (selectedFile: File) => {
     if (!selectedFile.type.startsWith('image/')) {
@@ -281,7 +290,7 @@ export default function Card() {
   return (
     <>
       {showModal && analysisResult && (
-        <HookModal result={analysisResult} onDismiss={() => setShowModal(false)} />
+        <HookModal onDismiss={resetCard} />
       )}
 
       <motion.div
@@ -300,8 +309,28 @@ export default function Card() {
             onDragOver={(e) => e.preventDefault()}
           >
             {previewUrl ? (
-              <Image src={previewUrl} alt="Оруулсан зураг" fill unoptimized className="object-cover"
-                sizes="(min-width: 1024px) 50vw, 100vw" />
+              <>
+                <Image src={previewUrl} alt="Оруулсан зураг" fill unoptimized className="object-cover"
+                  sizes="(min-width: 1024px) 50vw, 100vw" />
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setFile(null);
+                    setPreviewUrl(null);
+                    setAnalysisResult(null);
+                    setSentEmail(null);
+                    setSubmitError(null);
+                    setPhotoQualityError(null);
+                    setQuestionnaireAnswers({});
+                    setDbSaved(false);
+                  }}
+                  className="absolute right-2 top-2 z-10 flex h-7 w-7 items-center justify-center rounded-full bg-black/50 text-white backdrop-blur-sm transition-colors hover:bg-black/70"
+                  aria-label="Зураг устгах"
+                >
+                  <X className="h-3.5 w-3.5" strokeWidth={2.5} />
+                </button>
+              </>
             ) : (
               <div className="flex h-full flex-col items-center justify-center gap-4 py-14">
                 <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-slate-100 bg-white shadow-sm transition-all duration-300 group-hover:border-violet-200 group-hover:shadow-md group-hover:shadow-violet-100/60">
@@ -352,36 +381,44 @@ export default function Card() {
             )}
           </AnimatePresence>
 
-          {/* Tips */}
-          <div className="grid grid-cols-3 gap-2">
-            {requirements.map(({ icon: Icon, label }) => (
-              <div key={label} className="flex flex-col items-center gap-1.5 rounded-xl border border-slate-100/80 bg-white/60 px-2 py-3">
-                <Icon className="h-3.5 w-3.5 text-slate-500" strokeWidth={1.5} />
-                <span className="text-center text-[11px] font-medium text-slate-600">{label}</span>
-              </div>
-            ))}
-          </div>
+          {/* Tips — зураг оруулахаас өмнө л харагдана */}
+          {!file && (
+            <div className="grid grid-cols-3 gap-2">
+              {requirements.map(({ icon: Icon, label }) => (
+                <div key={label} className="flex flex-col items-center gap-1.5 rounded-xl border border-slate-100/80 bg-white/60 px-2 py-3">
+                  <Icon className="h-3.5 w-3.5 text-slate-500" strokeWidth={1.5} />
+                  <span className="text-center text-[11px] font-medium text-slate-600">{label}</span>
+                </div>
+              ))}
+            </div>
+          )}
 
-          {/* Email */}
-          <div className="space-y-2">
-            <label htmlFor="email" className="block text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-600">
-              Имэйл хаяг
-            </label>
-            <input
-              id="email"
-              ref={emailRef}
-              type="email"
-              inputMode="email"
-              autoComplete="email"
-              placeholder="name@example.com"
-              value={email}
-              onChange={(e) => { setEmail(e.target.value); setEmailError(null); }}
-              disabled={uploading}
-              className="w-full rounded-xl border border-slate-200/80 bg-white/70 px-4 py-3 text-sm text-slate-800 placeholder-slate-400 outline-none transition-all duration-200 focus:border-violet-300 focus:ring-2 focus:ring-violet-200/40 disabled:opacity-60"
-              aria-invalid={emailError ? 'true' : 'false'}
-            />
-            {emailError && <p className="text-xs text-rose-400">{emailError}</p>}
-          </div>
+          {/* Email — зураг оруулаагүй эсвэл асуулт бүрэн дууссаны дараа л харагдана */}
+          {(!file || isQuestionnaireComplete(questionnaireAnswers)) && (
+            <motion.div
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="space-y-2"
+            >
+              <label htmlFor="email" className="block text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-600">
+                Имэйл хаяг
+              </label>
+              <input
+                id="email"
+                ref={emailRef}
+                type="email"
+                inputMode="email"
+                autoComplete="email"
+                placeholder="name@example.com"
+                value={email}
+                onChange={(e) => { setEmail(e.target.value); setEmailError(null); }}
+                disabled={uploading}
+                className="w-full rounded-xl border border-slate-200/80 bg-white/70 px-4 py-3 text-sm text-slate-800 placeholder-slate-400 outline-none transition-all duration-200 focus:border-violet-300 focus:ring-2 focus:ring-violet-200/40 disabled:opacity-60"
+                aria-invalid={emailError ? 'true' : 'false'}
+              />
+              {emailError && <p className="text-xs text-rose-400">{emailError}</p>}
+            </motion.div>
+          )}
 
           {/* Photo quality error */}
           <AnimatePresence>
@@ -411,65 +448,47 @@ export default function Card() {
             )}
           </AnimatePresence>
 
-          {/* CTA */}
-          <button
-            onClick={handleUpload}
-            disabled={uploading}
-            className="group relative w-full overflow-hidden rounded-2xl bg-gradient-to-r from-violet-500 via-purple-500 to-pink-500 py-4 text-sm font-semibold text-white shadow-lg shadow-violet-200/70 transition-all duration-300 hover:scale-[1.025] hover:shadow-xl hover:shadow-violet-300/50 active:scale-[0.975] disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:scale-100"
-          >
-            <span className="relative z-10">
-              {uploading
-                ? analyzing ? 'AI шинжилж байна...'
-                  : checking ? 'Зургийн чанар шалгаж байна...'
-                  : 'Зураг оруулж байна...'
-                : file ? 'Миний өнгийг шинжлэх' : 'Зураг оруулах'}
-            </span>
-            <div className="absolute inset-0 bg-gradient-to-r from-violet-600 via-purple-600 to-pink-600 opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
-          </button>
+          {/* CTA — зураг оруулаагүй эсвэл асуулт дууссаны дараа л харагдана */}
+          {(!file || isQuestionnaireComplete(questionnaireAnswers)) && (
+            <button
+              onClick={handleUpload}
+              disabled={uploading}
+              className="group relative w-full overflow-hidden rounded-2xl bg-gradient-to-r from-violet-500 via-purple-500 to-pink-500 py-4 text-sm font-semibold text-white shadow-lg shadow-violet-200/70 transition-all duration-300 hover:scale-[1.025] hover:shadow-xl hover:shadow-violet-300/50 active:scale-[0.975] disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:scale-100"
+            >
+              <span className="relative z-10">
+                {uploading
+                  ? analyzing ? 'AI шинжилж байна...'
+                    : checking ? 'Зургийн чанар шалгаж байна...'
+                    : 'Зураг оруулж байна...'
+                  : file ? 'Миний өнгийг шинжлэх' : 'Зураг оруулах'}
+              </span>
+              <div className="absolute inset-0 bg-gradient-to-r from-violet-600 via-purple-600 to-pink-600 opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+            </button>
+          )}
 
-          {/* Result */}
+          {/* Success confirmation */}
           <AnimatePresence>
-            {analysisResult && sentEmail && (
+            {sentEmail && (
               <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
                 transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-                className="rounded-2xl border border-emerald-100 bg-emerald-50/70 px-5 py-4 backdrop-blur-sm">
-                <div className="flex items-center gap-2 mb-2">
+                className="rounded-2xl border border-emerald-100 bg-emerald-50/70 px-5 py-4 text-center space-y-3">
+                <div className="flex items-center justify-center gap-2">
                   <CheckCircle className="h-4 w-4 text-emerald-500" strokeWidth={1.5} />
-                  <span className="text-sm font-semibold text-emerald-700">
-                    {SEASON_MN[analysisResult.season]} — {analysisResult.subType}
-                  </span>
+                  <span className="text-sm font-semibold text-emerald-700">Үр дүн илгээгдлээ</span>
                 </div>
-                <p className="text-xs leading-relaxed text-emerald-600">{analysisResult.reasoning}</p>
-                <div className="mt-3 flex items-center gap-2">
-                  {analysisResult.recommendedColors.map((color) => (
-                    <div key={color}
-                      className="h-6 w-6 rounded-full border-2 border-white shadow-sm ring-1 ring-black/5"
-                      style={{ backgroundColor: color }} title={color} />
-                  ))}
-                </div>
-                <p className="mt-3 text-[11px] text-emerald-500">
-                  Үр дүн болон PDF тайлан {sentEmail} хаягаар илгээгдлээ.
+                <p className="text-xs text-emerald-600">
+                  {sentEmail} хаягаар PDF тайлан илгээгдлээ
                 </p>
-                {dbSaved && (
-                  <p className="mt-1 text-[11px] text-violet-500 flex items-center gap-1">
-                    <CheckCircle className="h-3 w-3" strokeWidth={2} />
-                    Таны бүртгэлд хадгалагдлаа.
-                  </p>
-                )}
-                {!isSignedIn && !dbSaved && imageUrl && (
-                  <button
-                    onClick={() => {
-                      localStorage.setItem(PENDING_KEY, JSON.stringify({ result: analysisResult, imageUrl }));
-                      setShowModal(true);
-                    }}
-                    className="mt-3 w-full rounded-xl bg-violet-600 py-2 text-xs font-semibold text-white hover:bg-violet-700 transition-colors"
-                  >
-                    Үр дүнгээ бүртгэлд хадгалах →
-                  </button>
-                )}
+                <button
+                  onClick={resetCard}
+                  className="w-full rounded-xl bg-emerald-500 py-2 text-xs font-semibold text-white hover:bg-emerald-600 transition-colors"
+                >
+                  Шинэ зураг оруулах →
+                </button>
               </motion.div>
             )}
           </AnimatePresence>
+
         </div>
       </motion.div>
     </>
