@@ -30,7 +30,7 @@ export default function Header() {
   }, [open]);
 
   return (
-   <header className="sticky top-0 z-50  px-4 pt-4 lg:px-8">
+   <header className="sticky top-0 z-50  px-4 pt-4 lg:px-8 ">
       <div className="relative mx-auto flex w-full max-w-7xl items-center justify-between rounded-4xl border border-white/70 bg-white/70 px-6 py-4 shadow-lg shadow-slate-200/40 backdrop-blur-xl">
         <Link
           href="/"

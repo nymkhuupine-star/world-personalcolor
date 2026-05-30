@@ -7,6 +7,8 @@ import { useUser } from '@clerk/nextjs';
 import { CheckCircle, Droplets, Eye, Sun, Upload } from 'lucide-react';
 import supabase from '@/utils/supabase';
 import HookModal from './HookModal';
+import Questionnaire from './Questionnaire';
+import type { QuestionnaireAnswers } from '@/lib/personal-color/questionnaire';
 
 type AnalysisResult = {
   season: 'Spring' | 'Summer' | 'Autumn' | 'Winter';
@@ -60,7 +62,10 @@ export default function Card() {
   const [emailError, setEmailError] = useState<string | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [checking, setChecking] = useState(false);
   const [analyzing, setAnalyzing] = useState(false);
+  const [photoQualityError, setPhotoQualityError] = useState<{ message: string; issues: string[] } | null>(null);
+  const [questionnaireAnswers, setQuestionnaireAnswers] = useState<Partial<QuestionnaireAnswers>>({});
   const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null);
   const [sentEmail, setSentEmail] = useState<string | null>(null);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
@@ -137,11 +142,13 @@ export default function Card() {
 
     isProcessing.current = true;
     setUploading(true);
+    setChecking(false);
     setAnalyzing(false);
     setAnalysisResult(null);
     setSentEmail(null);
     setEmailError(null);
     setSubmitError(null);
+    setPhotoQualityError(null);
     setDbSaved(false);
 
     try {
@@ -163,23 +170,83 @@ export default function Card() {
       if (!imgUrl) { setSubmitError('Зургийн URL авахад алдаа гарлаа.'); return; }
 
       setImageUrl(imgUrl);
-      setAnalyzing(true);
+      setChecking(true);
 
-      // 2. Analyze + send email
-      const analyzeRes = await fetch('/api/analyze', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ imageUrl: imgUrl, email: trimmedEmail }),
-      });
+      // 2. Client-side: MediaPipe + Questionnaire + Rule Engine → season (no AI)
+      let seasonName: string;
+      let colorMetrics: unknown;
+      let confidence: string;
+      try {
+        const { analyzeImage } = await import('@/lib/personal-color/image-analysis');
+        const { getPrimaryAndSecondarySeason } = await import('@/lib/personal-color/rule-engine');
+        const { questionnaireToMetrics, mergeMetrics } = await import('@/lib/personal-color/questionnaire');
 
-      if (!analyzeRes.ok) {
-        const err = await analyzeRes.text();
-        console.error('Analyze error:', analyzeRes.status, err);
-        setSubmitError('Шинжилгээ амжилтгүй боллоо. Дахин оролдоно уу.');
+        const imageMetrics = await analyzeImage(compressed);
+
+        // Merge with questionnaire if user answered all 4 questions
+        const { isQuestionnaireComplete } = await import('@/lib/personal-color/questionnaire');
+        const answeredAll = isQuestionnaireComplete(questionnaireAnswers);
+        colorMetrics = answeredAll
+          ? mergeMetrics(imageMetrics, questionnaireToMetrics(questionnaireAnswers as QuestionnaireAnswers))
+          : imageMetrics;
+
+        const ruleResult = getPrimaryAndSecondarySeason(
+          colorMetrics as Parameters<typeof getPrimaryAndSecondarySeason>[0]
+        );
+        seasonName = ruleResult.primary.season;
+        confidence = ruleResult.confidence;
+      } catch (err) {
+        setPhotoQualityError({
+          message: err instanceof Error
+            ? err.message
+            : 'Нүүр илрүүлж чадсангүй. Нүүрээ бүтэн харагдуулсан зураг оруулна уу.',
+          issues: [],
+        });
         return;
       }
 
-      const result = (await analyzeRes.json()) as AnalysisResult;
+      // 3. Server: quality check (Groq vision) + reasoning text (Groq text)
+      //    Season has already been decided by Rule Engine above — server just validates quality
+      const analyzeRes = await fetch('/api/analyze', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          imageUrl: imgUrl,
+          email: trimmedEmail,
+          colorMetrics,
+          seasonName,
+          confidence,
+        }),
+      });
+
+      const data = await analyzeRes.json() as {
+        canAnalyze?: boolean;
+        message?: string;
+        issues?: string[];
+        season?: AnalysisResult['season'];
+        subType?: string;
+        reasoning?: string;
+        recommendedColors?: string[];
+        confidence?: string;
+      };
+
+      if (!analyzeRes.ok || data.canAnalyze === false) {
+        setPhotoQualityError({
+          message: data.message ?? 'Зургийн чанар шаардлага хангаагүй байна.',
+          issues: data.issues ?? [],
+        });
+        return;
+      }
+
+      setChecking(false);
+      setAnalyzing(true);
+
+      const result: AnalysisResult = {
+        season: data.season!,
+        subType: data.subType!,
+        reasoning: data.reasoning!,
+        recommendedColors: data.recommendedColors!,
+      };
       setAnalysisResult(result);
       setSentEmail(trimmedEmail);
 
@@ -199,6 +266,7 @@ export default function Card() {
 
     } finally {
       isProcessing.current = false;
+      setChecking(false);
       setAnalyzing(false);
       setUploading(false);
     }
@@ -258,7 +326,7 @@ export default function Card() {
                         <span className="relative inline-flex h-2 w-2 rounded-full bg-violet-500" />
                       </span>
                       <span className="text-xs font-semibold tracking-wide text-slate-600">
-                        {analyzing ? 'AI шинжилж байна...' : 'Uploading...'}
+                        {analyzing ? 'AI шинжилж байна...' : checking ? 'Зургийн чанар шалгаж байна...' : 'Зураг оруулж байна...'}
                       </span>
                     </div>
                   </div>
@@ -273,6 +341,16 @@ export default function Card() {
               if (f) handleFileSelect(f);
               e.target.value = '';
             }} />
+
+          {/* Questionnaire — зураг сонгосны дараа харагдана */}
+          <AnimatePresence>
+            {file && !analysisResult && (
+              <Questionnaire
+                answers={questionnaireAnswers}
+                onChange={setQuestionnaireAnswers}
+              />
+            )}
+          </AnimatePresence>
 
           {/* Tips */}
           <div className="grid grid-cols-3 gap-2">
@@ -305,7 +383,25 @@ export default function Card() {
             {emailError && <p className="text-xs text-rose-400">{emailError}</p>}
           </div>
 
-          {/* Error */}
+          {/* Photo quality error */}
+          <AnimatePresence>
+            {photoQualityError && (
+              <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+                className="rounded-2xl border border-amber-200 bg-amber-50/80 px-5 py-4 space-y-2">
+                <p className="text-sm font-semibold text-amber-800">⚠ Зургийн чанар хангалтгүй</p>
+                <p className="text-xs leading-relaxed text-amber-700">{photoQualityError.message}</p>
+                {photoQualityError.issues.length > 0 && (
+                  <ul className="text-xs text-amber-600 space-y-0.5 list-disc list-inside">
+                    {photoQualityError.issues.map((issue, i) => (
+                      <li key={i}>{issue}</li>
+                    ))}
+                  </ul>
+                )}
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* Submit error */}
           <AnimatePresence>
             {submitError && (
               <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
@@ -323,7 +419,9 @@ export default function Card() {
           >
             <span className="relative z-10">
               {uploading
-                ? analyzing ? 'AI шинжилж байна...' : 'Uploading...'
+                ? analyzing ? 'AI шинжилж байна...'
+                  : checking ? 'Зургийн чанар шалгаж байна...'
+                  : 'Зураг оруулж байна...'
                 : file ? 'Миний өнгийг шинжлэх' : 'Зураг оруулах'}
             </span>
             <div className="absolute inset-0 bg-gradient-to-r from-violet-600 via-purple-600 to-pink-600 opacity-0 transition-opacity duration-300 group-hover:opacity-100" />

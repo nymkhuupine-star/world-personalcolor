@@ -30,7 +30,7 @@ export default function RootLayout({
         lang="mn"
         className={`${inter.variable} ${playfair.variable} h-full antialiased`}
       >
-        <body className="min-h-full flex flex-col bg-[oklch(82.3%_0.12_346.018)]">
+        <body suppressHydrationWarning className="min-h-full flex flex-col bg-white">
           <main className="flex-1">{children}</main>
         </body>
       </html>

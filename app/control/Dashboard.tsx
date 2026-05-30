@@ -9,6 +9,7 @@ import {
   Users,
   CreditCard,
   FileText,
+  Folder,
   ImageIcon,
   TrendingUp,
   Clock,
@@ -19,7 +20,10 @@ import {
   XCircle,
   Loader2,
   ChevronRight,
+  ChevronDown,
+  Trash2,
 } from 'lucide-react';
+import { REPORT_GROUPS, reportId, type SeasonKey } from '@/utils/reportPdfs';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -47,13 +51,6 @@ type Analysis = {
 
 type PdfStatuses = Record<string, boolean>;
 
-const SEASONS = [
-  { key: 'spring', label: 'Хавар', en: 'Spring', color: 'text-rose-500', bg: 'bg-rose-50', border: 'border-rose-100' },
-  { key: 'summer', label: 'Зун', en: 'Summer', color: 'text-violet-500', bg: 'bg-violet-50', border: 'border-violet-100' },
-  { key: 'autumn', label: 'Намар', en: 'Autumn', color: 'text-amber-500', bg: 'bg-amber-50', border: 'border-amber-100' },
-  { key: 'winter', label: 'Өвөл', en: 'Winter', color: 'text-sky-500', bg: 'bg-sky-50', border: 'border-sky-100' },
-];
-
 const NAV = [
   { key: 'overview' as Section, label: 'Тойм', icon: LayoutDashboard },
   { key: 'registrations' as Section, label: 'Бүртгэл', icon: Users },
@@ -75,7 +72,10 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [pdfStatuses, setPdfStatuses] = useState<PdfStatuses>({});
   const [pdfUploading, setPdfUploading] = useState<string | null>(null);
+  const [pdfDeleting, setPdfDeleting] = useState<string | null>(null);
   const [pdfSuccess, setPdfSuccess] = useState<string | null>(null);
+  const [pdfError, setPdfError] = useState<string | null>(null);
+  const [expandedSeason, setExpandedSeason] = useState<string | null>(null);
   const fileRefs = useRef<Record<string, HTMLInputElement | null>>({});
 
   const fetchPortraits = useCallback(async () => {
@@ -102,15 +102,47 @@ export default function Dashboard() {
     void fetchPdfStatuses();
   }, [fetchPortraits, fetchPdfStatuses]);
 
-  const handlePdfUpload = async (season: string, file: File) => {
-    setPdfUploading(season);
+  const handlePdfDelete = async (season: SeasonKey, subtype: string) => {
+    const id = reportId(season, subtype);
+    if (!confirm(`"${subtype}.pdf" файлыг устгах уу?`)) return;
+    setPdfDeleting(id);
     setPdfSuccess(null);
-    const form = new FormData();
-    form.append('season', season);
-    form.append('file', file);
-    const res = await fetch('/api/admin/pdf', { method: 'POST', body: form });
-    if (res.ok) {
-      setPdfSuccess(season);
+    setPdfError(null);
+    try {
+      const res = await fetch('/api/admin/pdf', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ season, subtype }),
+      });
+      if (res.ok) {
+        await fetchPdfStatuses();
+      } else {
+        const data = (await res.json()) as { error?: string };
+        setPdfError(data.error ?? `Алдаа гарлаа (${res.status}).`);
+      }
+    } catch {
+      setPdfError('Сервертэй холбогдож чадсангүй.');
+    }
+    setPdfDeleting(null);
+  };
+
+  const handlePdfUpload = async (season: SeasonKey, subtype: string, file: File) => {
+    const id = reportId(season, subtype);
+    setPdfUploading(id);
+    setPdfSuccess(null);
+    setPdfError(null);
+
+    const { error } = await supabase.storage
+      .from('reports')
+      .upload(`${season}/${subtype}.pdf`, file, {
+        contentType: 'application/pdf',
+        upsert: true,
+      });
+
+    if (error) {
+      setPdfError(error.message);
+    } else {
+      setPdfSuccess(id);
       await fetchPdfStatuses();
       setTimeout(() => setPdfSuccess(null), 3000);
     }
@@ -349,79 +381,135 @@ export default function Dashboard() {
             <div className="space-y-4">
               <p className="text-sm text-slate-500">
                 Шинжилгээний дараа имэйлээр илгээгдэх PDF тайлангуудыг энд оруулна уу.
-                Улирал тус бүрд нэг PDF файл байна.
+                Улирал бүр дотроо 3 PDF файлтай (Light/True/Bright гэх мэт).
               </p>
+              {pdfError && (
+                <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+                  {pdfError}
+                </div>
+              )}
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                {SEASONS.map(({ key, label, en, color, bg, border }) => {
-                  const exists = pdfStatuses[key];
-                  const isUploading = pdfUploading === key;
-                  const isSuccess = pdfSuccess === key;
+                {REPORT_GROUPS.map(({ key, label, en, color, bg, border, subtypes }) => {
+                  const expanded = expandedSeason === key;
+                  const uploadedCount = subtypes.filter((s) => pdfStatuses[reportId(key, s.key)]).length;
 
                   return (
-                    <div key={key} className={`rounded-2xl border ${border} bg-white shadow-sm p-6 flex flex-col gap-4`}>
-                      <div className="flex items-center justify-between">
+                    <div key={key} className={`rounded-2xl border ${border} bg-white shadow-sm p-6`}>
+                      <button
+                        onClick={() => setExpandedSeason(expanded ? null : key)}
+                        className="flex w-full items-center justify-between gap-3"
+                      >
                         <div className="flex items-center gap-3">
                           <div className={`flex h-10 w-10 items-center justify-center rounded-xl ${bg}`}>
-                            <FileText className={`h-5 w-5 ${color}`} strokeWidth={1.5} />
+                            <Folder className={`h-5 w-5 ${color}`} strokeWidth={1.5} />
                           </div>
-                          <div>
+                          <div className="text-left">
                             <p className="text-sm font-bold text-slate-800">{label}</p>
-                            <p className="text-xs text-slate-400">{en.toLowerCase()}.pdf</p>
+                            <p className="text-xs text-slate-400">{en}</p>
                           </div>
                         </div>
-                        {isSuccess ? (
-                          <span className="flex items-center gap-1 text-xs font-semibold text-emerald-600">
-                            <CheckCircle className="h-4 w-4" strokeWidth={1.5} /> Амжилттай
-                          </span>
-                        ) : exists === true ? (
-                          <span className="flex items-center gap-1 text-xs font-semibold text-emerald-600">
-                            <CheckCircle className="h-4 w-4" strokeWidth={1.5} /> Байна
-                          </span>
-                        ) : exists === false ? (
-                          <span className="flex items-center gap-1 text-xs font-semibold text-rose-500">
-                            <XCircle className="h-4 w-4" strokeWidth={1.5} /> Байхгүй
-                          </span>
-                        ) : null}
-                      </div>
 
-                      <input
-                        ref={el => { fileRefs.current[key] = el; }}
-                        type="file"
-                        accept="application/pdf"
-                        className="hidden"
-                        onChange={e => {
-                          const f = e.target.files?.[0];
-                          if (f) handlePdfUpload(key, f);
-                          e.target.value = '';
-                        }}
-                      />
-
-                      <button
-                        onClick={() => fileRefs.current[key]?.click()}
-                        disabled={isUploading}
-                        className={`flex w-full items-center justify-center gap-2 rounded-xl border py-2.5 text-xs font-semibold transition-all ${
-                          isUploading
-                            ? 'border-slate-200 bg-slate-50 text-slate-400 cursor-not-allowed'
-                            : `border-current ${color} hover:${bg}`
-                        }`}
-                      >
-                        {isUploading ? (
-                          <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Хуулж байна...</>
-                        ) : (
-                          <><Upload className="h-3.5 w-3.5" strokeWidth={1.5} />
-                          {exists ? 'PDF солих' : 'PDF оруулах'}</>
-                        )}
+                        <div className="flex items-center gap-3">
+                          <span className="text-xs font-semibold text-slate-400">
+                            {uploadedCount}/{subtypes.length}
+                          </span>
+                          <ChevronDown
+                            className={`h-4 w-4 text-slate-400 transition-transform ${expanded ? 'rotate-180' : ''}`}
+                            strokeWidth={1.5}
+                          />
+                        </div>
                       </button>
 
-                      {exists && (
-                        <a
-                          href={`/reports/${key}.pdf`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-center text-xs text-slate-400 hover:text-slate-600 transition-colors"
-                        >
-                          Одоогийн файлыг харах →
-                        </a>
+                      {expanded && (
+                        <div className="mt-4 space-y-3">
+                          {subtypes.map((s) => {
+                            const id = reportId(key, s.key);
+                            const exists = pdfStatuses[id];
+                            const isUploading = pdfUploading === id;
+                            const isSuccess = pdfSuccess === id;
+
+                            return (
+                              <div key={id} className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+                                <div className="flex items-center justify-between gap-3">
+                                  <div className="min-w-0">
+                                    <p className="truncate text-xs font-semibold text-slate-700">{s.label}</p>
+                                    <p className="text-[11px] text-slate-400">{key}/{s.key}.pdf</p>
+                                  </div>
+                                  {isSuccess ? (
+                                    <span className="flex items-center gap-1 text-xs font-semibold text-emerald-600">
+                                      <CheckCircle className="h-4 w-4" strokeWidth={1.5} /> Амжилттай
+                                    </span>
+                                  ) : exists === true ? (
+                                    <span className="flex items-center gap-1 text-xs font-semibold text-emerald-600">
+                                      <CheckCircle className="h-4 w-4" strokeWidth={1.5} /> Байна
+                                    </span>
+                                  ) : exists === false ? (
+                                    <span className="flex items-center gap-1 text-xs font-semibold text-rose-500">
+                                      <XCircle className="h-4 w-4" strokeWidth={1.5} /> Байхгүй
+                                    </span>
+                                  ) : null}
+                                </div>
+
+                                <input
+                                  ref={(el) => { fileRefs.current[id] = el; }}
+                                  type="file"
+                                  accept="application/pdf"
+                                  className="sr-only"
+                                  onChange={(e) => {
+                                    const f = e.target.files?.[0];
+                                    if (f) handlePdfUpload(key, s.key, f);
+                                    e.target.value = '';
+                                  }}
+                                />
+
+                                <div className="mt-3 flex items-center gap-2">
+                                  <button
+                                    onClick={() => fileRefs.current[id]?.click()}
+                                    disabled={isUploading || pdfDeleting === id}
+                                    className={`flex flex-1 items-center justify-center gap-2 rounded-xl border py-2 text-xs font-semibold transition-all ${
+                                      isUploading || pdfDeleting === id
+                                        ? 'border-slate-200 bg-white text-slate-400 cursor-not-allowed'
+                                        : `border-current ${color} hover:${bg}`
+                                    }`}
+                                  >
+                                    {isUploading ? (
+                                      <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Хуулж байна...</>
+                                    ) : (
+                                      <><Upload className="h-3.5 w-3.5" strokeWidth={1.5} />
+                                      {exists ? 'PDF солих' : 'PDF оруулах'}</>
+                                    )}
+                                  </button>
+
+                                  {exists && (
+                                    <a
+                                      href={supabase.storage.from('reports').getPublicUrl(`${key}/${s.key}.pdf`).data.publicUrl}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="text-xs text-slate-400 hover:text-slate-600 transition-colors whitespace-nowrap"
+                                    >
+                                      Харах →
+                                    </a>
+                                  )}
+
+                                  {exists && (
+                                    <button
+                                      onClick={() => handlePdfDelete(key, s.key)}
+                                      disabled={pdfDeleting === id || isUploading}
+                                      title="Устгах"
+                                      className="flex items-center justify-center rounded-xl border border-rose-200 bg-rose-50 p-2 text-rose-500 transition-all hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-40"
+                                    >
+                                      {pdfDeleting === id ? (
+                                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                      ) : (
+                                        <Trash2 className="h-3.5 w-3.5" strokeWidth={1.5} />
+                                      )}
+                                    </button>
+                                  )}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
                       )}
                     </div>
                   );

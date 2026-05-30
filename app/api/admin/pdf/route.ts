@@ -1,43 +1,53 @@
-import { writeFile, access } from 'node:fs/promises';
-import { join } from 'node:path';
+import { createClient } from '@supabase/supabase-js';
+import { REPORT_GROUPS, isSeasonKey, isSubtypeKeyForSeason, reportId } from '@/utils/reportPdfs';
 
 export const runtime = 'nodejs';
 
-const VALID_SEASONS = ['spring', 'summer', 'autumn', 'winter'];
+const BUCKET = 'reports';
 
-export async function POST(req: Request) {
-  try {
-    const formData = await req.formData();
-    const season = formData.get('season') as string;
-    const file = formData.get('file') as File | null;
-
-    if (!VALID_SEASONS.includes(season)) {
-      return Response.json({ error: 'Invalid season.' }, { status: 400 });
-    }
-    if (!file || file.type !== 'application/pdf') {
-      return Response.json({ error: 'PDF file required.' }, { status: 400 });
-    }
-
-    const buffer = Buffer.from(await file.arrayBuffer());
-    const filePath = join(process.cwd(), 'public', 'reports', `${season}.pdf`);
-    await writeFile(filePath, buffer);
-
-    return Response.json({ success: true, season });
-  } catch (err) {
-    console.error('PDF upload error:', err);
-    return Response.json({ error: 'Failed to save PDF.' }, { status: 500 });
-  }
+function adminClient() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  );
 }
 
 export async function GET() {
+  const sb = adminClient();
   const statuses: Record<string, boolean> = {};
-  for (const season of VALID_SEASONS) {
-    try {
-      await access(join(process.cwd(), 'public', 'reports', `${season}.pdf`));
-      statuses[season] = true;
-    } catch {
-      statuses[season] = false;
-    }
-  }
+
+  await Promise.all(
+    REPORT_GROUPS.map(async (group) => {
+      const { data } = await sb.storage.from(BUCKET).list(group.key);
+      const names = new Set((data ?? []).map((f) => f.name));
+      for (const s of group.subtypes) {
+        statuses[reportId(group.key, s.key)] = names.has(`${s.key}.pdf`);
+      }
+    })
+  );
+
   return Response.json(statuses);
+}
+
+export async function DELETE(req: Request) {
+  try {
+    const { season, subtype } = (await req.json()) as { season?: string; subtype?: string };
+
+    if (typeof season !== 'string' || !isSeasonKey(season)) {
+      return Response.json({ error: 'Invalid season.' }, { status: 400 });
+    }
+    if (typeof subtype !== 'string' || !isSubtypeKeyForSeason(season, subtype)) {
+      return Response.json({ error: 'Invalid subtype.' }, { status: 400 });
+    }
+
+    const sb = adminClient();
+    const { error } = await sb.storage.from(BUCKET).remove([`${season}/${subtype}.pdf`]);
+    if (error) return Response.json({ error: error.message }, { status: 500 });
+
+    return Response.json({ success: true });
+  } catch (err) {
+    console.error('PDF delete error:', err);
+    const msg = err instanceof Error ? err.message : String(err);
+    return Response.json({ error: `Failed to delete: ${msg}` }, { status: 500 });
+  }
 }

@@ -1,8 +1,7 @@
 import { auth, currentUser } from '@clerk/nextjs/server';
 import { createClient } from '@supabase/supabase-js';
 import { Resend } from 'resend';
-import { readFile } from 'node:fs/promises';
-import { join } from 'node:path';
+import { normalizeSubtypeKey, seasonKeyFromSeasonName } from '@/utils/reportPdfs';
 
 export const runtime = 'nodejs';
 
@@ -49,9 +48,26 @@ export async function POST(req: Request) {
     // Send email with PDF
     if (email && process.env.RESEND_API_KEY) {
       const resend = new Resend(process.env.RESEND_API_KEY);
-      const pdfPath = join(process.cwd(), 'public', 'reports', `${result.season.toLowerCase()}.pdf`);
-      let pdfBuffer: Buffer | undefined;
-      try { pdfBuffer = await readFile(pdfPath); } catch { /* PDF байхгүй бол skip */ }
+      const seasonKey = seasonKeyFromSeasonName(result.season);
+      const seasonFolder = seasonKey ?? result.season.toLowerCase();
+      const subtypeKey = seasonKey ? normalizeSubtypeKey(seasonKey, result.subType) : null;
+
+      const candidatePaths = [
+        subtypeKey ? `${seasonFolder}/${subtypeKey}.pdf` : null,
+        `${seasonFolder}.pdf`,
+      ].filter(Boolean) as string[];
+
+      let pdfUrl: string | undefined;
+      for (const path of candidatePaths) {
+        const { data: list } = await supabase.storage.from('reports').list(
+          path.includes('/') ? path.split('/')[0] : '',
+          { search: path.includes('/') ? path.split('/')[1] : path }
+        );
+        if (list && list.length > 0) {
+          pdfUrl = supabase.storage.from('reports').getPublicUrl(path).data.publicUrl;
+          break;
+        }
+      }
 
       await resend.emails.send({
         from: 'Personal Color AI <onboarding@resend.dev>',
@@ -65,14 +81,18 @@ export async function POST(req: Request) {
               <p><strong>Таны улирал:</strong> ${SEASON_MN[result.season]} (${result.subType})</p>
               <p><strong>Тайлбар:</strong> ${result.reasoning}</p>
             </div>
-            <p style="margin-top:16px">Дэлгэрэнгүй зөвлөмжийг хавсаргасан PDF файлаас үзнэ үү.</p>
+            ${pdfUrl ? `
+            <div style="margin-top:20px;text-align:center">
+              <a href="${pdfUrl}" target="_blank"
+                style="display:inline-block;background:#7c3aed;color:#fff;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:600;font-size:15px">
+                📄 PDF тайланг үзэх
+              </a>
+            </div>` : ''}
             <hr style="margin:20px 0"/>
             <p style="font-size:12px;color:#888;text-align:center">© ${new Date().getFullYear()} Personal Color AI</p>
           </div>
         `,
-        attachments: pdfBuffer
-          ? [{ filename: `${result.season.toLowerCase()}_report.pdf`, content: pdfBuffer }]
-          : [],
+        attachments: [],
       });
     }
 
