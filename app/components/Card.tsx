@@ -181,7 +181,19 @@ export default function Card() {
       setImageUrl(imgUrl);
       setChecking(true);
 
-      // 2. Client-side: MediaPipe + Questionnaire + Rule Engine → season (no AI)
+      // 2. Client-side quality check (brightness + blur — no AI, canvas math only)
+      try {
+        const { checkImageQuality } = await import('@/lib/personal-color/image-analysis');
+        const quality = await checkImageQuality(compressed);
+        if (!quality.ok) {
+          setPhotoQualityError({ message: 'Зургийн чанар шаардлага хангаагүй байна.', issues: quality.issues });
+          return;
+        }
+      } catch {
+        // quality check failure is non-fatal — continue to face detection
+      }
+
+      // 3. Client-side: MediaPipe face detection + Questionnaire + Rule Engine → season (no AI)
       let seasonName: string;
       let colorMetrics: unknown;
       let confidence: string;
@@ -214,8 +226,7 @@ export default function Card() {
         return;
       }
 
-      // 3. Server: quality check (Groq vision) + reasoning text (Groq text)
-      //    Season has already been decided by Rule Engine above — server just validates quality
+      // 4. Server: static reasoning text + DB save + email (no AI)
       const analyzeRes = await fetch('/api/analyze', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

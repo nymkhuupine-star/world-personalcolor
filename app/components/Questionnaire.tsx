@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import type { QuestionnaireAnswers, NaturalHairColor } from '@/lib/personal-color/questionnaire';
+import type { QuestionnaireAnswers, NaturalHairColor, EyeColor } from '@/lib/personal-color/questionnaire';
 
 type PartialAnswers = Partial<QuestionnaireAnswers>;
 
@@ -12,12 +12,11 @@ interface Props {
 }
 
 const HAIR_COLORS: { value: NaturalHairColor; label: string; swatch: string }[] = [
-  { value: 'black',        label: 'Хар',            swatch: '#1A1008' },
-  { value: 'dark_brown',   label: 'Харлуу хүрэн',   swatch: '#3B2314' },
-  { value: 'medium_brown', label: 'Хүрэн',           swatch: '#7B4F2E' },
-  { value: 'light_brown',  label: 'Цайвар хүрэн',   swatch: '#A07850' },
-  { value: 'blonde',       label: 'Шаргал / Алтан', swatch: '#C8A046' },
-  { value: 'auburn',       label: 'Улаан / Буурцаг', swatch: '#8B3A22' },
+  { value: 'black',        label: 'Хар',        swatch: '#1A1008' },
+  { value: 'dark_brown',   label: 'Бараан бор', swatch: '#3B2314' },
+  { value: 'medium_brown', label: 'Бор',        swatch: '#7B4F2E' },
+  { value: 'light_brown',  label: 'Цайвар бор', swatch: '#A07850' },
+  { value: 'blonde',       label: 'Шаргал',     swatch: '#C8A046' },
 ];
 
 function OptionBtn({
@@ -38,12 +37,21 @@ function OptionBtn({
   );
 }
 
-type StepKey = 'vein' | 'hairDyed' | 'naturalHairColor' | 'contrast' | 'sunReaction';
+const EYE_COLORS: { value: EyeColor; label: string; swatch: string }[] = [
+  { value: 'black',       label: 'Хар',        swatch: '#1A1008' },
+  { value: 'dark_brown',  label: 'Бараан бор', swatch: '#3B2314' },
+  { value: 'light_brown', label: 'Цайвар бор', swatch: '#8B5E3C' },
+  { value: 'green',       label: 'Ногоон',     swatch: '#4A7C59' },
+  { value: 'grey',        label: 'Саарал',     swatch: '#7A8899' },
+  { value: 'blue',        label: 'Цэнхэр',     swatch: '#4A7AB5' },
+];
+
+type StepKey = 'vein' | 'hairDyed' | 'naturalHairColor' | 'eyeColor' | 'jewelryPreference';
 
 function getSteps(answers: PartialAnswers): StepKey[] {
   const steps: StepKey[] = ['vein', 'hairDyed'];
   if (answers.hairDyed === 'yes') steps.push('naturalHairColor');
-  steps.push('contrast', 'sunReaction');
+  steps.push('eyeColor', 'jewelryPreference');
   return steps;
 }
 
@@ -86,7 +94,7 @@ export default function Questionnaire({ answers, onChange }: Props) {
         return (
           <div className="space-y-2.5">
             <p className="text-xs font-medium text-slate-600">
-              Гарынхаа дотор талыг харна уу. Венийн өнгө ямар вэ?
+              Гарынхаа дотор талын судсыг ажиглаарай. Ямар өнгөтэй харагдаж байна вэ?
             </p>
             <div className="grid grid-cols-3 gap-1.5">
               {[
@@ -140,11 +148,11 @@ export default function Questionnaire({ answers, onChange }: Props) {
             <p className="text-xs font-medium text-slate-600">
               Будаагүй үедээ үсний байгалийн өнгө ямар байсан бэ?
             </p>
-            <div className="grid grid-cols-3 gap-1.5">
+            <div className="grid grid-cols-5 gap-1.5">
               {HAIR_COLORS.map(o => (
                 <OptionBtn key={o.value} active={answers.naturalHairColor === o.value}
                   onClick={() => pick({ ...answers, naturalHairColor: o.value })}>
-                  <span className="block h-5 w-5 rounded-full border border-white shadow-sm ring-1 ring-black/10"
+                  <span className="block h-7 w-7 rounded-full border-2 border-white shadow ring-1 ring-black/10"
                         style={{ backgroundColor: o.swatch }} />
                   <span className={`text-[10px] font-medium leading-tight ${answers.naturalHairColor === o.value ? 'text-violet-700' : 'text-slate-600'}`}>
                     {o.label}
@@ -155,22 +163,19 @@ export default function Questionnaire({ answers, onChange }: Props) {
           </div>
         );
 
-      case 'contrast':
+      case 'eyeColor':
         return (
           <div className="space-y-2.5">
             <p className="text-xs font-medium text-slate-600">
-              Таны арьс, үс, нүдний өнгө хоорондоо хэр ялгаатай вэ?
+             Таны нүдний өнгө ямар вэ?
             </p>
             <div className="grid grid-cols-3 gap-1.5">
-              {[
-                { value: 'high'   as const, label: 'Маш ялгаатай',    icon: '◼◻' },
-                { value: 'medium' as const, label: 'Дундаж',           icon: '▪▫' },
-                { value: 'low'    as const, label: 'Ойролцоо өнгөтэй', icon: '▫▫' },
-              ].map(o => (
-                <OptionBtn key={o.value} active={answers.contrast === o.value}
-                  onClick={() => pick({ ...answers, contrast: o.value })}>
-                  <span className="text-base leading-none">{o.icon}</span>
-                  <span className={`text-[10px] font-medium leading-tight ${answers.contrast === o.value ? 'text-violet-700' : 'text-slate-600'}`}>
+              {EYE_COLORS.map(o => (
+                <OptionBtn key={o.value} active={answers.eyeColor === o.value}
+                  onClick={() => pick({ ...answers, eyeColor: o.value })}>
+                  <span className="block h-7 w-7 rounded-full border-2 border-white shadow ring-1 ring-black/10"
+                        style={{ backgroundColor: o.swatch }} />
+                  <span className={`text-[10px] font-medium leading-tight ${answers.eyeColor === o.value ? 'text-violet-700' : 'text-slate-600'}`}>
                     {o.label}
                   </span>
                 </OptionBtn>
@@ -179,22 +184,26 @@ export default function Questionnaire({ answers, onChange }: Props) {
           </div>
         );
 
-      case 'sunReaction':
+      case 'jewelryPreference':
         return (
           <div className="space-y-2.5">
             <p className="text-xs font-medium text-slate-600">
-              Нарны туяанд удаан байвал таны арьс:
+              Танд алтлаг эсвэл мөнгөлөг гоёлын аль нь илүү зохидог вэ?
             </p>
-            <div className="grid grid-cols-3 gap-1.5">
+            <div className="grid grid-cols-2 gap-1.5">
               {[
-                { value: 'burns' as const, label: 'Амархан түлэгддэг, бараг борлодоггүй',         icon: '🔴' },
-                { value: 'mixed' as const, label: 'Эхлээд түлэгдэж улайгаад, дараа нь борлодог', icon: '🟡' },
-                { value: 'tans'  as const, label: 'Хурдан борлодог, бараг түлэгддэггүй',          icon: '🟤' },
+                { value: 'gold'   as const, label: 'Алтлаг',     swatch: 'linear-gradient(135deg,#F5C842,#D4A017,#F5C842)' },
+                { value: 'silver' as const, label: 'Мөнгөлөг',   swatch: 'linear-gradient(135deg,#D8D8D8,#A0A0A0,#D8D8D8)' },
+                { value: 'both'   as const, label: 'Аль аль нь', swatch: 'linear-gradient(135deg,#F5C842 0%,#F5C842 50%,#D8D8D8 50%,#D8D8D8 100%)' },
+                { value: 'unsure' as const, label: 'Мэдэхгүй',   swatch: 'linear-gradient(135deg,#E2E8F0,#CBD5E1)' },
               ].map(o => (
-                <OptionBtn key={o.value} active={answers.sunReaction === o.value}
-                  onClick={() => pick({ ...answers, sunReaction: o.value })}>
-                  <span className="text-base leading-none">{o.icon}</span>
-                  <span className={`text-[10px] font-medium leading-tight ${answers.sunReaction === o.value ? 'text-violet-700' : 'text-slate-600'}`}>
+                <OptionBtn key={o.value} active={answers.jewelryPreference === o.value}
+                  onClick={() => pick({ ...answers, jewelryPreference: o.value })}>
+                  <span
+                    className="block h-7 w-7 rounded-full border-2 border-white shadow ring-1 ring-black/10"
+                    style={{ background: o.swatch }}
+                  />
+                  <span className={`text-[10px] font-medium leading-tight ${answers.jewelryPreference === o.value ? 'text-violet-700' : 'text-slate-600'}`}>
                     {o.label}
                   </span>
                 </OptionBtn>

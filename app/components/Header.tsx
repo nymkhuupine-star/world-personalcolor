@@ -12,7 +12,6 @@ type NavItem = {
 
 const NAV_ITEMS: NavItem[] = [
   { href: '#how-it-works', label: 'Хэрхэн ажилладаг вэ' },
-  { href: '#pricing', label: 'Үнэ' },
   { href: '#faq', label: 'Түгээмэл асуулт' },
 ];
 
@@ -58,6 +57,14 @@ export default function Header() {
               {item.label}
             </a>
           ))}
+          {!isSignedIn && (
+            <a
+              href="#search-result"
+              className="px-4 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-400/60"
+            >
+              Өмнөх үр дүн хайх
+            </a>
+          )}
         </nav>
 
         <div className="hidden items-center gap-2 lg:flex">
@@ -142,6 +149,16 @@ export default function Header() {
                     <span className="text-slate-400">→</span>
                   </a>
                 ))}
+                {!isSignedIn && (
+                  <a
+                    href="#search-result"
+                    onClick={() => setOpen(false)}
+                    className="flex w-full items-center justify-between px-4 py-3 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-100"
+                  >
+                    <span>Өмнөх үр дүн хайх</span>
+                    <span className="text-slate-400">→</span>
+                  </a>
+                )}
 
                 <div className="mt-3 grid grid-cols-2 gap-2 px-1">
                   <Link

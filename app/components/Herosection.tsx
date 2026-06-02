@@ -55,10 +55,11 @@ export default function HeroSection() {
           >
             Таны байгалийн{' '}
             <em className="not-italic bg-gradient-to-r from-violet-500 to-pink-500 bg-clip-text text-transparent">
-              гоо үзэсгэлэн
+              гоо үзэсгэлэнг
             </em>
             <br />
-          
+            тодотгоно
+
           </motion.h1>
 
           <motion.div

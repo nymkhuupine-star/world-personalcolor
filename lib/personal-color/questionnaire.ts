@@ -2,23 +2,30 @@ import type { ColorMetrics } from './rule-engine';
 
 export type NaturalHairColor =
   | 'black'        // Хар
-  | 'dark_brown'   // Харлуу хүрэн
-  | 'medium_brown' // Хүрэн
-  | 'light_brown'  // Цайвар хүрэн
-  | 'blonde'       // Шаргал / Алтан
-  | 'auburn';      // Улаан / Буурцаг
+  | 'dark_brown'   // Бараан бор
+  | 'medium_brown' // Бор
+  | 'light_brown'  // Цайвар бор
+  | 'blonde';      // Шаргал
+
+export type EyeColor =
+  | 'black'       // Хар
+  | 'dark_brown'  // Бараан бор
+  | 'light_brown' // Цайвар бор
+  | 'green'       // Ногоон
+  | 'grey'        // Саарал
+  | 'blue';       // Цэнхэр
 
 export type QuestionnaireAnswers = {
-  vein:              'blue_green' | 'purple_red' | 'both';
-  hairDyed:          'yes' | 'no';
-  naturalHairColor?: NaturalHairColor; // зөвхөн hairDyed === 'yes' үед
-  contrast:          'high' | 'medium' | 'low';
-  sunReaction:       'burns' | 'mixed' | 'tans';
+  vein:               'blue_green' | 'purple_red' | 'both';
+  hairDyed:           'yes' | 'no';
+  naturalHairColor?:  NaturalHairColor; // зөвхөн hairDyed === 'yes' үед
+  eyeColor:           EyeColor;
+  jewelryPreference:  'gold' | 'silver' | 'both' | 'unsure';
 };
 
 /** Асуулга бүрэн бөглөгдсөн эсэхийг шалгах */
 export function isQuestionnaireComplete(a: Partial<QuestionnaireAnswers>): boolean {
-  if (!a.vein || !a.hairDyed || !a.contrast || !a.sunReaction) return false;
+  if (!a.vein || !a.hairDyed || !a.eyeColor || !a.jewelryPreference) return false;
   if (a.hairDyed === 'yes' && !a.naturalHairColor) return false;
   return true;
 }
@@ -30,7 +37,16 @@ const HAIR_METRICS: Record<NaturalHairColor, { light: number; medium: number; de
   medium_brown: { light: 15, medium: 40, deep: 15, warm: 12, cool:  0 },
   light_brown:  { light: 30, medium: 35, deep:  5, warm: 18, cool:  0 },
   blonde:       { light: 50, medium: 20, deep:  0, warm: 25, cool:  0 },
-  auburn:       { light: 10, medium: 30, deep: 20, warm: 30, cool:  0 },
+};
+
+// Нүдний өнгө → undertone + contrast дохио
+const EYE_METRICS: Record<EyeColor, { warm: number; cool: number; neutral: number; high: number; medium: number; low: number }> = {
+  black:       { warm:  0, cool: 10, neutral: 15, high: 40, medium: 15, low:  0 },
+  dark_brown:  { warm: 20, cool:  0, neutral: 10, high: 30, medium: 20, low:  0 },
+  light_brown: { warm: 25, cool:  0, neutral:  5, high:  5, medium: 35, low: 10 },
+  green:       { warm:  0, cool: 20, neutral: 10, high:  5, medium: 30, low: 15 },
+  grey:        { warm:  0, cool: 30, neutral:  5, high:  0, medium: 15, low: 35 },
+  blue:        { warm:  0, cool: 35, neutral:  0, high:  0, medium: 10, low: 40 },
 };
 
 export function questionnaireToMetrics(a: QuestionnaireAnswers): Partial<ColorMetrics> {
@@ -53,15 +69,22 @@ export function questionnaireToMetrics(a: QuestionnaireAnswers): Partial<ColorMe
     cool   += h.cool;
   }
 
-  // Q3: Ялгаа → contrast
-  if (a.contrast === 'high')   { high += 45; low  -= 15; }
-  if (a.contrast === 'medium') { medC += 40; }
-  if (a.contrast === 'low')    { low  += 45; high -= 15; }
+  // Q3: Нүдний өнгө → undertone + contrast
+  if (a.eyeColor) {
+    const e = EYE_METRICS[a.eyeColor];
+    warm    += e.warm;
+    cool    += e.cool;
+    neutral += e.neutral;
+    high    += e.high;
+    medC    += e.medium;
+    low     += e.low;
+  }
 
-  // Q4: Нарны хариу → undertone + value нөхнө
-  if (a.sunReaction === 'burns') { cool += 20; light  += 15; }
-  if (a.sunReaction === 'mixed') { neutral += 15; medium += 10; }
-  if (a.sunReaction === 'tans')  { warm += 20; medium += 10; }
+  // Q4: Гоёлын металл → undertone-ийн хамгийн тодорхой дохио
+  if (a.jewelryPreference === 'gold')   { warm    += 30; cool -= 10; }
+  if (a.jewelryPreference === 'silver') { cool    += 30; warm -= 10; }
+  if (a.jewelryPreference === 'both')   { neutral += 20; }
+  // 'unsure' → дохио өгөхгүй
 
   const c = (v: number) => Math.max(0, Math.min(100, Math.round(v)));
 

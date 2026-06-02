@@ -353,6 +353,62 @@ function calcContrast(
   return { high, low, medium };
 }
 
+// ── Image quality check (no MediaPipe, canvas-only) ──────────────────────────
+
+export type QualityResult = { ok: boolean; issues: string[] };
+
+function checkBrightness(data: Uint8ClampedArray): string | null {
+  let sum = 0, count = 0;
+  for (let i = 0; i < data.length; i += 32) { // sample every 8th pixel (stride=8 → 32 bytes)
+    sum += 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
+    count++;
+  }
+  const avg = sum / count;
+  if (avg < 38)  return 'Зураг хэт харанхуй байна. Байгалийн гэрэлтэй орчинд авсан зураг оруулна уу.';
+  if (avg > 232) return 'Зураг хэт гэрэлтэй байна. Тал руу харсан буюу сүүдэртэй газраас зураг авна уу.';
+  return null;
+}
+
+function checkBlur(data: Uint8ClampedArray, width: number, height: number): string | null {
+  // Laplacian variance on grayscale samples — low variance → blurry
+  const step = 5;
+  let sumSq = 0, count = 0;
+  const lum = (idx: number) => 0.299 * data[idx] + 0.587 * data[idx + 1] + 0.114 * data[idx + 2];
+  for (let y = 1; y < height - 1; y += step) {
+    for (let x = 1; x < width - 1; x += step) {
+      const c      = lum((y * width + x) * 4);
+      const top    = lum(((y - 1) * width + x) * 4);
+      const bottom = lum(((y + 1) * width + x) * 4);
+      const left   = lum((y * width + x - 1) * 4);
+      const right  = lum((y * width + x + 1) * 4);
+      const lap = top + bottom + left + right - 4 * c;
+      sumSq += lap * lap;
+      count++;
+    }
+  }
+  const variance = count > 0 ? sumSq / count : 999;
+  if (variance < 55) return 'Зураг бүдэг байна. Фокус зөв, тодорхой зураг оруулна уу.';
+  return null;
+}
+
+/**
+ * Fast client-side quality check — brightness + blur only, no MediaPipe.
+ * Call this before analyzeImage to give early feedback.
+ */
+export async function checkImageQuality(imageFile: File): Promise<QualityResult> {
+  const canvas = await fileToCanvas(imageFile);
+  const { width, height } = canvas;
+  const { data } = canvas.getContext('2d')!.getImageData(0, 0, width, height);
+
+  const issues: string[] = [];
+  const bIssue = checkBrightness(data);
+  if (bIssue) issues.push(bIssue);
+  const blurIssue = checkBlur(data, width, height);
+  if (blurIssue) issues.push(blurIssue);
+
+  return { ok: issues.length === 0, issues };
+}
+
 // ── Main export ───────────────────────────────────────────────────────────────
 
 /**
@@ -375,6 +431,12 @@ export async function analyzeImage(imageFile: File): Promise<ColorMetrics> {
   // 2. MediaPipe FaceMesh — detect 468 face landmarks
   const fm = await getFaceMesh();
   const landmarks = await detectLandmarks(fm, canvas);
+
+  // Face size check — face must span at least 12% of image width
+  const faceWidthRatio = landmarks[454].x - landmarks[234].x;
+  if (faceWidthRatio < 0.12) {
+    throw new Error('Нүүр хэт жижиг байна. Нүүрийгээ илүү ойртуулсан зураг оруулна уу.');
+  }
 
   // ── 3. Extract region pixels ──────────────────────────────────────────────
 

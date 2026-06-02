@@ -5,7 +5,7 @@ import { useUser } from '@clerk/nextjs';
 import { createClient } from '@supabase/supabase-js';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { ArrowLeft, Sparkles, Calendar, CheckCircle } from 'lucide-react';
+import { ArrowLeft, Sparkles, Calendar, CheckCircle, Send } from 'lucide-react';
 import Header from '../components/Header';
 
 const supabase = createClient(
@@ -44,6 +44,8 @@ export default function MyResultsPage() {
   const { user, isLoaded } = useUser();
   const [analyses, setAnalyses] = useState<UserAnalysis[]>([]);
   const [loading, setLoading] = useState(true);
+  const [sendingId, setSendingId] = useState<string | null>(null);
+  const [sentId, setSentId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!isLoaded || !user) return;
@@ -57,6 +59,25 @@ export default function MyResultsPage() {
         setLoading(false);
       });
   }, [isLoaded, user]);
+
+  async function resendResult(analysisId: string) {
+    if (sendingId || !user) return;
+    setSendingId(analysisId);
+    setSentId(null);
+    try {
+      const email = user.primaryEmailAddress?.emailAddress ?? '';
+      const res = await fetch('/api/verify/resend-result', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, analysisId }),
+      });
+      if (res.ok) setSentId(analysisId);
+    } catch {
+      // silent fail
+    } finally {
+      setSendingId(null);
+    }
+  }
 
   return (
     <div className="min-h-screen bg-[#FAFAFA]">
@@ -143,6 +164,24 @@ export default function MyResultsPage() {
                         Хадгалагдсан
                       </span>
                     </div>
+
+                    <button
+                      onClick={() => resendResult(a.id)}
+                      disabled={sendingId === a.id}
+                      className={`mt-3 w-full flex items-center justify-center gap-2 rounded-xl border py-2.5 text-sm font-medium transition-all
+                        ${sentId === a.id
+                          ? 'border-emerald-200 bg-emerald-50 text-emerald-600'
+                          : 'border-violet-200 bg-violet-50 text-violet-600 hover:bg-violet-100 active:scale-[0.98]'}
+                        disabled:opacity-60 disabled:cursor-not-allowed`}
+                    >
+                      {sentId === a.id ? (
+                        <><CheckCircle className="h-4 w-4" strokeWidth={2} />Имэйл илгээгдлээ</>
+                      ) : sendingId === a.id ? (
+                        <><span className="h-4 w-4 rounded-full border-2 border-violet-400 border-t-transparent animate-spin" />Илгээж байна…</>
+                      ) : (
+                        <><Send className="h-4 w-4" strokeWidth={1.5} />Имэйлээр авах</>
+                      )}
+                    </button>
                   </div>
                 </motion.div>
               );

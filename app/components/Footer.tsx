@@ -20,7 +20,7 @@ export default function Footer() {
             </div>
             <div className="leading-tight">
               <p className="text-sm font-bold text-slate-900">Personal Color</p>
-              <p className="text-[11px] text-slate-400">AI шинжилгээ</p>
+              {/* <p className="text-[11px] text-slate-400">AI шинжилгээ</p> */}
             </div>
           </Link>
 
@@ -36,7 +36,7 @@ export default function Footer() {
 
           {/* Copy */}
           <p className="text-xs text-slate-300">
-            © {new Date().getFullYear()} Personal Color AI
+            © {new Date().getFullYear()} Personal Color 
           </p>
         </div>
       </div>
