@@ -71,7 +71,7 @@ export async function POST(req: Request) {
       }
 
       await resend.emails.send({
-        from: 'Personal Color AI <onboarding@resend.dev>',
+        from: process.env.RESEND_FROM_EMAIL ?? 'Personal Color AI <noreply@personalcolor.mn>',
         to: email,
         subject: 'Таны хувийн өнгөний оношлогоо бэлэн боллоо!',
         html: `

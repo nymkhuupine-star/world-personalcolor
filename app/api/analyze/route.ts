@@ -70,7 +70,7 @@ export async function POST(req: Request) {
     // Send email
     const resend = new Resend(RESEND_API_KEY);
     const { error: emailError } = await resend.emails.send({
-      from: 'Personal Color AI <onboarding@resend.dev>',
+      from: process.env.RESEND_FROM_EMAIL ?? 'Personal Color AI <onboarding@resend.dev>',
       to: email,
       subject: 'Таны хувийн өнгөний оношлогоо бэлэн боллоо!',
       html: `
