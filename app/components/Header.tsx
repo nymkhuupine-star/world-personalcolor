@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { Menu, Sparkles, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { SignInButton, UserButton, useUser } from '@clerk/nextjs';
+import { SignInButton, SignOutButton, UserButton, useUser } from '@clerk/nextjs';
 
 type NavItem = {
   href: string;
@@ -124,7 +124,7 @@ export default function Header() {
                     <div className="text-sm font-semibold tracking-tight text-slate-900">
                       Personal Color
                     </div>
-                    <div className="text-[11px] font-medium text-slate-500">AI шинжилгээ</div>
+                    {/* <div className="text-[11px] font-medium text-slate-500">AI шинжилгээ</div> */}
                   </div>
                 </div>
                 <button
@@ -176,6 +176,14 @@ export default function Header() {
                     >
                       Шинжилгээ эхлүүлэх
                     </Link>
+                    <SignOutButton redirectUrl="/">
+                      <button
+                        onClick={() => setOpen(false)}
+                        className="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-500 transition-colors hover:bg-slate-50"
+                      >
+                        Гарах
+                      </button>
+                    </SignOutButton>
                   </div>
                 ) : (
                   <div className="mt-3 grid grid-cols-2 gap-2 px-1">
