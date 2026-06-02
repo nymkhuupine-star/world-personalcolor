@@ -160,22 +160,42 @@ export default function Header() {
                   </a>
                 )}
 
-                <div className="mt-3 grid grid-cols-2 gap-2 px-1">
-                  <Link
-                    href="#signin"
-                    onClick={() => setOpen(false)}
-                    className="inline-flex items-center justify-center border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 shadow-sm shadow-slate-200/60 transition-colors hover:bg-slate-50"
-                  >
-                    Нэвтрэх
-                  </Link>
-                  <Link
-                    href="#upload"
-                    onClick={() => setOpen(false)}
-                    className="inline-flex items-center justify-center bg-gradient-to-r from-violet-500 via-purple-500 to-pink-500 px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-violet-200 transition-all hover:scale-[1.03] hover:shadow-violet-300 active:scale-[0.97]"
-                  >
-                    Шинжилгээ эхлүүлэх
-                  </Link>
-                </div>
+                {isSignedIn ? (
+                  <div className="mt-3 flex flex-col gap-2 px-1">
+                    <Link
+                      href="/my-results"
+                      onClick={() => setOpen(false)}
+                      className="inline-flex items-center justify-center rounded-xl bg-violet-50 border border-violet-200 px-4 py-3 text-sm font-semibold text-violet-600 transition-colors hover:bg-violet-100"
+                    >
+                      Миний үр дүн
+                    </Link>
+                    <Link
+                      href="#upload"
+                      onClick={() => setOpen(false)}
+                      className="inline-flex items-center justify-center rounded-xl bg-gradient-to-r from-violet-500 via-purple-500 to-pink-500 px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-violet-200"
+                    >
+                      Шинжилгээ эхлүүлэх
+                    </Link>
+                  </div>
+                ) : (
+                  <div className="mt-3 grid grid-cols-2 gap-2 px-1">
+                    <SignInButton mode="modal">
+                      <button
+                        onClick={() => setOpen(false)}
+                        className="inline-flex items-center justify-center border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 shadow-sm transition-colors hover:bg-slate-50"
+                      >
+                        Нэвтрэх
+                      </button>
+                    </SignInButton>
+                    <Link
+                      href="#upload"
+                      onClick={() => setOpen(false)}
+                      className="inline-flex items-center justify-center bg-gradient-to-r from-violet-500 via-purple-500 to-pink-500 px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-violet-200 transition-all hover:scale-[1.03] active:scale-[0.97]"
+                    >
+                      Шинжилгээ эхлүүлэх
+                    </Link>
+                  </div>
+                )}
               </div>
             </div>
           </div>
