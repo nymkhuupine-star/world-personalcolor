@@ -98,7 +98,7 @@ export default function Header() {
         <button
           type="button"
           onClick={() => setOpen(true)}
-          className="inline-flex items-center justify-center border border-slate-200 bg-white/70 p-2.5 text-slate-700 shadow-sm shadow-slate-200/60 backdrop-blur-sm transition-colors hover:bg-white lg:hidden"
+          className="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white/70 p-2.5 text-slate-700 shadow-sm shadow-slate-200/60 backdrop-blur-sm transition-colors hover:bg-white lg:hidden"
           aria-label="Цэс нээх"
         >
           <Menu className="h-5 w-5" />
@@ -130,7 +130,7 @@ export default function Header() {
                 <button
                   type="button"
                   onClick={() => setOpen(false)}
-                  className="inline-flex items-center justify-center border border-slate-200 bg-white/70 p-2.5 text-slate-700 shadow-sm shadow-slate-200/60 backdrop-blur-sm transition-colors hover:bg-white"
+                  className="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white/70 p-2.5 text-slate-700 shadow-sm shadow-slate-200/60 backdrop-blur-sm transition-colors hover:bg-white"
                   aria-label="Цэс хаах"
                 >
                   <X className="h-5 w-5" />
@@ -143,7 +143,7 @@ export default function Header() {
                     key={item.href}
                     href={item.href}
                     onClick={() => setOpen(false)}
-                    className="flex w-full items-center justify-between px-4 py-3 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-100"
+                    className="flex w-full items-center justify-between rounded-xl px-4 py-3 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-100"
                   >
                     <span>{item.label}</span>
                     <span className="text-slate-400">→</span>
@@ -153,7 +153,7 @@ export default function Header() {
                   <a
                     href="#search-result"
                     onClick={() => setOpen(false)}
-                    className="flex w-full items-center justify-between px-4 py-3 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-100"
+                    className="flex w-full items-center justify-between rounded-xl px-4 py-3 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-100"
                   >
                     <span>Өмнөх үр дүн хайх</span>
                     <span className="text-slate-400">→</span>
@@ -190,7 +190,7 @@ export default function Header() {
                     <SignInButton mode="modal">
                       <button
                         onClick={() => setOpen(false)}
-                        className="inline-flex items-center justify-center border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 shadow-sm transition-colors hover:bg-slate-50"
+                        className="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 shadow-sm transition-colors hover:bg-slate-50"
                       >
                         Нэвтрэх
                       </button>
@@ -198,7 +198,7 @@ export default function Header() {
                     <Link
                       href="#upload"
                       onClick={() => setOpen(false)}
-                      className="inline-flex items-center justify-center bg-gradient-to-r from-violet-500 via-purple-500 to-pink-500 px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-violet-200 transition-all hover:scale-[1.03] active:scale-[0.97]"
+                      className="inline-flex items-center justify-center rounded-xl bg-gradient-to-r from-violet-500 via-purple-500 to-pink-500 px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-violet-200 transition-all hover:scale-[1.03] active:scale-[0.97]"
                     >
                       Шинжилгээ эхлүүлэх
                     </Link>

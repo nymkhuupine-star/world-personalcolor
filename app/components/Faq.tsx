@@ -42,7 +42,7 @@ export default function FAQ() {
             Түгээмэл асуулт
           </span>
           <h2 className="font-serif text-4xl font-bold text-slate-900">
-            Та бодсон <em className="not-italic bg-gradient-to-r from-violet-500 to-pink-500 bg-clip-text text-transparent">зүйлсийнхээ</em> хариулт
+         Таны мэдэхийг хүссэн<em className="not-italic bg-gradient-to-r from-violet-500 to-pink-500 bg-clip-text text-transparent"> бүх зүйл</em> 
           </h2>
         </motion.div>
 
