@@ -18,7 +18,6 @@ export default function Home() {
       {/* <Payment /> */}
       <HowItWorks />
       <SearchResult />
-      
       <FAQ />
       <Footer />
     </>

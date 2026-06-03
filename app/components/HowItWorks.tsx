@@ -57,7 +57,7 @@ const fadeUp = {
 
 export default function HowItWorks() {
   return (
-    <section id="how-it-works" className="py-32 bg-white">
+    <section id="how-it-works" className="py-40 bg-white">
       <div className="mx-auto max-w-6xl px-6">
         {/* Header */}
         <motion.div
@@ -65,18 +65,18 @@ export default function HowItWorks() {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, amount: 0.3 }}
           transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
-          className="mb-14 text-center"
+          className="mb-20 text-center"
         >
-          <p className="mb-3 text-sm font-semibold uppercase tracking-widest text-violet-500">
+          <span className="inline-block mb-4 text-[11px] font-semibold uppercase tracking-[0.18em] text-violet-500">
             Хэрхэн ажилладаг вэ
-          </p>
-          <h2 className="text-2xl font-bold text-slate-900 sm:text-3xl">
-            Хувийн өнгөө тодорхойлох 4 хялбар алхам
+          </span>
+          <h2 className="font-serif text-4xl font-bold text-slate-900">
+            Хувийн өнгөө тодорхойлох <em className="not-italic bg-gradient-to-r from-violet-500 to-pink-500 bg-clip-text text-transparent">4 хялбар алхам</em>
           </h2>
         </motion.div>
 
         {/* Steps */}
-        <div className="relative grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="relative grid gap-14 sm:grid-cols-2 lg:grid-cols-4">
           {/* connector line */}
           <div className="absolute top-10 left-[12%] right-[12%] hidden h-px bg-gradient-to-r from-violet-200 via-fuchsia-200 via-sky-200 to-rose-200 lg:block" />
 
@@ -90,11 +90,11 @@ export default function HowItWorks() {
                 whileInView="visible"
                 viewport={{ once: true, amount: 0.2 }}
                 variants={fadeUp}
-                className="relative flex flex-col items-center text-center"
+                className="relative flex flex-col items-center text-center pt-6"
               >
                 {/* icon */}
                 <div
-                  className={`relative z-10 mb-5 flex h-20 w-20 items-center justify-center rounded-2xl ${step.bg} ring-8 ${step.ring} shadow-sm`}
+                  className={`relative z-10 mb-8 flex h-20 w-20 items-center justify-center rounded-2xl ${step.bg} ring-8 ${step.ring} shadow-sm`}
                 >
                   <div className={`absolute inset-0 rounded-2xl bg-gradient-to-br ${step.color} opacity-10`} />
                   <Icon
@@ -115,8 +115,8 @@ export default function HowItWorks() {
                   </span>
                 </div>
 
-                <h3 className="mb-2 text-base font-bold text-slate-900">{step.title}</h3>
-                <p className="text-sm leading-relaxed text-slate-500">{step.description}</p>
+                <h3 className="mb-3 text-base font-bold text-slate-900">{step.title}</h3>
+                <p className="text-sm leading-relaxed text-slate-500 px-2">{step.description}</p>
               </motion.div>
             );
           })}

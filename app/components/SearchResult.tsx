@@ -191,8 +191,11 @@ export default function SearchResult() {
     <section id="search-result" className="py-20 px-6 bg-pink-100/100 from-slate-50 to-white">
       <div className="mx-auto max-w-lg">
         <div className="text-center mb-10">
-          <h2 className="font-serif text-3xl font-bold text-slate-900 mb-2">
-            Өмнөх үр дүн хайх
+          <span className="inline-block mb-4 text-[11px] font-semibold uppercase tracking-[0.18em] text-violet-500">
+            Өмнөх үр дүн
+          </span>
+          <h2 className="font-serif text-4xl font-bold text-slate-900 mb-2">
+            Өмнөх <em className="not-italic bg-gradient-to-r from-violet-500 to-pink-500 bg-clip-text text-transparent">үр дүн</em> хайх
           </h2>
           <p className="text-slate-500 text-sm">
             Шинжилгээ хийхдээ ашигласан имэйлээрээ үр дүнгээ хайна уу
