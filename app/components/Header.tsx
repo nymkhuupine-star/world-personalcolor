@@ -37,7 +37,7 @@ export default function Header() {
           className="group flex items-center gap-3 pr-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-400/60"
         >
           <div className="relative h-12 w-48">
-            <Image src="/personal1.png" alt="Personal Color logo" fill className="object-contain object-left" />
+            <Image src="/personal1.png" alt="Personal Color logo" fill sizes="192px" className="object-contain object-left" />
           </div>
         </Link>
 
@@ -111,7 +111,7 @@ export default function Header() {
               <div className="flex items-center justify-between px-5 py-4">
                 <div className="flex items-center gap-3">
                   <div className="relative h-12 w-48">
-                    <Image src="/personal1.png" alt="Personal Color logo" fill className="object-contain object-left" />
+                    <Image src="/personal1.png" alt="Personal Color logo" fill sizes="192px" className="object-contain object-left" />
                   </div>
                 </div>
                 <button

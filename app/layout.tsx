@@ -15,8 +15,13 @@ const playfair = Playfair_Display({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://personalcolor.mn"),
   title: "Personal Color AI",
   description: "AI-д суурилсан хувийн өнгөний шинжилгээ — улирлын палитраа олж, илүү зөв сонголт хий.",
+  icons: {
+    icon: "/personal (6).png",
+    apple: "/personal (6).png",
+  },
   openGraph: {
     title: "Personal Color AI",
     description: "AI-д суурилсан хувийн өнгөний шинжилгээ — улирлын палитраа олж, илүү зөв сонголт хий.",
