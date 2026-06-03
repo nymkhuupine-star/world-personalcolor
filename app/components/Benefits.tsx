@@ -31,10 +31,10 @@ const benefits = [
 ] as const;
 
 const fadeUp = {
-  hidden: { opacity: 0, y: 24 },
+  hidden: { opacity: 0, y: 48 },
   visible: (i: number) => ({
     opacity: 1, y: 0,
-    transition: { delay: i * 0.12, duration: 0.6, ease: 'easeOut' as const },
+    transition: { delay: i * 0.14, duration: 0.7, ease: [0.22, 1, 0.36, 1] as const },
   }),
 };
 
@@ -48,8 +48,8 @@ export default function Benefits() {
 
       <div className="relative mx-auto max-w-7xl px-6">
         <motion.div
-          initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }} transition={{ duration: 0.6 }}
+          initial={{ opacity: 0, y: 32 }} whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, amount: 0.3 }} transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
           className="mx-auto max-w-2xl text-center mb-16"
         >
           <span className="inline-block mb-4 text-[11px] font-semibold uppercase tracking-[0.18em] text-violet-500">
@@ -66,7 +66,7 @@ export default function Benefits() {
           {benefits.map((item, i) => (
             <motion.div
               key={i}
-              custom={i} initial="hidden" whileInView="visible" viewport={{ once: true }}
+              custom={i} initial="hidden" whileInView="visible" viewport={{ once: true, amount: 0.2 }}
               variants={fadeUp}
               className="group relative rounded-3xl border border-slate-100 bg-white p-8 shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-300"
             >

@@ -47,11 +47,11 @@ const steps = [
 ];
 
 const fadeUp = {
-  hidden: { opacity: 0, y: 28 },
+  hidden: { opacity: 0, y: 52 },
   visible: (i: number) => ({
     opacity: 1,
     y: 0,
-    transition: { duration: 0.5, delay: i * 0.15, ease: 'easeOut' as const },
+    transition: { duration: 0.7, delay: i * 0.15, ease: [0.22, 1, 0.36, 1] as const },
   }),
 };
 
@@ -61,10 +61,10 @@ export default function HowItWorks() {
       <div className="mx-auto max-w-6xl px-6">
         {/* Header */}
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: 32 }}
           whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.5 }}
+          viewport={{ once: true, amount: 0.3 }}
+          transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
           className="mb-14 text-center"
         >
           <p className="mb-3 text-sm font-semibold uppercase tracking-widest text-violet-500">
@@ -88,7 +88,7 @@ export default function HowItWorks() {
                 custom={i}
                 initial="hidden"
                 whileInView="visible"
-                viewport={{ once: true }}
+                viewport={{ once: true, amount: 0.2 }}
                 variants={fadeUp}
                 className="relative flex flex-col items-center text-center"
               >
