@@ -1,42 +1,53 @@
-import { Sparkles } from 'lucide-react';
 import Link from 'next/link';
+import Image from 'next/image';
 
-const links = [
-  { label: 'Хэрхэн ажилладаг вэ', href: '#how-it-works' },
-  { label: 'Үнэ', href: '#pricing' },
-  { label: 'Түгээмэл асуулт', href: '#faq' },
+const policyLinks = [
+  { label: 'Үйлчилгээний нөхцөл', href: '/terms' },
+  { label: 'Төлбөрийн нөхцөл', href: '/payment-policy' },
+  { label: 'Буцаалтын нөхцөл', href: '/refund-policy' },
+  { label: 'Нууцлалын бодлого', href: '/privacy-policy' },
 ];
 
 export default function Footer() {
   return (
-    <footer className="border-t border-slate-100 bg-white">
-      <div className="mx-auto max-w-7xl px-6 py-12">
-        <div className="flex flex-col items-center gap-8 md:flex-row md:justify-between">
-          {/* Logo */}
-          <Link href="/" className="flex items-center gap-3">
-            <div className="relative flex h-9 w-9 items-center justify-center overflow-hidden rounded-xl bg-slate-900 shadow-sm">
-              <div className="absolute inset-0 bg-gradient-to-br from-violet-600 via-fuchsia-500 to-rose-400 opacity-90" />
-              <Sparkles className="relative h-4 w-4 text-white" strokeWidth={1.5} />
-            </div>
-            <div className="leading-tight">
-              <p className="text-sm font-bold text-slate-900">Personal Color</p>
-              {/* <p className="text-[11px] text-slate-400">AI шинжилгээ</p> */}
-            </div>
-          </Link>
-
-          {/* Nav */}
-          <nav className="flex items-center gap-6">
-            {links.map((l) => (
-              <a key={l.href} href={l.href}
+    <footer className="border-t border-pink-100 bg-pink-100">
+      <div className="mx-auto max-w-7xl px-6 py-10">
+        {/* Mobile */}
+        <div className="flex flex-col items-center gap-4 md:hidden">
+          <nav className="grid grid-cols-2 gap-x-8 gap-y-2 text-center">
+            {policyLinks.map((l) => (
+              <Link key={l.href} href={l.href}
                 className="text-xs text-slate-400 hover:text-slate-700 transition-colors">
                 {l.label}
-              </a>
+              </Link>
             ))}
           </nav>
-
-          {/* Copy */}
           <p className="text-xs text-slate-300">
-            © {new Date().getFullYear()} Personal Color 
+            © {new Date().getFullYear()} Personal Color
+          </p>
+        </div>
+
+        {/* Desktop */}
+        <div className="hidden md:flex md:items-center md:justify-between">
+          <Link href="/" className="flex items-center">
+            <Image
+              src="/personal1.png"
+              alt="Personal Color logo"
+              width={200}
+              height={75}
+              className="h-14 w-auto"
+            />
+          </Link>
+          <nav className="flex flex-wrap justify-center items-center gap-6">
+            {policyLinks.map((l) => (
+              <Link key={l.href} href={l.href}
+                className="text-xs text-slate-400 hover:text-slate-700 transition-colors">
+                {l.label}
+              </Link>
+            ))}
+          </nav>
+          <p className="text-xs text-slate-300">
+            © {new Date().getFullYear()} Personal Color
           </p>
         </div>
       </div>

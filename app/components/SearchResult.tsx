@@ -188,7 +188,7 @@ export default function SearchResult() {
   if (isSignedIn) return null;
 
   return (
-    <section id="search-result" className="py-20 px-6 bg-gradient-to-b from-slate-50 to-white">
+    <section id="search-result" className="py-20 px-6 bg-pink-100/100 from-slate-50 to-white">
       <div className="mx-auto max-w-lg">
         <div className="text-center mb-10">
           <h2 className="font-serif text-3xl font-bold text-slate-900 mb-2">

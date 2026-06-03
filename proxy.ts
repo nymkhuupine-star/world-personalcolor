@@ -13,6 +13,10 @@ const isPublicRoute = createRouteMatcher([
   '/how-it-works(.*)',
   '/pricing(.*)',
   '/faq(.*)',
+  '/terms',
+  '/payment-policy',
+  '/refund-policy',
+  '/privacy-policy',
 ]);
 
 // /api/analyze endpoint-д энгийн IP-д суурилсан rate limit

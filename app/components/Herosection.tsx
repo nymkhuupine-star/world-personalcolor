@@ -51,14 +51,12 @@ export default function HeroSection() {
             initial="hidden"
             animate="visible"
             variants={fadeUp}
-            className="font-serif text-4xl font-bold leading-tight text-slate-900 lg:text-5xl xl:text-6xl"
+            className="font-serif text-3xl font-bold leading-tight text-slate-900 lg:text-4xl xl:text-5xl"
           >
-            Таны байгалийн{' '}
+            Таны төрөлхийн гоо үзэсгэлэнг тодотгох{' '}
             <em className="not-italic bg-gradient-to-r from-violet-500 to-pink-500 bg-clip-text text-transparent">
-              гоо үзэсгэлэнг
+              хувийн өнгө
             </em>
-            <br />
-            тодотгоно
 
           </motion.h1>
 
@@ -77,8 +75,7 @@ export default function HeroSection() {
             variants={fadeUp}
             className="max-w-sm text-[17px] font-medium leading-8 text-slate-700"
           >
-            Таны зурагт үндэслэн арьс, үс, нүдний өнгөний зохицлыг харж,
-            өөрт тань тохирох өнгөнүүдийг санал болгоно.
+            Таны гэрэл зурагт дүн шинжилгээ хийж, арьс, үс, нүдний өнгөнд тань хамгийн төгс зохицох хувийн өнгийг тодорхойлно.
           </motion.p>
 
           <motion.div

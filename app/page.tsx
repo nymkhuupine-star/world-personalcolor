@@ -4,6 +4,7 @@ import Header from './components/Header';
 import HeroSection from './components/Herosection';
 import Payment from './components/Payment';
 import SearchResult from './components/SearchResult';
+import HowItWorks from './components/HowItWorks';
 import Testimonials from './components/Testimonials';
 import Footer from './components/Footer';
 
@@ -15,7 +16,9 @@ export default function Home() {
       <Benefits />
       <Testimonials />
       {/* <Payment /> */}
+      <HowItWorks />
       <SearchResult />
+      
       <FAQ />
       <Footer />
     </>

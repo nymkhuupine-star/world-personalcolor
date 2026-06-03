@@ -1,7 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import { Menu, Sparkles, X } from 'lucide-react';
+import Image from 'next/image';
+import { Menu, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { SignInButton, SignOutButton, UserButton, useUser } from '@clerk/nextjs';
 
@@ -30,20 +31,13 @@ export default function Header() {
 
   return (
    <header className="sticky top-0 z-50  px-4 pt-4 lg:px-8 ">
-      <div className="relative mx-auto flex w-full max-w-7xl items-center justify-between rounded-4xl border border-white/70 bg-white/70 px-6 py-4 shadow-lg shadow-slate-200/40 backdrop-blur-xl">
+      <div className="relative mx-auto flex w-full max-w-7xl items-center justify-between rounded-4xl border border-white/70 bg-white/70 px-6 py-2 shadow-lg shadow-slate-200/40 backdrop-blur-xl">
         <Link
           href="/"
           className="group flex items-center gap-3 pr-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-400/60"
         >
-          <div className="relative grid h-10 w-10 place-items-center overflow-hidden rounded-lg bg-slate-900 text-white shadow-sm shadow-slate-200">
-            <div className="absolute inset-0 bg-gradient-to-br from-violet-600 via-fuchsia-500 to-rose-400 opacity-90" />
-            <Sparkles className="relative h-5 w-5" />
-          </div>
-          <div className="leading-tight">
-            <div className="text-sm font-semibold tracking-tight text-slate-900">
-              Personal Color
-            </div>
-            
+          <div className="relative h-12 w-48">
+            <Image src="/personal1.png" alt="Personal Color logo" fill className="object-contain object-left" />
           </div>
         </Link>
 
@@ -116,15 +110,8 @@ export default function Header() {
             <div className="overflow-hidden rounded-2xl border border-white/70 bg-white/85 shadow-2xl shadow-slate-200/70 backdrop-blur-xl">
               <div className="flex items-center justify-between px-5 py-4">
                 <div className="flex items-center gap-3">
-                  <div className="relative grid h-10 w-10 place-items-center overflow-hidden rounded-lg bg-slate-900 text-white">
-                    <div className="absolute h-10 w-10 bg-gradient-to-br from-violet-600 via-fuchsia-500 to-rose-400 opacity-90" />
-                    <Sparkles className="relative h-5 w-5" />
-                  </div>
-                  <div className="leading-tight">
-                    <div className="text-sm font-semibold tracking-tight text-slate-900">
-                      Personal Color
-                    </div>
-                    {/* <div className="text-[11px] font-medium text-slate-500">AI шинжилгээ</div> */}
+                  <div className="relative h-12 w-48">
+                    <Image src="/personal1.png" alt="Personal Color logo" fill className="object-contain object-left" />
                   </div>
                 </div>
                 <button

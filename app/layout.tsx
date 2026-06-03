@@ -17,6 +17,17 @@ const playfair = Playfair_Display({
 export const metadata: Metadata = {
   title: "Personal Color AI",
   description: "AI-д суурилсан хувийн өнгөний шинжилгээ — улирлын палитраа олж, илүү зөв сонголт хий.",
+  openGraph: {
+    title: "Personal Color AI",
+    description: "AI-д суурилсан хувийн өнгөний шинжилгээ — улирлын палитраа олж, илүү зөв сонголт хий.",
+    images: [{ url: "/personal%20(6).png", width: 1080, height: 1080 }],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Personal Color AI",
+    description: "AI-д суурилсан хувийн өнгөний шинжилгээ — улирлын палитраа олж, илүү зөв сонголт хий.",
+    images: ["/personal%20(6).png"],
+  },
 };
 
 export default function RootLayout({

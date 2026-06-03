@@ -7,7 +7,7 @@ const benefits = [
   {
     icon: Sparkles,
     title: 'Өөртөө итгэлтэй',
-    description: 'Өөрийн арьсны өнгөнд төгс зохицох өнгийг сонгон хувцасласнаар царай тань илүү гэрэлтэж, хаана ч өөртөө итгэлтэй харагдах болно.',
+    description: 'Өөртөө төгс зохицох өнгөөр хувцасласнаар таны царай улам гэрэлтэж, алхам тутамдаа өөртөө итгэлтэй, дур булаам төрхийг бүтээнэ.',
     gradient: 'from-violet-500 to-pink-500',
     bg: 'bg-violet-50',
     text: 'text-violet-600',
@@ -15,7 +15,7 @@ const benefits = [
   {
     icon: ShoppingBag,
     title: 'Цаг хэмнэнэ',
-    description: 'Уг үйлчилгээ нь зөвхөн арьс төдийгүй үс, нүдний өнгийг цогцоор нь шинжилдэг тул үр дүн нь өндөр нарийвчлалтай, оновчтой гардаг.',
+    description: 'Дэлгүүр хэсэж, өөрт зохихгүй хувцас сонгож цаг алдахаа болино. Арьс, үс, нүдний өнгийг цогцоор нь шинжилж, таныд тохирох өнгийг хэдхэн секундэд тодорхойлно.',
     gradient: 'from-rose-400 to-orange-400',
     bg: 'bg-rose-50',
     text: 'text-rose-600',
@@ -23,7 +23,7 @@ const benefits = [
   {
     icon: Wallet,
     title: 'Мөнгөө хэмнэнэ',
-    description: 'Өөрт тохирохгүй өнгийн хувцас, гоо сайхны бүтээгдэхүүнд илүү мөнгө зарцуулахын оронд таны өнгөнд зохих сонголтоо хийж, цөөн хэрнээ оновчтой худалдан авалт хийхэд тусална.',
+    description: 'Та зохихгүй хувцас, гоо сайхны бүтээгдэхүүн худалдан авч санхүүгийн алдагдал хүлээхээ болино. Танд хамгийн сайн зохих өнгөнүүдийг сонгосноор илүүдэл зардал гаргахгүй, ухаалаг худалдан авалт хийхэд тусална.',
     gradient: 'from-amber-400 to-yellow-400',
     bg: 'bg-amber-50',
     text: 'text-amber-600',
@@ -56,8 +56,10 @@ export default function Benefits() {
             Яагаад хэрэгтэй вэ
           </span>
           <h2 className="font-serif text-4xl font-bold text-slate-900 leading-tight">
-            Таны амьдралд хэрхэн <em className="not-italic bg-gradient-to-r from-violet-500 to-pink-500 bg-clip-text text-transparent">өөрчлөлт</em> авчрах вэ
+            Энэхүү оношилгоо таны амьдралыг хэрхэн<em className="not-italic bg-gradient-to-r from-violet-500 to-pink-500 bg-clip-text text-transparent"> өөрчлөх </em> вэ?
           </h2>
+
+             
         </motion.div>
 
         <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
