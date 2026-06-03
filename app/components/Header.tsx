@@ -99,12 +99,12 @@ export default function Header() {
                   Нэвтрэх
                 </button>
               </SignInButton>
-              <Link
-                href="#upload"
+              <button
+                onClick={() => handleNav('#upload')}
                 className="rounded-full bg-gradient-to-r from-violet-500 via-purple-500 to-pink-500 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-violet-200 transition-all hover:scale-[1.04] hover:shadow-violet-300 focus:outline-none active:scale-[0.97]"
               >
                 Шинжилгээ эхлүүлэх
-              </Link>
+              </button>
             </>
           )}
         </div>
@@ -177,13 +177,12 @@ export default function Header() {
                     >
                       Миний үр дүн
                     </Link>
-                    <Link
-                      href="#upload"
-                      onClick={() => setOpen(false)}
+                    <button
+                      onClick={() => { setOpen(false); handleNav('#upload'); }}
                       className="inline-flex items-center justify-center rounded-xl bg-gradient-to-r from-violet-500 via-purple-500 to-pink-500 px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-violet-200"
                     >
                       Шинжилгээ эхлүүлэх
-                    </Link>
+                    </button>
                     <SignOutButton redirectUrl="/">
                       <button
                         onClick={() => setOpen(false)}
@@ -203,13 +202,12 @@ export default function Header() {
                         Нэвтрэх
                       </button>
                     </SignInButton>
-                    <Link
-                      href="#upload"
-                      onClick={() => setOpen(false)}
+                    <button
+                      onClick={() => { setOpen(false); handleNav('#upload'); }}
                       className="inline-flex items-center justify-center text-center rounded-xl bg-gradient-to-r from-violet-500 via-purple-500 to-pink-500 px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-violet-200 transition-all hover:scale-[1.03] active:scale-[0.97]"
                     >
                       Шинжилгээ эхлүүлэх
-                    </Link>
+                    </button>
                   </div>
                 )}
               </div>
