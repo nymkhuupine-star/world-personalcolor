@@ -5,6 +5,9 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { createClient } from '@supabase/supabase-js';
 import {
+  Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis,
+} from 'recharts';
+import {
   LayoutDashboard,
   Users,
   CreditCard,
@@ -164,10 +167,30 @@ export default function Dashboard() {
     setPdfUploading(null);
   };
 
-  const today       = new Date().toDateString();
-  const todayCount  = portraits.filter(p => new Date(p.created_at).toDateString() === today).length;
-  const paidOrders  = orders.filter(o => o.paid);
+  const today        = new Date().toDateString();
+  const todayCount   = portraits.filter(p => new Date(p.created_at).toDateString() === today).length;
+  const paidOrders   = orders.filter(o => o.paid);
   const totalRevenue = paidOrders.reduce((sum, o) => sum + (o.amount ?? 0), 0);
+
+  // Build daily revenue chart data for current month
+  const now = new Date();
+  const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+  const thisMonthRevenue = paidOrders
+    .filter(o => o.paid_at && new Date(o.paid_at).getMonth() === now.getMonth() && new Date(o.paid_at).getFullYear() === now.getFullYear())
+    .reduce((sum, o) => sum + (o.amount ?? 0), 0);
+
+  const chartData = Array.from({ length: daysInMonth }, (_, i) => {
+    const day = i + 1;
+    const label = String(day).padStart(2, '0');
+    const revenue = paidOrders
+      .filter(o => {
+        if (!o.paid_at) return false;
+        const d = new Date(o.paid_at);
+        return d.getDate() === day && d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+      })
+      .reduce((sum, o) => sum + (o.amount ?? 0), 0);
+    return { day: label, revenue };
+  });
 
   return (
     <div className="flex min-h-screen bg-slate-50">
@@ -238,38 +261,138 @@ export default function Dashboard() {
           {/* ── OVERVIEW ── */}
           {section === 'overview' && (
             <>
+              {/* Stat cards */}
               <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
                 {[
-                  { label: 'Нийт шинжилгээ', value: portraits.length, icon: ImageIcon, color: 'text-violet-500', bg: 'bg-violet-50' },
-                  { label: 'Өнөөдөр', value: todayCount, icon: TrendingUp, color: 'text-emerald-500', bg: 'bg-emerald-50' },
-                  { label: 'Төлбөр төлсөн', value: paidOrders.length, icon: CreditCard, color: 'text-blue-500', bg: 'bg-blue-50' },
-                  { label: 'Нийт орлого', value: `${totalRevenue.toLocaleString()}₮`, icon: Clock, color: 'text-rose-500', bg: 'bg-rose-50' },
-                ].map(({ label, value, icon: Icon, color, bg }) => (
-                  <div key={label} className="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm">
+                  {
+                    label: 'Нийт орлого',
+                    value: `${totalRevenue.toLocaleString()}₮`,
+                    sub: 'Нийт төлөгдсөн дүн',
+                    icon: CreditCard,
+                    color: 'text-emerald-600',
+                    bg: 'bg-emerald-50',
+                    border: 'border-emerald-100',
+                  },
+                  {
+                    label: 'Энэ сарын орлого',
+                    value: `${thisMonthRevenue.toLocaleString()}₮`,
+                    sub: 'Одоогийн сарын дүн',
+                    icon: TrendingUp,
+                    color: 'text-blue-600',
+                    bg: 'bg-blue-50',
+                    border: 'border-blue-100',
+                  },
+                  {
+                    label: 'Төлөгдсөн захиалга',
+                    value: paidOrders.length,
+                    sub: 'Амжилттай баталгаажсан',
+                    icon: CheckCircle,
+                    color: 'text-violet-600',
+                    bg: 'bg-violet-50',
+                    border: 'border-violet-100',
+                  },
+                  {
+                    label: 'Хүлээгдэж буй',
+                    value: orders.filter(o => !o.paid).length,
+                    sub: 'Төлбөр хийгдээгүй',
+                    icon: Clock,
+                    color: 'text-amber-600',
+                    bg: 'bg-amber-50',
+                    border: 'border-amber-100',
+                  },
+                ].map(({ label, value, sub, icon: Icon, color, bg, border }) => (
+                  <div key={label} className={`rounded-2xl border ${border} bg-white p-5 shadow-sm`}>
                     <div className={`mb-3 inline-flex h-10 w-10 items-center justify-center rounded-xl ${bg}`}>
                       <Icon className={`h-5 w-5 ${color}`} strokeWidth={1.5} />
                     </div>
-                    <p className="text-2xl font-bold text-slate-900">{value}</p>
-                    <p className="mt-0.5 text-xs text-slate-500">{label}</p>
+                    <p className={`text-2xl font-bold ${color}`}>{value}</p>
+                    <p className="mt-0.5 text-xs font-semibold text-slate-600">{label}</p>
+                    <p className="text-[11px] text-slate-400">{sub}</p>
                   </div>
                 ))}
               </div>
 
-              {/* Recent 5 */}
+              {/* Revenue chart */}
               <div className="rounded-2xl border border-slate-100 bg-white shadow-sm overflow-hidden">
                 <div className="border-b border-slate-100 px-6 py-4">
-                  <h2 className="text-sm font-bold text-slate-900">Сүүлийн шинжилгээнүүд</h2>
+                  <h2 className="text-sm font-bold text-slate-900">Нийт орлого</h2>
+                  <p className="text-xs text-slate-400 mt-0.5">
+                    {now.getFullYear()} оны {now.getMonth() + 1}-р сарын өдөр тутмын орлого
+                  </p>
+                </div>
+                <div className="px-2 py-6">
+                  {loading ? (
+                    <div className="flex items-center justify-center h-48 text-slate-300 text-sm">
+                      <Loader2 className="h-5 w-5 animate-spin mr-2" /> Уншиж байна...
+                    </div>
+                  ) : (
+                    <ResponsiveContainer width="100%" height={220}>
+                      <AreaChart data={chartData} margin={{ top: 4, right: 16, left: 8, bottom: 0 }}>
+                        <defs>
+                          <linearGradient id="revenueGrad" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#7c3aed" stopOpacity={0.18} />
+                            <stop offset="95%" stopColor="#7c3aed" stopOpacity={0} />
+                          </linearGradient>
+                        </defs>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
+                        <XAxis
+                          dataKey="day"
+                          tick={{ fontSize: 11, fill: '#94a3b8' }}
+                          tickLine={false}
+                          axisLine={false}
+                        />
+                        <YAxis
+                          tick={{ fontSize: 11, fill: '#94a3b8' }}
+                          tickLine={false}
+                          axisLine={false}
+                          tickFormatter={v => v === 0 ? '0' : `${(v / 1000).toFixed(0)}к`}
+                        />
+                        <Tooltip
+                          formatter={(v) => [`${Number(v).toLocaleString()}₮`, 'Орлого']}
+                          labelFormatter={l => `${now.getMonth() + 1}/${l}`}
+                          contentStyle={{ borderRadius: 12, border: '1px solid #e2e8f0', fontSize: 12 }}
+                        />
+                        <Area
+                          type="monotone"
+                          dataKey="revenue"
+                          stroke="#7c3aed"
+                          strokeWidth={2.5}
+                          fill="url(#revenueGrad)"
+                          dot={false}
+                          activeDot={{ r: 5, fill: '#7c3aed', strokeWidth: 0 }}
+                        />
+                      </AreaChart>
+                    </ResponsiveContainer>
+                  )}
+                </div>
+              </div>
+
+              {/* Recent paid orders */}
+              <div className="rounded-2xl border border-slate-100 bg-white shadow-sm overflow-hidden">
+                <div className="border-b border-slate-100 px-6 py-4">
+                  <h2 className="text-sm font-bold text-slate-900">Сүүлийн төлбөрүүд</h2>
                 </div>
                 <div className="divide-y divide-slate-50">
-                  {portraits.slice(0, 5).map((p, i) => (
-                    <div key={p.name} className="flex items-center justify-between px-6 py-3">
+                  {paidOrders.slice(0, 6).map((o, i) => (
+                    <div key={o.id} className="flex items-center justify-between px-6 py-3">
                       <div className="flex items-center gap-3">
                         <span className="text-xs font-mono text-slate-300">{i + 1}</span>
-                        <span className="text-sm text-slate-700 font-medium truncate max-w-[260px]">{p.name}</span>
+                        <div>
+                          <p className="text-sm font-medium text-slate-700">{o.email}</p>
+                          <p className="text-xs text-slate-400">{o.analysis_result?.seasonName ?? '—'}</p>
+                        </div>
                       </div>
-                      <span className="text-xs text-slate-400">{formatDate(p.created_at)}</span>
+                      <div className="text-right">
+                        <p className="text-sm font-bold text-emerald-600">{(o.amount ?? 0).toLocaleString()}₮</p>
+                        <p className="text-xs text-slate-400">{o.paid_at ? formatDate(o.paid_at) : '—'}</p>
+                      </div>
                     </div>
                   ))}
+                  {paidOrders.length === 0 && (
+                    <div className="flex items-center justify-center py-10 text-slate-300 text-sm">
+                      Одоохондоо төлбөр байхгүй
+                    </div>
+                  )}
                 </div>
               </div>
             </>
