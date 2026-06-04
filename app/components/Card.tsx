@@ -4,11 +4,12 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { useEffect, useRef, useState, type ChangeEvent, type DragEvent } from 'react';
 import Image from 'next/image';
 import { useUser } from '@clerk/nextjs';
-import { CreditCard, Droplets, Eye, Lock, Sparkles, Sun, Upload, X } from 'lucide-react';
+import { CreditCard, Droplets, Eye, Lock, Sparkles, Sun, Upload, X, ExternalLink } from 'lucide-react';
 import supabase from '@/utils/supabase';
 import Questionnaire from './Questionnaire';
 import type { QuestionnaireAnswers } from '@/lib/personal-color/questionnaire';
 import { isQuestionnaireComplete } from '@/lib/personal-color/questionnaire';
+import { isInAppBrowser } from '@/lib/isInAppBrowser';
 
 const MAX_SIZE = 1024;
 const JPEG_QUALITY = 0.85;
@@ -219,10 +220,14 @@ export default function Card() {
           amount:         10,
         }),
       });
-      const data = await res.json().catch(() => ({} as { followUpLink?: string; error?: string }));
+      const data = await res.json().catch(() => ({} as { followUpLink?: string; orderId?: string; error?: string }));
       if (!res.ok || !data.followUpLink) {
         setSubmitError(data.error ?? 'Төлбөр үүсгэхэд алдаа гарлаа. Дахин оролдоно уу.');
         return;
+      }
+      // Save orderId so page-load check can verify payment if success page is missed
+      if (data.orderId) {
+        try { localStorage.setItem('pendingOrderId', data.orderId); } catch {}
       }
       window.location.href = data.followUpLink;
     } catch (err) {
@@ -405,6 +410,33 @@ export default function Card() {
             <div className="absolute inset-0 bg-gradient-to-r from-violet-600 via-purple-600 to-pink-600 opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
           </button>
         )}
+
+        {/* In-app browser warning */}
+        <AnimatePresence>
+          {readyToPay && isInAppBrowser() && (
+            <motion.div
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0 }}
+              className="rounded-2xl border border-amber-200 bg-amber-50 px-5 py-4 space-y-2"
+            >
+              <p className="text-sm font-semibold text-amber-800">Анхааруулга</p>
+              <p className="text-xs leading-relaxed text-amber-700">
+                Messenger браузер дотроос төлбөр хийхэд имэйл хүрэхгүй байж болно.
+                Илүү найдвартай ажиллахын тулд Safari эсвэл Chrome браузераар нэмж нэвтэрнэ үү.
+              </p>
+              <a
+                href={typeof window !== 'undefined' ? window.location.href : '/'}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 text-xs font-semibold text-amber-700 underline"
+              >
+                <ExternalLink className="h-3.5 w-3.5" strokeWidth={1.5} />
+                Safari/Chrome-ээр нэмж нэвтэрх
+              </a>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* Payment gate — шинжилгээ дууссаны дараа л харагдана, result харуулахгүй */}
         <AnimatePresence>

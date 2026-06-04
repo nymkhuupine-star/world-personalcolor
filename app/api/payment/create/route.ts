@@ -64,7 +64,7 @@ export async function POST(req: Request) {
       return Response.json({ error: 'Захиалга шинэчлэхэд алдаа гарлаа.' }, { status: 500 });
     }
 
-    return Response.json({ followUpLink });
+    return Response.json({ followUpLink, orderId: transactionId });
   } catch (err) {
     console.error('payment/create error:', err);
     return Response.json({ error: 'Дотоод алдаа гарлаа.' }, { status: 500 });
