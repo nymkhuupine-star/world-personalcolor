@@ -49,6 +49,18 @@ type Analysis = {
   created_at: string;
 };
 
+type Order = {
+  id: string;
+  email: string;
+  invoice_id: string | null;
+  transaction_id: string | null;
+  amount: number;
+  paid: boolean;
+  paid_at: string | null;
+  created_at: string;
+  analysis_result: { seasonName?: string } | null;
+};
+
 type PdfStatuses = Record<string, boolean>;
 
 const NAV = [
@@ -69,6 +81,7 @@ export default function Dashboard() {
   const [section, setSection] = useState<Section>('overview');
   const [portraits, setPortraits] = useState<Portrait[]>([]);
   const [analyses, setAnalyses] = useState<Analysis[]>([]);
+  const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [pdfStatuses, setPdfStatuses] = useState<PdfStatuses>({});
   const [pdfUploading, setPdfUploading] = useState<string | null>(null);
@@ -80,15 +93,17 @@ export default function Dashboard() {
 
   const fetchPortraits = useCallback(async () => {
     setLoading(true);
-    const [storageRes, dbRes] = await Promise.all([
+    const [storageRes, dbRes, ordersRes] = await Promise.all([
       supabase.storage.from('portraits').list('', {
         limit: 200,
         sortBy: { column: 'created_at', order: 'desc' },
       }),
       supabase.from('analyses').select('*').order('created_at', { ascending: false }).limit(200),
+      supabase.from('analysis_orders').select('*').order('created_at', { ascending: false }).limit(200),
     ]);
     if (!storageRes.error && storageRes.data) setPortraits(storageRes.data as Portrait[]);
     if (!dbRes.error && dbRes.data) setAnalyses(dbRes.data as Analysis[]);
+    if (!ordersRes.error && ordersRes.data) setOrders(ordersRes.data as Order[]);
     setLoading(false);
   }, []);
 
@@ -149,8 +164,10 @@ export default function Dashboard() {
     setPdfUploading(null);
   };
 
-  const today = new Date().toDateString();
-  const todayCount = portraits.filter(p => new Date(p.created_at).toDateString() === today).length;
+  const today       = new Date().toDateString();
+  const todayCount  = portraits.filter(p => new Date(p.created_at).toDateString() === today).length;
+  const paidOrders  = orders.filter(o => o.paid);
+  const totalRevenue = paidOrders.reduce((sum, o) => sum + (o.amount ?? 0), 0);
 
   return (
     <div className="flex min-h-screen bg-slate-50">
@@ -225,13 +242,8 @@ export default function Dashboard() {
                 {[
                   { label: 'Нийт шинжилгээ', value: portraits.length, icon: ImageIcon, color: 'text-violet-500', bg: 'bg-violet-50' },
                   { label: 'Өнөөдөр', value: todayCount, icon: TrendingUp, color: 'text-emerald-500', bg: 'bg-emerald-50' },
-                  { label: 'Нийт хэрэглэгч', value: portraits.length, icon: Users, color: 'text-blue-500', bg: 'bg-blue-50' },
-                  { label: 'Сүүлийн 7 хоног', value: portraits.filter(p => {
-                    const d = new Date(p.created_at);
-                    const week = new Date();
-                    week.setDate(week.getDate() - 7);
-                    return d >= week;
-                  }).length, icon: Clock, color: 'text-rose-500', bg: 'bg-rose-50' },
+                  { label: 'Төлбөр төлсөн', value: paidOrders.length, icon: CreditCard, color: 'text-blue-500', bg: 'bg-blue-50' },
+                  { label: 'Нийт орлого', value: `${totalRevenue.toLocaleString()}₮`, icon: Clock, color: 'text-rose-500', bg: 'bg-rose-50' },
                 ].map(({ label, value, icon: Icon, color, bg }) => (
                   <div key={label} className="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm">
                     <div className={`mb-3 inline-flex h-10 w-10 items-center justify-center rounded-xl ${bg}`}>
@@ -338,40 +350,105 @@ export default function Dashboard() {
           {/* ── PAYMENTS ── */}
           {section === 'payments' && (
             <div className="space-y-4">
+              {/* Summary cards */}
               <div className="grid grid-cols-3 gap-4">
                 {[
-                  { label: 'Нийт орлого', value: '₮0', note: 'Төлбөрийн систем холбогдоогүй' },
-                  { label: 'Төлбөр төлсөн', value: '0', note: 'Хэрэглэгч' },
-                  { label: 'Үнэгүй ашигласан', value: String(portraits.length), note: 'Хэрэглэгч' },
-                ].map(({ label, value, note }) => (
+                  {
+                    label: 'Нийт орлого',
+                    value: `${totalRevenue.toLocaleString()}₮`,
+                    note: `${paidOrders.length} амжилттай захиалга`,
+                    color: 'text-emerald-600',
+                    bg: 'bg-emerald-50',
+                  },
+                  {
+                    label: 'Төлбөр төлсөн',
+                    value: String(paidOrders.length),
+                    note: 'Хэрэглэгч',
+                    color: 'text-blue-600',
+                    bg: 'bg-blue-50',
+                  },
+                  {
+                    label: 'Дуусаагүй захиалга',
+                    value: String(orders.filter(o => !o.paid).length),
+                    note: 'Төлбөр хийгдээгүй',
+                    color: 'text-slate-500',
+                    bg: 'bg-slate-50',
+                  },
+                ].map(({ label, value, note, color, bg }) => (
                   <div key={label} className="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm">
-                    <p className="text-xs text-slate-400 mb-1">{label}</p>
-                    <p className="text-3xl font-bold text-slate-900">{value}</p>
-                    <p className="text-xs text-slate-400 mt-1">{note}</p>
+                    <div className={`mb-3 inline-flex h-9 w-9 items-center justify-center rounded-xl ${bg}`}>
+                      <CreditCard className={`h-4.5 w-4.5 ${color}`} strokeWidth={1.5} />
+                    </div>
+                    <p className={`text-3xl font-bold ${color}`}>{value}</p>
+                    <p className="text-xs text-slate-400 mt-1">{label}</p>
+                    <p className="text-[11px] text-slate-300 mt-0.5">{note}</p>
                   </div>
                 ))}
               </div>
 
+              {/* Orders table */}
               <div className="rounded-2xl border border-slate-100 bg-white shadow-sm overflow-hidden">
-                <div className="border-b border-slate-100 px-6 py-4">
-                  <h2 className="text-sm font-bold text-slate-900">Төлбөрийн бүртгэл</h2>
+                <div className="border-b border-slate-100 px-6 py-4 flex items-center justify-between">
+                  <h2 className="text-sm font-bold text-slate-900">Захиалгын бүртгэл</h2>
+                  <span className="rounded-full bg-violet-50 px-3 py-1 text-xs font-semibold text-violet-600">
+                    {orders.length} нийт
+                  </span>
                 </div>
-                <div className="flex flex-col items-center justify-center gap-4 py-16 text-center">
-                  <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-amber-50">
-                    <CreditCard className="h-7 w-7 text-amber-400" strokeWidth={1.5} />
+                {loading ? (
+                  <div className="flex items-center justify-center gap-2 py-20 text-slate-400 text-sm">
+                    <Loader2 className="h-4 w-4 animate-spin" /> Уншиж байна...
                   </div>
-                  <div>
-                    <p className="text-sm font-semibold text-slate-700">Төлбөрийн систем холбогдоогүй</p>
-                    <p className="mt-1 max-w-xs text-xs text-slate-400">
-                      Stripe эсвэл бусад төлбөрийн системийг холбосны дараа энд харагдана.
-                    </p>
+                ) : orders.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center gap-2 py-20 text-slate-400 text-sm">
+                    <CreditCard className="h-8 w-8 text-slate-200" strokeWidth={1.5} />
+                    <p>Одоохондоо захиалга байхгүй байна</p>
                   </div>
-                  <div className="rounded-xl border border-slate-200 bg-slate-50 px-5 py-3 text-xs text-slate-500">
-                    Stripe нэмэхийн тулд{' '}
-                    <code className="font-mono text-violet-600">STRIPE_SECRET_KEY</code>-г{' '}
-                    <code className="font-mono text-violet-600">.env.local</code>-д нэм
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b border-slate-100 bg-slate-50 text-left text-xs font-semibold uppercase tracking-wider text-slate-400">
+                          <th className="px-6 py-3">#</th>
+                          <th className="px-6 py-3">Имэйл</th>
+                          <th className="px-6 py-3">Улирал</th>
+                          <th className="px-6 py-3 text-right">Дүн</th>
+                          <th className="px-6 py-3 text-center">Статус</th>
+                          <th className="px-6 py-3">Огноо</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-50">
+                        {orders.map((o, i) => (
+                          <tr key={o.id} className="hover:bg-slate-50 transition-colors">
+                            <td className="px-6 py-4 text-slate-400 font-mono text-xs">{i + 1}</td>
+                            <td className="px-6 py-4">
+                              <span className="font-medium text-slate-800">{o.email}</span>
+                            </td>
+                            <td className="px-6 py-4 text-slate-500 text-xs">
+                              {o.analysis_result?.seasonName ?? '—'}
+                            </td>
+                            <td className="px-6 py-4 text-right font-semibold text-slate-800">
+                              {(o.amount ?? 0).toLocaleString()}₮
+                            </td>
+                            <td className="px-6 py-4 text-center">
+                              {o.paid ? (
+                                <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-600">
+                                  <CheckCircle className="h-3.5 w-3.5" strokeWidth={2} /> Амжилттай
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-400">
+                                  <XCircle className="h-3.5 w-3.5" strokeWidth={2} /> Дуусаагүй
+                                </span>
+                              )}
+                            </td>
+                            <td className="px-6 py-4 text-slate-400 text-xs whitespace-nowrap">
+                              {o.paid && o.paid_at ? formatDate(o.paid_at) : formatDate(o.created_at)}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
                   </div>
-                </div>
+                )}
               </div>
             </div>
           )}
