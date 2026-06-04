@@ -2,7 +2,7 @@ const BONUM_API        = process.env.BONUM_API!;
 const BONUM_TERMINAL   = process.env.BONUM_TERMINAL_ID!;
 const BONUM_APP_SECRET = process.env.BONUM_APP_SECRET!;
 
-const CALLBACK_URL = 'https://www.personalcolor.mn/payment/success';
+const CALLBACK_BASE = 'https://www.personalcolor.mn/payment/success';
 
 async function getToken(): Promise<string> {
   const res = await fetch(`${BONUM_API}/bonum-gateway/ecommerce/auth/create`, {
@@ -54,7 +54,7 @@ export async function createBonumInvoice(
     },
     body: JSON.stringify({
       amount,
-      callback:      CALLBACK_URL,
+      callback:      `${CALLBACK_BASE}?orderId=${transactionId}`,
       transactionId,
       expiresIn:     3600,
       providers:     ['QPAY'],
@@ -75,4 +75,37 @@ export async function createBonumInvoice(
     throw new Error(`Bonum invoice: missing invoiceId or followUpLink. Response: ${JSON.stringify(data)}`);
 
   return { invoiceId, followUpLink };
+}
+
+export type BonumInvoiceStatus = {
+  paid: boolean;
+  status: string;
+  invoiceId: string;
+};
+
+export async function getBonumInvoiceStatus(invoiceId: string): Promise<BonumInvoiceStatus> {
+  const token = await getToken();
+
+  const res = await fetch(
+    `${BONUM_API}/bonum-gateway/ecommerce/invoices/${encodeURIComponent(invoiceId)}`,
+    {
+      headers: {
+        Authorization:   `Bearer ${token}`,
+        'X-TERMINAL-ID': BONUM_TERMINAL,
+      },
+      cache: 'no-store',
+    },
+  );
+
+  if (!res.ok) {
+    const text = await res.text().catch(() => '');
+    throw new Error(`Bonum invoice status error ${res.status}: ${text}`);
+  }
+
+  const data = await res.json() as Record<string, unknown>;
+  // Bonum may use status field or paid boolean — handle both shapes
+  const status = (data.status as string | undefined) ?? '';
+  const paid   = status === 'PAID' || status === 'SUCCESS' || data.paid === true;
+
+  return { paid, status, invoiceId };
 }
