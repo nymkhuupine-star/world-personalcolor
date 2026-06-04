@@ -10,6 +10,8 @@ const isPublicRoute = createRouteMatcher([
   '/api/analyze',
   '/api/save-analysis',
   '/api/verify/(.*)',
+  '/api/payment/(.*)',
+  '/payment/success',
   '/how-it-works(.*)',
   '/pricing(.*)',
   '/faq(.*)',
