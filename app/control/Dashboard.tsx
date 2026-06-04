@@ -66,13 +66,6 @@ type Order = {
 
 type PdfStatuses = Record<string, boolean>;
 
-const SEASON_STYLE: Record<string, { bg: string; text: string; dot: string }> = {
-  Spring: { bg: 'bg-rose-50',    text: 'text-rose-600',    dot: 'bg-rose-400' },
-  Summer: { bg: 'bg-violet-50',  text: 'text-violet-600',  dot: 'bg-violet-400' },
-  Autumn: { bg: 'bg-amber-50',   text: 'text-amber-600',   dot: 'bg-amber-400' },
-  Winter: { bg: 'bg-sky-50',     text: 'text-sky-600',     dot: 'bg-sky-400' },
-};
-
 const SEASON_MN: Record<string, string> = {
   Spring: 'Хавар', Summer: 'Зун', Autumn: 'Намар', Winter: 'Өвөл',
 };
@@ -463,7 +456,6 @@ export default function Dashboard() {
                       </thead>
                       <tbody>
                         {filtered.map((a, i) => {
-                          const style = SEASON_STYLE[a.season] ?? SEASON_STYLE.Summer;
                           return (
                             <tr key={a.id} className="border-b border-slate-50 hover:bg-slate-50/60 transition-colors">
                               <td className="px-5 py-4 text-xs text-slate-300 font-mono w-10">{i + 1}</td>
@@ -472,9 +464,8 @@ export default function Dashboard() {
                               </td>
                               <td className="px-5 py-4">
                                 {a.season ? (
-                                  <span className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-semibold ${style.bg} ${style.text}`}>
-                                    <span className={`h-1.5 w-1.5 rounded-full ${style.dot} flex-shrink-0`} />
-                                    {a.sub_type || `${SEASON_MN[a.season]} ${a.season}`}
+                                  <span className="inline-flex items-center gap-1.5 rounded-lg bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600">
+                                    {a.sub_type || `${SEASON_MN[a.season] ?? a.season}`}
                                   </span>
                                 ) : <span className="text-xs text-slate-300">—</span>}
                               </td>
@@ -583,8 +574,6 @@ export default function Dashboard() {
                           .filter(o => !paySearch || o.email.toLowerCase().includes(paySearch.toLowerCase()) || (o.analysis_result?.seasonName ?? '').toLowerCase().includes(paySearch.toLowerCase()))
                           .map((o, i) => {
                             const sName = o.analysis_result?.seasonName ?? '';
-                            const season = sName.includes('Spring') ? 'Spring' : sName.includes('Summer') ? 'Summer' : sName.includes('Autumn') ? 'Autumn' : sName.includes('Winter') ? 'Winter' : '';
-                            const style = season ? SEASON_STYLE[season] : null;
                             return (
                               <tr key={o.id} className="border-b border-slate-50 hover:bg-slate-50/60 transition-colors">
                                 <td className="px-5 py-4 text-xs text-slate-300 font-mono w-10">{i + 1}</td>
@@ -592,9 +581,8 @@ export default function Dashboard() {
                                   <span className="text-sm font-medium text-slate-800">{o.email}</span>
                                 </td>
                                 <td className="px-5 py-4">
-                                  {style ? (
-                                    <span className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-semibold ${style.bg} ${style.text}`}>
-                                      <span className={`h-1.5 w-1.5 rounded-full ${style.dot}`} />
+                                  {sName ? (
+                                    <span className="inline-flex items-center gap-1.5 rounded-lg bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600">
                                       {sName}
                                     </span>
                                   ) : <span className="text-xs text-slate-300">—</span>}
