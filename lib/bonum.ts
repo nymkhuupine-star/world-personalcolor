@@ -1,6 +1,6 @@
-const BONUM_API        = process.env.BONUM_API!;
-const BONUM_TERMINAL   = process.env.BONUM_TERMINAL_ID!;
-const BONUM_APP_SECRET = process.env.BONUM_APP_SECRET!;
+const BONUM_API        = (process.env.BONUM_API        ?? '').trim();
+const BONUM_TERMINAL   = (process.env.BONUM_TERMINAL_ID ?? '').trim();
+const BONUM_APP_SECRET = (process.env.BONUM_APP_SECRET  ?? '').trim();
 
 const CALLBACK_BASE = 'https://www.personalcolor.mn/payment/success';
 
