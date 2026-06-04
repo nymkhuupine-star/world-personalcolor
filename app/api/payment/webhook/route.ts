@@ -125,39 +125,26 @@ async function deliverResult(email: string, seasonName: string, imageUrl: string
     ? supabase.storage.from('reports').getPublicUrl(pdfPath).data.publicUrl
     : null;
 
-  // Find or insert analyses row — always capture id and ensure paid: true
+  // Always insert a new analyses row per payment — each payment = one record
   let analysisRowId: string | null = null;
 
-  const { data: existing } = await supabase
+  const { data: inserted, error: insertErr } = await supabase
     .from('analyses')
+    .insert({
+      email,
+      image_path:         imageUrl,
+      season:             baseSeason,
+      sub_type:           season,
+      reasoning,
+      recommended_colors: recommendedColors,
+      email_sent:         false,
+      paid:               true,
+    })
     .select('id')
-    .eq('email', email)
-    .eq('sub_type', season)
-    .order('created_at', { ascending: false })
-    .limit(1)
     .single();
 
-  if (existing?.id) {
-    analysisRowId = existing.id as string;
-    await supabase.from('analyses').update({ paid: true }).eq('id', analysisRowId);
-  } else {
-    const { data: inserted, error: insertErr } = await supabase
-      .from('analyses')
-      .insert({
-        email,
-        image_path:         imageUrl,
-        season:             baseSeason,
-        sub_type:           season,
-        reasoning,
-        recommended_colors: recommendedColors,
-        email_sent:         false,
-        paid:               true,
-      })
-      .select('id')
-      .single();
-    if (insertErr) console.error('analyses insert error:', insertErr);
-    analysisRowId = inserted?.id ?? null;
-  }
+  if (insertErr) console.error('analyses insert error:', insertErr);
+  analysisRowId = inserted?.id ?? null;
 
   // Send email via Resend
   const { RESEND_API_KEY } = process.env;
