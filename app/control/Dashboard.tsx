@@ -66,6 +66,17 @@ type Order = {
 
 type PdfStatuses = Record<string, boolean>;
 
+const SEASON_STYLE: Record<string, { bg: string; text: string; dot: string }> = {
+  Spring: { bg: 'bg-rose-50',    text: 'text-rose-600',    dot: 'bg-rose-400' },
+  Summer: { bg: 'bg-violet-50',  text: 'text-violet-600',  dot: 'bg-violet-400' },
+  Autumn: { bg: 'bg-amber-50',   text: 'text-amber-600',   dot: 'bg-amber-400' },
+  Winter: { bg: 'bg-sky-50',     text: 'text-sky-600',     dot: 'bg-sky-400' },
+};
+
+const SEASON_MN: Record<string, string> = {
+  Spring: 'Хавар', Summer: 'Зун', Autumn: 'Намар', Winter: 'Өвөл',
+};
+
 const NAV = [
   { key: 'overview' as Section, label: 'Тойм', icon: LayoutDashboard },
   { key: 'registrations' as Section, label: 'Бүртгэл', icon: Users },
@@ -422,47 +433,64 @@ export default function Dashboard() {
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="border-b border-slate-100 bg-slate-50 text-left text-xs font-semibold uppercase tracking-wider text-slate-400">
-                        <th className="px-6 py-3">#</th>
-                        <th className="px-6 py-3">Gmail хаяг</th>
-                        <th className="px-6 py-3">Цаг, огноо</th>
-                        <th className="px-6 py-3 text-center">Төлбөр төлсөн</th>
-                        <th className="px-6 py-3 text-center">Имэйл хүлээн авсан</th>
+                        <th className="px-4 py-3">#</th>
+                        <th className="px-4 py-3">Имэйл</th>
+                        <th className="px-4 py-3">Өнгөний төрөл</th>
+                        <th className="px-4 py-3">Огноо</th>
+                        <th className="px-4 py-3 text-center">Төлбөр</th>
+                        <th className="px-4 py-3 text-center">Имэйл</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-50">
-                      {analyses.map((a, i) => (
-                        <tr key={a.id} className="hover:bg-slate-50 transition-colors">
-                          <td className="px-6 py-4 text-slate-400 font-mono text-xs">{i + 1}</td>
-                          <td className="px-6 py-4">
-                            <span className="font-medium text-slate-800">{a.email}</span>
-                          </td>
-                          <td className="px-6 py-4 text-slate-500 text-xs whitespace-nowrap">
-                            {formatDate(a.created_at)}
-                          </td>
-                          <td className="px-6 py-4 text-center">
-                            {a.paid ? (
-                              <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-600">
-                                <CheckCircle className="h-3.5 w-3.5" strokeWidth={2} /> Төлсөн
-                              </span>
-                            ) : (
-                              <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-400">
-                                <XCircle className="h-3.5 w-3.5" strokeWidth={2} /> Төлөөгүй
-                              </span>
-                            )}
-                          </td>
-                          <td className="px-6 py-4 text-center">
-                            {a.email_sent ? (
-                              <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-600">
-                                <CheckCircle className="h-3.5 w-3.5" strokeWidth={2} /> Илгээсэн
-                              </span>
-                            ) : (
-                              <span className="inline-flex items-center gap-1.5 rounded-full bg-rose-50 px-3 py-1 text-xs font-semibold text-rose-500">
-                                <XCircle className="h-3.5 w-3.5" strokeWidth={2} /> Илгээгээгүй
-                              </span>
-                            )}
-                          </td>
-                        </tr>
-                      ))}
+                      {analyses.map((a, i) => {
+                        const style = SEASON_STYLE[a.season] ?? SEASON_STYLE.Summer;
+                        return (
+                          <tr key={a.id} className="hover:bg-slate-50 transition-colors">
+                            <td className="px-4 py-3.5 text-slate-400 font-mono text-xs">{i + 1}</td>
+                            <td className="px-4 py-3.5">
+                              <span className="font-medium text-slate-800 text-sm">{a.email}</span>
+                            </td>
+                            <td className="px-4 py-3.5">
+                              {a.season ? (
+                                <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold ${style.bg} ${style.text}`}>
+                                  <span className={`h-2 w-2 rounded-full ${style.dot}`} />
+                                  {SEASON_MN[a.season] ?? a.season}
+                                  {a.sub_type && a.sub_type !== a.season && (
+                                    <span className="opacity-70">· {a.sub_type}</span>
+                                  )}
+                                </span>
+                              ) : (
+                                <span className="text-xs text-slate-300">—</span>
+                              )}
+                            </td>
+                            <td className="px-4 py-3.5 text-slate-500 text-xs whitespace-nowrap">
+                              {formatDate(a.created_at)}
+                            </td>
+                            <td className="px-4 py-3.5 text-center">
+                              {a.paid ? (
+                                <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-600">
+                                  <CheckCircle className="h-3 w-3" strokeWidth={2} /> Төлсөн
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-400">
+                                  <XCircle className="h-3 w-3" strokeWidth={2} /> Үгүй
+                                </span>
+                              )}
+                            </td>
+                            <td className="px-4 py-3.5 text-center">
+                              {a.email_sent ? (
+                                <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-600">
+                                  <CheckCircle className="h-3 w-3" strokeWidth={2} /> Илгээсэн
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center gap-1 rounded-full bg-rose-50 px-2.5 py-1 text-xs font-semibold text-rose-500">
+                                  <XCircle className="h-3 w-3" strokeWidth={2} /> Үгүй
+                                </span>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>
