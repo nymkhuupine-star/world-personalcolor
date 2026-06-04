@@ -99,11 +99,11 @@ export default function Dashboard() {
         sortBy: { column: 'created_at', order: 'desc' },
       }),
       supabase.from('analyses').select('*').order('created_at', { ascending: false }).limit(200),
-      supabase.from('analysis_orders').select('*').order('created_at', { ascending: false }).limit(200),
+      fetch('/api/admin/orders').then(r => r.ok ? r.json() : []),
     ]);
     if (!storageRes.error && storageRes.data) setPortraits(storageRes.data as Portrait[]);
     if (!dbRes.error && dbRes.data) setAnalyses(dbRes.data as Analysis[]);
-    if (!ordersRes.error && ordersRes.data) setOrders(ordersRes.data as Order[]);
+    setOrders(Array.isArray(ordersRes) ? ordersRes as Order[] : []);
     setLoading(false);
   }, []);
 
