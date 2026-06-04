@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import { randomUUID } from 'crypto';
+import { deliverResult } from '@/lib/deliverResult';
 
 export const runtime = 'nodejs';
 
@@ -39,13 +40,15 @@ export async function POST(req: Request) {
     if (codeErr || !codeRow)
       return Response.json({ error: 'Код буруу эсвэл хугацаа дууссан байна.' }, { status: 400 });
 
-    // Mark code as used (single-use)
     await supabase.from('verification_codes').update({ used: true }).eq('id', codeRow.id);
 
-    // Create 7-day session token
     const token = randomUUID();
     const expiresAt = new Date(Date.now() + SESSION_DAYS * 24 * 60 * 60 * 1000).toISOString();
     await supabase.from('sessions').insert({ token, email, expires_at: expiresAt });
+
+    // Deliver any paid-but-undelivered orders for this email
+    // This ensures email arrives regardless of which browser was used for payment
+    await processPendingOrders(email);
 
     const { data: analyses, error: analysesErr } = await supabase
       .from('analyses')
@@ -60,5 +63,40 @@ export async function POST(req: Request) {
   } catch (err) {
     console.error('check-code error:', err);
     return Response.json({ error: 'Дотоод алдаа гарлаа.' }, { status: 500 });
+  }
+}
+
+async function processPendingOrders(email: string) {
+  const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+
+  const { data: paidOrders } = await supabase
+    .from('analysis_orders')
+    .select('id, analysis_result, paid_at')
+    .eq('email', email)
+    .eq('paid', true)
+    .gte('paid_at', thirtyDaysAgo)
+    .not('paid_at', 'is', null)
+    .order('paid_at', { ascending: false })
+    .limit(10);
+
+  if (!paidOrders?.length) return;
+
+  for (const order of paidOrders) {
+    const stored = order.analysis_result as { seasonName?: string; imageUrl?: string } | null;
+    if (!stored?.seasonName || !order.paid_at) continue;
+
+    // Check if email was already delivered after this payment
+    const { count } = await supabase
+      .from('analyses')
+      .select('id', { count: 'exact', head: true })
+      .eq('email', email)
+      .eq('email_sent', true)
+      .gte('created_at', order.paid_at);
+
+    if (!count || count === 0) {
+      await deliverResult(email, stored.seasonName, stored.imageUrl ?? null).catch(
+        (err) => console.error('processPendingOrders deliverResult error:', err),
+      );
+    }
   }
 }
