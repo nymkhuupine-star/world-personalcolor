@@ -2,6 +2,7 @@
 
 import { Suspense, useCallback, useEffect, useState, type JSX } from 'react';
 import { useSearchParams } from 'next/navigation';
+import { useUser } from '@clerk/nextjs';
 import { motion } from 'framer-motion';
 import { CheckCircle, Loader2, Mail, ArrowRight, AlertCircle, RefreshCw } from 'lucide-react';
 import Link from 'next/link';
@@ -9,16 +10,24 @@ import Link from 'next/link';
 type State = 'verifying' | 'success' | 'already' | 'unpaid' | 'error';
 
 type VerifyResponse = {
-  success?: boolean;
-  paid?: boolean;
+  success?:         boolean;
+  paid?:            boolean;
   alreadyDelivered?: boolean;
-  error?: string;
+  error?:           string;
+  result?: {
+    season:             string;
+    subType:            string;
+    reasoning:          string;
+    recommendedColors:  string[];
+  };
+  imageUrl?: string;
 };
 
 function PaymentSuccessContent() {
-  const searchParams  = useSearchParams();
-  const orderId       = searchParams.get('orderId');
-  const [state, setState]     = useState<State>('verifying');
+  const { isSignedIn } = useUser();
+  const searchParams   = useSearchParams();
+  const orderId        = searchParams.get('orderId');
+  const [state, setState]       = useState<State>('verifying');
   const [errorMsg, setErrorMsg] = useState('');
   const [retrying, setRetrying] = useState(false);
 
@@ -33,6 +42,14 @@ function PaymentSuccessContent() {
       const data = await res.json() as VerifyResponse;
 
       if (data.alreadyDelivered || (data.success && data.paid)) {
+        // Save to user_analyses for logged-in Clerk users (/my-results page)
+        if (isSignedIn && data.result && !data.alreadyDelivered) {
+          fetch('/api/save-analysis', {
+            method:  'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ result: data.result, imageUrl: data.imageUrl ?? '' }),
+          }).catch((err) => console.error('save-analysis error:', err));
+        }
         setState(data.alreadyDelivered ? 'already' : 'success');
       } else if (data.success === false && data.paid === false) {
         setState('unpaid');
@@ -44,7 +61,7 @@ function PaymentSuccessContent() {
       setState('error');
       setErrorMsg('Сүлжээний алдаа гарлаа.');
     }
-  }, [orderId]);
+  }, [orderId, isSignedIn]);
 
   useEffect(() => { verify(); }, [verify]);
 

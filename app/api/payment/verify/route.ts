@@ -77,7 +77,24 @@ export async function GET(req: Request) {
       );
     }
 
-    return Response.json({ success: true, paid: true });
+    // Return result data so the success page can save to user_analyses for logged-in users
+    const seasonName = stored?.seasonName ?? '';
+    const season     = seasonName as SeasonName;
+    const baseSeason = getBaseSeason(season);
+    const reasoning  = SEASON_DESCRIPTIONS[season] ?? SEASON_DESCRIPTIONS['True Spring'];
+    const recommendedColors = (SEASON_PALETTES[season] ?? SEASON_PALETTES['True Spring']) as string[];
+
+    return Response.json({
+      success: true,
+      paid:    true,
+      result: {
+        season:             baseSeason,
+        subType:            seasonName,
+        reasoning,
+        recommendedColors,
+      },
+      imageUrl: stored?.imageUrl ?? '',
+    });
   } catch (err) {
     console.error('payment/verify error:', err);
     return Response.json({ error: 'Дотоод алдаа гарлаа.' }, { status: 500 });
