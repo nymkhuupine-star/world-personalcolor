@@ -46,7 +46,7 @@ export async function GET(req: Request) {
     if (!order.invoice_id)
       return Response.json({ error: 'invoice_id байхгүй.' }, { status: 400 });
 
-    // Check payment status directly with Bonum
+    // Verify payment status directly with Bonum
     let paid = false;
     try {
       const status = await getBonumInvoiceStatus(order.invoice_id);
@@ -59,13 +59,13 @@ export async function GET(req: Request) {
     if (!paid)
       return Response.json({ success: false, paid: false });
 
-    // Mark as paid
+    // Mark order as paid
     await supabase
       .from('analysis_orders')
       .update({ paid: true, paid_at: new Date().toISOString() })
       .eq('id', order.id);
 
-    // Deliver result
+    // Deliver result (email + analyses insert)
     const stored = order.analysis_result as StoredAnalysis | null;
     if (stored?.seasonName && order.email) {
       await deliverResult(order.email, stored.seasonName, stored.imageUrl ?? null).catch(
@@ -86,6 +86,7 @@ async function deliverResult(email: string, seasonName: string, imageUrl: string
   const reasoning         = SEASON_DESCRIPTIONS[season] ?? SEASON_DESCRIPTIONS['True Spring'];
   const recommendedColors = (SEASON_PALETTES[season] ?? SEASON_PALETTES['True Spring']) as string[];
 
+  // PDF public URL from Supabase Storage
   const { folder, file: subtypeFile } = seasonNameToStoragePath(season);
   const pdfPath = `${folder}/${subtypeFile}.pdf`;
   const { data: listed } = await supabase.storage
@@ -94,6 +95,9 @@ async function deliverResult(email: string, seasonName: string, imageUrl: string
   const pdfUrl = listed?.length
     ? supabase.storage.from('reports').getPublicUrl(pdfPath).data.publicUrl
     : null;
+
+  // Find or insert analyses row — always capture the id
+  let analysisId: string | null = null;
 
   const { data: existing } = await supabase
     .from('analyses')
@@ -104,19 +108,29 @@ async function deliverResult(email: string, seasonName: string, imageUrl: string
     .limit(1)
     .single();
 
-  if (!existing) {
-    await supabase.from('analyses').insert({
-      email,
-      image_path:         imageUrl,
-      season:             baseSeason,
-      sub_type:           season,
-      reasoning,
-      recommended_colors: recommendedColors,
-      email_sent:         false,
-      paid:               true,
-    });
+  if (existing?.id) {
+    analysisId = existing.id as string;
+  } else {
+    const { data: inserted, error: insertErr } = await supabase
+      .from('analyses')
+      .insert({
+        email,
+        image_path:         imageUrl,
+        season:             baseSeason,
+        sub_type:           season,
+        reasoning,
+        recommended_colors: recommendedColors,
+        email_sent:         false,
+        paid:               true,
+      })
+      .select('id')
+      .single();
+
+    if (insertErr) console.error('analyses insert error:', insertErr);
+    analysisId = inserted?.id ?? null;
   }
 
+  // Send email via Resend
   const { RESEND_API_KEY } = process.env;
   if (!RESEND_API_KEY) return;
 
@@ -148,7 +162,11 @@ async function deliverResult(email: string, seasonName: string, imageUrl: string
 
   if (emailErr) throw new Error(`Resend: ${JSON.stringify(emailErr)}`);
 
-  if (existing?.id) {
-    await supabase.from('analyses').update({ email_sent: true }).eq('id', existing.id);
+  // Mark email as sent using the captured analysisId
+  if (analysisId) {
+    await supabase
+      .from('analyses')
+      .update({ email_sent: true })
+      .eq('id', analysisId);
   }
 }
