@@ -51,9 +51,9 @@ export default function PrivacyPolicyPage() {
               <p className="text-sm text-slate-600 leading-relaxed">
                 Нууцлалын бодлого болон хувийн мэдээллийн аюулгүй байдалтай холбоотой аливаа
                 асуулт, санал гомдлыг{' '}
-                <a href="mailto:info@personalcolor.mn"
+                <a href="mailto:personalcolor.web@gmail.com"
                   className="text-violet-600 hover:underline">
-                  info@personalcolor.mn
+                  personalcolor.web@gmail.com
                 </a>{' '}
                 хаягаар хүлээн авч, шуурхай шийдвэрлэнэ.
               </p>

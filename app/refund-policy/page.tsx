@@ -47,9 +47,9 @@ export default function RefundPolicyPage() {
               <p className="text-sm text-slate-600 leading-relaxed">
                 Төлбөр буцаахтай холбоотой гомдол, хүсэлтийг гүйлгээ хийгдсэнээс хойш ажлын
                 3 өдрийн дотор гүйлгээний баримтын хамт{' '}
-                <a href="mailto:info@personalcolor.mn"
+                <a href="mailto:personalcolor.web@gmail.com"
                   className="text-violet-600 hover:underline">
-                  info@personalcolor.mn
+                  personalcolor.web@gmail.com
                 </a>{' '}
                 цахим хаягаар ирүүлнэ. Хүсэлтийг ажлын 2–5 өдөрт багтаан шийдвэрлэх бөгөөд
                 буцаалт хийхэд банк хоорондын гүйлгээний шимтгэл суутгагдаж болно.

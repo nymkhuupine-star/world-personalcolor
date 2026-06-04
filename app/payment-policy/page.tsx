@@ -52,11 +52,11 @@ export default function PaymentPolicyPage() {
                 Төлбөрийн гүйлгээ хийгдсэн боловч үйлчилгээ идэвхжээгүй, эсвэл төлбөртэй
                 холбоотой ямар нэгэн алдаа, асуудал гарсан тохиолдолд хэрэглэгч гүйлгээний
                 баримтаа хавсарган{' '}
-                <a href="mailto:info@personalcolor.mn"
+                <a href="mailto:personalcolor.web@gmail.com"
                   className="text-violet-600 hover:underline">
-                  info@personalcolor.mn
+                  personalcolor.web@gmail.com
                 </a>{' '}
-                цахим хаягаар болон Инстаграм хаягаар шууд холбогдож шийдвэрлүүлэх үүрэгтэй.
+                цахим хаягаар болон Инстаграм хаягаар шууд холбогдон шийдвэрлүүлэх боломжтой.
               </p>
             </div>
           </div>
