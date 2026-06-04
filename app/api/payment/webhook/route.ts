@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import { createHmac } from 'crypto';
 import { Resend } from 'resend';
 import {
   type SeasonName,
@@ -9,6 +10,15 @@ import {
 import { SEASON_DESCRIPTIONS } from '@/lib/personal-color/season-descriptions';
 
 export const runtime = 'nodejs';
+
+function verifyChecksum(rawBody: string, headerValue: string): boolean {
+  const key = process.env.BONUM_MERCHANT_CHECKSUM_KEY;
+  if (!key) return true; // key тохируулаагүй бол алгасна (dev)
+  const computed = createHmac('sha256', Buffer.from(key, 'utf8'))
+    .update(rawBody, 'utf8')
+    .digest('hex');
+  return computed === headerValue;
+}
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -39,10 +49,16 @@ type StoredAnalysis = {
 
 export async function POST(req: Request) {
   try {
-    // TODO: verify HMAC signature using BONUM_MERCHANT_CHECKSUM_KEY
-    // once Bonum documents their webhook signing scheme.
+    // Raw body-г эхлээд text-ээр авна — checksum raw JSON дээр тооцогддог
+    const rawBody = await req.text().catch(() => '');
+    const checksumHeader = req.headers.get('x-checksum-v2');
 
-    const payload = await req.json().catch(() => null) as BonumWebhook | null;
+    if (checksumHeader && !verifyChecksum(rawBody, checksumHeader)) {
+      console.error('webhook: invalid checksum');
+      return Response.json({ error: 'Invalid checksum' }, { status: 401 });
+    }
+
+    const payload = rawBody ? JSON.parse(rawBody) as BonumWebhook : null;
 
     if (!payload || payload.type !== 'PAYMENT' || payload.status !== 'SUCCESS')
       return Response.json({ received: true });
