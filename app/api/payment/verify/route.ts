@@ -114,6 +114,8 @@ async function deliverResult(email: string, seasonName: string, imageUrl: string
 
   if (existing?.id) {
     analysisId = existing.id as string;
+    // Ensure paid=true on the existing row (may have been created by old free-analysis flow)
+    await supabase.from('analyses').update({ paid: true }).eq('id', analysisId);
   } else {
     const { data: inserted, error: insertErr } = await supabase
       .from('analyses')
