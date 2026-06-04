@@ -49,15 +49,37 @@ export default function MyResultsPage() {
 
   useEffect(() => {
     if (!isLoaded || !user) return;
-    supabase
-      .from('user_analyses')
-      .select('*')
-      .eq('user_id', user.id)
-      .order('created_at', { ascending: false })
-      .then(({ data, error }) => {
-        if (!error && data) setAnalyses(data as UserAnalysis[]);
-        setLoading(false);
+    const email = user.primaryEmailAddress?.emailAddress ?? '';
+
+    Promise.all([
+      // 1. Clerk-тэй холбоотой хуучин үр дүн
+      supabase
+        .from('user_analyses')
+        .select('id, season, sub_type, reasoning, recommended_colors, image_path, created_at')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false }),
+      // 2. Төлбөрийн шинэ үр дүн (email-ээр)
+      supabase
+        .from('analyses')
+        .select('id, season, sub_type, reasoning, recommended_colors, image_path, created_at')
+        .eq('email', email)
+        .eq('paid', true)
+        .order('created_at', { ascending: false }),
+    ]).then(([userRes, paidRes]) => {
+      const fromUser   = (!userRes.error  && userRes.data)  ? (userRes.data  as UserAnalysis[]) : [];
+      const fromPaid   = (!paidRes.error  && paidRes.data)  ? (paidRes.data  as UserAnalysis[]) : [];
+
+      // Нэгтгэж, давхардлыг id-аар шүүнэ
+      const seen = new Set<string>();
+      const merged = [...fromUser, ...fromPaid].filter(a => {
+        if (seen.has(a.id)) return false;
+        seen.add(a.id);
+        return true;
       });
+      merged.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+      setAnalyses(merged);
+      setLoading(false);
+    });
   }, [isLoaded, user]);
 
   async function resendResult(analysisId: string) {
