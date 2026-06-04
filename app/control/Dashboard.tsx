@@ -97,6 +97,8 @@ export default function Dashboard() {
   const [analyses, setAnalyses] = useState<Analysis[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
+  const [regSearch, setRegSearch] = useState('');
+  const [paySearch, setPaySearch] = useState('');
   const [pdfStatuses, setPdfStatuses] = useState<PdfStatuses>({});
   const [pdfUploading, setPdfUploading] = useState<string | null>(null);
   const [pdfDeleting, setPdfDeleting] = useState<string | null>(null);
@@ -410,93 +412,97 @@ export default function Dashboard() {
           )}
 
           {/* ── REGISTRATIONS ── */}
-          {section === 'registrations' && (
-            <div className="rounded-2xl border border-slate-100 bg-white shadow-sm overflow-hidden">
-              <div className="border-b border-slate-100 px-6 py-4 flex items-center justify-between">
-                <h2 className="text-sm font-bold text-slate-900">Бүртгэлийн жагсаалт</h2>
-                <span className="rounded-full bg-violet-50 px-3 py-1 text-xs font-semibold text-violet-600">
-                  {analyses.length} нийт
-                </span>
+          {section === 'registrations' && (() => {
+            const filtered = analyses.filter(a =>
+              !regSearch || a.email.toLowerCase().includes(regSearch.toLowerCase()) ||
+              a.sub_type?.toLowerCase().includes(regSearch.toLowerCase())
+            );
+            return (
+              <div className="rounded-2xl border border-slate-100 bg-white shadow-sm overflow-hidden">
+                {/* Header + Search */}
+                <div className="border-b border-slate-100 px-6 py-4 flex items-center justify-between gap-4">
+                  <div className="flex items-center gap-3">
+                    <h2 className="text-sm font-bold text-slate-900">Шинжилгээний бүртгэл</h2>
+                    <span className="rounded-full bg-violet-50 px-2.5 py-0.5 text-xs font-semibold text-violet-600">
+                      {analyses.length}
+                    </span>
+                  </div>
+                  <div className="relative w-56">
+                    <input
+                      value={regSearch}
+                      onChange={e => setRegSearch(e.target.value)}
+                      placeholder="Хайх..."
+                      className="w-full rounded-xl border border-slate-200 bg-slate-50 py-2 pl-9 pr-3 text-xs text-slate-700 outline-none focus:border-violet-300 focus:ring-2 focus:ring-violet-100"
+                    />
+                    <svg className="absolute left-3 top-2.5 h-3.5 w-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z" />
+                    </svg>
+                  </div>
+                </div>
+
+                {loading ? (
+                  <div className="flex items-center justify-center gap-2 py-20 text-slate-400 text-sm">
+                    <Loader2 className="h-4 w-4 animate-spin" /> Уншиж байна...
+                  </div>
+                ) : filtered.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center gap-2 py-20 text-slate-400 text-sm">
+                    <Users className="h-8 w-8 text-slate-200" strokeWidth={1.5} />
+                    <p>{regSearch ? 'Хайлтад тохирох бүртгэл олдсонгүй' : 'Одоохондоо бүртгэл байхгүй'}</p>
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead>
+                        <tr className="border-b border-slate-100 bg-slate-50/70">
+                          {['#', 'Имэйл хаяг', 'Өнгөний төрөл', 'Огноо', 'Төлбөр', 'Имэйл'].map((h, i) => (
+                            <th key={h} className={`px-5 py-3 text-left text-[11px] font-semibold text-slate-400 ${i >= 4 ? 'text-center' : ''}`}>
+                              {h}
+                            </th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {filtered.map((a, i) => {
+                          const style = SEASON_STYLE[a.season] ?? SEASON_STYLE.Summer;
+                          return (
+                            <tr key={a.id} className="border-b border-slate-50 hover:bg-slate-50/60 transition-colors">
+                              <td className="px-5 py-4 text-xs text-slate-300 font-mono w-10">{i + 1}</td>
+                              <td className="px-5 py-4">
+                                <span className="text-sm font-medium text-slate-800">{a.email}</span>
+                              </td>
+                              <td className="px-5 py-4">
+                                {a.season ? (
+                                  <span className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-semibold ${style.bg} ${style.text}`}>
+                                    <span className={`h-1.5 w-1.5 rounded-full ${style.dot} flex-shrink-0`} />
+                                    {a.sub_type || `${SEASON_MN[a.season]} ${a.season}`}
+                                  </span>
+                                ) : <span className="text-xs text-slate-300">—</span>}
+                              </td>
+                              <td className="px-5 py-4 text-xs text-slate-400 whitespace-nowrap">
+                                {formatDate(a.created_at)}
+                              </td>
+                              <td className="px-5 py-4 text-center">
+                                {a.paid
+                                  ? <span className="inline-flex items-center gap-1 rounded-lg bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-600"><CheckCircle className="h-3 w-3" strokeWidth={2.5} />Төлсөн</span>
+                                  : <span className="inline-flex items-center gap-1 rounded-lg bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-400"><XCircle className="h-3 w-3" strokeWidth={2} />Үгүй</span>
+                                }
+                              </td>
+                              <td className="px-5 py-4 text-center">
+                                {a.email_sent
+                                  ? <span className="inline-flex items-center gap-1 rounded-lg bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-600"><CheckCircle className="h-3 w-3" strokeWidth={2.5} />Илгээсэн</span>
+                                  : <span className="inline-flex items-center gap-1 rounded-lg bg-rose-50 px-2.5 py-1 text-xs font-semibold text-rose-500"><XCircle className="h-3 w-3" strokeWidth={2} />Үгүй</span>
+                                }
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
               </div>
-              {loading ? (
-                <div className="flex items-center justify-center gap-2 py-20 text-slate-400 text-sm">
-                  <Loader2 className="h-4 w-4 animate-spin" /> Уншиж байна...
-                </div>
-              ) : analyses.length === 0 ? (
-                <div className="flex flex-col items-center justify-center gap-2 py-20 text-slate-400 text-sm">
-                  <Users className="h-8 w-8 text-slate-200" strokeWidth={1.5} />
-                  <p>Одоохондоо бүртгэл байхгүй байна</p>
-                  <p className="text-xs">Шинжилгээ хийгдсэний дараа энд харагдана</p>
-                </div>
-              ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="border-b border-slate-100 bg-slate-50 text-left text-xs font-semibold uppercase tracking-wider text-slate-400">
-                        <th className="px-4 py-3">#</th>
-                        <th className="px-4 py-3">Имэйл</th>
-                        <th className="px-4 py-3">Өнгөний төрөл</th>
-                        <th className="px-4 py-3">Огноо</th>
-                        <th className="px-4 py-3 text-center">Төлбөр</th>
-                        <th className="px-4 py-3 text-center">Имэйл</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-50">
-                      {analyses.map((a, i) => {
-                        const style = SEASON_STYLE[a.season] ?? SEASON_STYLE.Summer;
-                        return (
-                          <tr key={a.id} className="hover:bg-slate-50 transition-colors">
-                            <td className="px-4 py-3.5 text-slate-400 font-mono text-xs">{i + 1}</td>
-                            <td className="px-4 py-3.5">
-                              <span className="font-medium text-slate-800 text-sm">{a.email}</span>
-                            </td>
-                            <td className="px-4 py-3.5">
-                              {a.season ? (
-                                <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold ${style.bg} ${style.text}`}>
-                                  <span className={`h-2 w-2 rounded-full ${style.dot}`} />
-                                  {SEASON_MN[a.season] ?? a.season}
-                                  {a.sub_type && a.sub_type !== a.season && (
-                                    <span className="opacity-70">· {a.sub_type}</span>
-                                  )}
-                                </span>
-                              ) : (
-                                <span className="text-xs text-slate-300">—</span>
-                              )}
-                            </td>
-                            <td className="px-4 py-3.5 text-slate-500 text-xs whitespace-nowrap">
-                              {formatDate(a.created_at)}
-                            </td>
-                            <td className="px-4 py-3.5 text-center">
-                              {a.paid ? (
-                                <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-600">
-                                  <CheckCircle className="h-3 w-3" strokeWidth={2} /> Төлсөн
-                                </span>
-                              ) : (
-                                <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-400">
-                                  <XCircle className="h-3 w-3" strokeWidth={2} /> Үгүй
-                                </span>
-                              )}
-                            </td>
-                            <td className="px-4 py-3.5 text-center">
-                              {a.email_sent ? (
-                                <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-600">
-                                  <CheckCircle className="h-3 w-3" strokeWidth={2} /> Илгээсэн
-                                </span>
-                              ) : (
-                                <span className="inline-flex items-center gap-1 rounded-full bg-rose-50 px-2.5 py-1 text-xs font-semibold text-rose-500">
-                                  <XCircle className="h-3 w-3" strokeWidth={2} /> Үгүй
-                                </span>
-                              )}
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </div>
-          )}
+            );
+          })()}
 
           {/* ── PAYMENTS ── */}
           {section === 'payments' && (
@@ -539,63 +545,75 @@ export default function Dashboard() {
 
               {/* Orders table */}
               <div className="rounded-2xl border border-slate-100 bg-white shadow-sm overflow-hidden">
-                <div className="border-b border-slate-100 px-6 py-4 flex items-center justify-between">
-                  <h2 className="text-sm font-bold text-slate-900">Захиалгын бүртгэл</h2>
-                  <span className="rounded-full bg-violet-50 px-3 py-1 text-xs font-semibold text-violet-600">
-                    {orders.length} нийт
-                  </span>
+                <div className="border-b border-slate-100 px-6 py-4 flex items-center justify-between gap-4">
+                  <div className="flex items-center gap-3">
+                    <h2 className="text-sm font-bold text-slate-900">Захиалгын бүртгэл</h2>
+                    <span className="rounded-full bg-violet-50 px-2.5 py-0.5 text-xs font-semibold text-violet-600">{orders.length}</span>
+                  </div>
+                  <div className="relative w-56">
+                    <input
+                      value={paySearch}
+                      onChange={e => setPaySearch(e.target.value)}
+                      placeholder="Хайх..."
+                      className="w-full rounded-xl border border-slate-200 bg-slate-50 py-2 pl-9 pr-3 text-xs text-slate-700 outline-none focus:border-violet-300 focus:ring-2 focus:ring-violet-100"
+                    />
+                    <svg className="absolute left-3 top-2.5 h-3.5 w-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z" />
+                    </svg>
+                  </div>
                 </div>
                 {loading ? (
                   <div className="flex items-center justify-center gap-2 py-20 text-slate-400 text-sm">
                     <Loader2 className="h-4 w-4 animate-spin" /> Уншиж байна...
                   </div>
-                ) : orders.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center gap-2 py-20 text-slate-400 text-sm">
-                    <CreditCard className="h-8 w-8 text-slate-200" strokeWidth={1.5} />
-                    <p>Одоохондоо захиалга байхгүй байна</p>
-                  </div>
                 ) : (
                   <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
+                    <table className="w-full">
                       <thead>
-                        <tr className="border-b border-slate-100 bg-slate-50 text-left text-xs font-semibold uppercase tracking-wider text-slate-400">
-                          <th className="px-6 py-3">#</th>
-                          <th className="px-6 py-3">Имэйл</th>
-                          <th className="px-6 py-3">Улирал</th>
-                          <th className="px-6 py-3 text-right">Дүн</th>
-                          <th className="px-6 py-3 text-center">Статус</th>
-                          <th className="px-6 py-3">Огноо</th>
+                        <tr className="border-b border-slate-100 bg-slate-50/70">
+                          {['#', 'Имэйл хаяг', 'Өнгөний төрөл', 'Дүн', 'Статус', 'Огноо'].map((h, i) => (
+                            <th key={h} className={`px-5 py-3 text-left text-[11px] font-semibold text-slate-400 ${i === 3 ? 'text-right' : ''} ${i === 4 ? 'text-center' : ''}`}>
+                              {h}
+                            </th>
+                          ))}
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-slate-50">
-                        {orders.map((o, i) => (
-                          <tr key={o.id} className="hover:bg-slate-50 transition-colors">
-                            <td className="px-6 py-4 text-slate-400 font-mono text-xs">{i + 1}</td>
-                            <td className="px-6 py-4">
-                              <span className="font-medium text-slate-800">{o.email}</span>
-                            </td>
-                            <td className="px-6 py-4 text-slate-500 text-xs">
-                              {o.analysis_result?.seasonName ?? '—'}
-                            </td>
-                            <td className="px-6 py-4 text-right font-semibold text-slate-800">
-                              {(o.amount ?? 0).toLocaleString()}₮
-                            </td>
-                            <td className="px-6 py-4 text-center">
-                              {o.paid ? (
-                                <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-600">
-                                  <CheckCircle className="h-3.5 w-3.5" strokeWidth={2} /> Амжилттай
-                                </span>
-                              ) : (
-                                <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-400">
-                                  <XCircle className="h-3.5 w-3.5" strokeWidth={2} /> Дуусаагүй
-                                </span>
-                              )}
-                            </td>
-                            <td className="px-6 py-4 text-slate-400 text-xs whitespace-nowrap">
-                              {o.paid && o.paid_at ? formatDate(o.paid_at) : formatDate(o.created_at)}
-                            </td>
-                          </tr>
-                        ))}
+                      <tbody>
+                        {orders
+                          .filter(o => !paySearch || o.email.toLowerCase().includes(paySearch.toLowerCase()) || (o.analysis_result?.seasonName ?? '').toLowerCase().includes(paySearch.toLowerCase()))
+                          .map((o, i) => {
+                            const sName = o.analysis_result?.seasonName ?? '';
+                            const season = sName.includes('Spring') ? 'Spring' : sName.includes('Summer') ? 'Summer' : sName.includes('Autumn') ? 'Autumn' : sName.includes('Winter') ? 'Winter' : '';
+                            const style = season ? SEASON_STYLE[season] : null;
+                            return (
+                              <tr key={o.id} className="border-b border-slate-50 hover:bg-slate-50/60 transition-colors">
+                                <td className="px-5 py-4 text-xs text-slate-300 font-mono w-10">{i + 1}</td>
+                                <td className="px-5 py-4">
+                                  <span className="text-sm font-medium text-slate-800">{o.email}</span>
+                                </td>
+                                <td className="px-5 py-4">
+                                  {style ? (
+                                    <span className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-semibold ${style.bg} ${style.text}`}>
+                                      <span className={`h-1.5 w-1.5 rounded-full ${style.dot}`} />
+                                      {sName}
+                                    </span>
+                                  ) : <span className="text-xs text-slate-300">—</span>}
+                                </td>
+                                <td className="px-5 py-4 text-right">
+                                  <span className="text-sm font-bold text-slate-800">{(o.amount ?? 0).toLocaleString()}₮</span>
+                                </td>
+                                <td className="px-5 py-4 text-center">
+                                  {o.paid
+                                    ? <span className="inline-flex items-center gap-1 rounded-lg bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-600"><CheckCircle className="h-3 w-3" strokeWidth={2.5} />Амжилттай</span>
+                                    : <span className="inline-flex items-center gap-1 rounded-lg bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-500"><XCircle className="h-3 w-3" strokeWidth={2} />Дуусаагүй</span>
+                                  }
+                                </td>
+                                <td className="px-5 py-4 text-xs text-slate-400 whitespace-nowrap">
+                                  {o.paid && o.paid_at ? formatDate(o.paid_at) : formatDate(o.created_at)}
+                                </td>
+                              </tr>
+                            );
+                          })}
                       </tbody>
                     </table>
                   </div>
