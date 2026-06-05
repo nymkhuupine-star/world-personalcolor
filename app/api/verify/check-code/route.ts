@@ -1,6 +1,11 @@
 import { createClient } from '@supabase/supabase-js';
 import { randomUUID } from 'crypto';
-import { deliverResult } from '@/lib/deliverResult';
+import {
+  type SeasonName,
+  SEASON_PALETTES,
+  getBaseSeason,
+} from '@/lib/personal-color/rule-engine';
+import { SEASON_DESCRIPTIONS } from '@/lib/personal-color/season-descriptions';
 
 export const runtime = 'nodejs';
 
@@ -14,6 +19,15 @@ function isEmail(v: string) {
 }
 
 const SESSION_DAYS = 7;
+
+type AnalysisRow = {
+  id: string;
+  season: string;
+  sub_type: string;
+  reasoning: string | null;
+  recommended_colors: string[] | null;
+  created_at: string;
+};
 
 export async function POST(req: Request) {
   try {
@@ -46,53 +60,52 @@ export async function POST(req: Request) {
     const expiresAt = new Date(Date.now() + SESSION_DAYS * 24 * 60 * 60 * 1000).toISOString();
     await supabase.from('sessions').insert({ token, email, expires_at: expiresAt });
 
-    const { data: analyses, error: analysesErr } = await supabase
+    // Primary: query analyses table
+    const { data: analyses } = await supabase
       .from('analyses')
       .select('id, season, sub_type, reasoning, recommended_colors, created_at')
       .eq('email', email)
       .order('created_at', { ascending: false });
 
-    if (analysesErr)
-      return Response.json({ error: 'Үр дүн татахад алдаа гарлаа.' }, { status: 500 });
+    let finalAnalyses: AnalysisRow[] = (analyses ?? []) as AnalysisRow[];
 
-    return Response.json({ success: true, token, analyses: analyses ?? [] });
+    // Fallback: if analyses empty, build from paid analysis_orders
+    // (handles case where analyses row failed to insert but webhook ran)
+    if (finalAnalyses.length === 0) {
+      const { data: paidOrders } = await supabase
+        .from('analysis_orders')
+        .select('id, analysis_result, paid_at')
+        .eq('email', email)
+        .eq('paid', true)
+        .order('paid_at', { ascending: false })
+        .limit(10);
+
+      if (paidOrders?.length) {
+        finalAnalyses = paidOrders
+          .filter(o => (o.analysis_result as { seasonName?: string } | null)?.seasonName)
+          .map(o => {
+            const stored = o.analysis_result as { seasonName: string };
+            const season = stored.seasonName as SeasonName;
+            const baseSeason = getBaseSeason(season);
+            return {
+              id: o.id,
+              season: baseSeason,
+              sub_type: stored.seasonName,
+              reasoning: SEASON_DESCRIPTIONS[season] ?? null,
+              recommended_colors: (SEASON_PALETTES[season] ?? []) as string[],
+              created_at: (o.paid_at as string | null) ?? now,
+            };
+          });
+      }
+    }
+
+    return Response.json({ success: true, token, analyses: finalAnalyses });
   } catch (err) {
     console.error('check-code error:', err);
     return Response.json({ error: 'Дотоод алдаа гарлаа.' }, { status: 500 });
   }
 }
 
-async function processPendingOrders(email: string) {
-  const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
-
-  const { data: paidOrders } = await supabase
-    .from('analysis_orders')
-    .select('id, analysis_result, paid_at')
-    .eq('email', email)
-    .eq('paid', true)
-    .gte('paid_at', thirtyDaysAgo)
-    .not('paid_at', 'is', null)
-    .order('paid_at', { ascending: false })
-    .limit(10);
-
-  if (!paidOrders?.length) return;
-
-  for (const order of paidOrders) {
-    const stored = order.analysis_result as { seasonName?: string; imageUrl?: string } | null;
-    if (!stored?.seasonName || !order.paid_at) continue;
-
-    // Check if email was already delivered after this payment
-    const { count } = await supabase
-      .from('analyses')
-      .select('id', { count: 'exact', head: true })
-      .eq('email', email)
-      .eq('email_sent', true)
-      .gte('created_at', order.paid_at);
-
-    if (!count || count === 0) {
-      await deliverResult(email, stored.seasonName, stored.imageUrl ?? null).catch(
-        (err) => console.error('processPendingOrders deliverResult error:', err),
-      );
-    }
-  }
-}
+// processPendingOrders — kept for future admin use, not called from OTP flow
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+async function _processPendingOrders(_email: string) { /* reserved */ }
