@@ -49,8 +49,9 @@ export async function POST(req: Request) {
     try {
       ({ invoiceId, followUpLink } = await createBonumInvoice(transactionId, amount));
     } catch (err) {
-      console.error('payment/create Bonum error:', err);
-      return Response.json({ error: 'Bonum invoice үүсгэхэд алдаа гарлаа.' }, { status: 502 });
+      const msg = err instanceof Error ? err.message : String(err);
+      console.error('payment/create Bonum error:', msg);
+      return Response.json({ error: `Bonum invoice үүсгэхэд алдаа гарлаа. (${msg})` }, { status: 502 });
     }
 
     // Persist invoiceId and transactionId

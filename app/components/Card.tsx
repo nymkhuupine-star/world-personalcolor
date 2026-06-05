@@ -423,7 +423,7 @@ export default function Card() {
               <p className="text-sm font-semibold text-amber-800">Анхааруулга</p>
               <p className="text-xs leading-relaxed text-amber-700">
                 Messenger/Instagram браузерт төлбөрийн дараах хуудас автоматаар нээгдэхгүй байж болно.
-                Гэхдээ имэйл таны хаяг руу заавал очно. Мөн нүүр хуудасны "Өмнөх үр дүн" хэсгээр имэйлээрээ үр дүнгийн байдлыг шалгах боломжтой.
+                Гэхдээ имэйл таны хаяг руу заавал очно. Мөн нүүр хуудасны &ldquo;Өмнөх үр дүн&rdquo; хэсгээр имэйлээрээ үр дүнгийн байдлыг шалгах боломжтой.
               </p>
               <a
                 href={typeof window !== 'undefined' ? window.location.href : '/'}
