@@ -210,10 +210,7 @@ export default function Card() {
     setPaying(true);
     setSubmitError(null);
 
-    // Open a blank window synchronously during the click event.
-    // This bypasses popup-blockers (including Messenger's in-app browser)
-    // because window.open() is called before any async work.
-    // We set the real URL once the invoice is ready.
+ 
     let payWin: Window | null = null;
     try { payWin = window.open('about:blank', '_blank'); } catch {}
 
