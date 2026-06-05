@@ -38,7 +38,7 @@ export async function POST(req: Request) {
     return Response.json({ error: 'analysis_result эсвэл email байхгүй.' }, { status: 400 });
 
   try {
-    await deliverResult(order.email, stored.seasonName, stored.imageUrl ?? null);
+    await deliverResult(order.email, stored.seasonName, stored.imageUrl ?? null, { force: true });
 
     if (!order.paid) {
       await supabase
