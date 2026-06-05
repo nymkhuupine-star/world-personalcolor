@@ -8,7 +8,7 @@ import { CheckCircle, Loader2, Mail, ArrowRight, AlertCircle, RefreshCw } from '
 import Link from 'next/link';
 
 // Webhook typically fires within 1-5s. Poll for up to 30s before showing manual retry.
-const AUTO_RETRY_LIMIT    = 10;
+const AUTO_RETRY_LIMIT    = 20;   // 20 × 3s = 60s
 const AUTO_RETRY_INTERVAL = 3000; // ms
 
 type State = 'verifying' | 'waiting' | 'success' | 'already' | 'unpaid' | 'error';
@@ -208,11 +208,15 @@ function PaymentSuccessContent() {
             </div>
           </div>
           <div className="space-y-2">
-            <h1 className="font-serif text-2xl font-bold text-slate-900">Баталгаажаагүй байна</h1>
+            <h1 className="font-serif text-2xl font-bold text-slate-900">Төлбөр боловсруулж байна</h1>
             <p className="text-sm text-slate-500 leading-relaxed">
-              Төлбөр баталгаажих хугацаа хэтэрлээ. Хэдэн минутын дараа дахин шалгана уу.
-              Хэрэв имэйл ирсэн бол амжилттай гэсэн үг.
+              Хэрэв та QPay-д төлбөр амжилттай хийсэн бол таны имэйл хаяг руу
+              <strong> PDF тайлан</strong> удахгүй ирнэ.
             </p>
+          </div>
+          <div className="rounded-2xl bg-violet-50 border border-violet-100 px-5 py-4 text-sm text-violet-700 text-left space-y-1">
+            <p className="font-semibold">Имэйлдээ шалгана уу:</p>
+            <p className="text-xs text-violet-600">inbox болон spam хавтсыг аль алийг нь шалгаарай.</p>
           </div>
           <button
             onClick={handleRetry}
