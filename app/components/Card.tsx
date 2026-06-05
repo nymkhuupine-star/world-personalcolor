@@ -57,6 +57,9 @@ export default function Card() {
   // Payment gate — set after successful analysis, never exposes season/colors to UI
   const [readyToPay, setReadyToPay] = useState(false);
   const [paying, setPaying] = useState(false);
+  // In-app browser: store the Bonum followUpLink so user can tap it manually
+  const [inAppPayLink, setInAppPayLink] = useState<string | null>(null);
+  const [linkCopied, setLinkCopied] = useState(false);
   const pendingSeason   = useRef<string | null>(null);
   const pendingImageUrl = useRef<string | null>(null);
 
@@ -80,6 +83,8 @@ export default function Card() {
     setQuestionnaireAnswers({});
     setReadyToPay(false);
     setPaying(false);
+    setInAppPayLink(null);
+    setLinkCopied(false);
     pendingSeason.current   = null;
     pendingImageUrl.current = null;
   };
@@ -229,7 +234,13 @@ export default function Card() {
       if (data.orderId) {
         try { localStorage.setItem('pendingOrderId', data.orderId); } catch {}
       }
-      window.location.href = data.followUpLink;
+      // In-app browsers (Messenger/Instagram) block window.location.href redirects.
+      // Show the link explicitly so the user can tap it to open in Safari/Chrome.
+      if (isInAppBrowser()) {
+        setInAppPayLink(data.followUpLink);
+      } else {
+        window.location.href = data.followUpLink;
+      }
     } catch (err) {
       console.error('handlePay error:', err);
       setSubmitError(err instanceof Error ? err.message : 'Алдаа гарлаа. Дахин оролдоно уу.');
@@ -491,6 +502,39 @@ export default function Card() {
                 </span>
                 <div className="absolute inset-0 bg-gradient-to-r from-violet-600 via-purple-600 to-pink-600 opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
               </button>
+
+              {/* In-app browser: show tap-able link instead of JS redirect */}
+              {inAppPayLink && (
+                <div className="rounded-xl border border-violet-200 bg-white px-4 py-4 space-y-3">
+                  <p className="text-xs font-semibold text-slate-700 text-center">
+                    Доорх товчийг дарж Safari-д нээнэ үү
+                  </p>
+                  <a
+                    href={inAppPayLink}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-violet-500 via-purple-500 to-pink-500 py-3.5 text-sm font-bold text-white shadow-md"
+                  >
+                    <ExternalLink className="h-4 w-4" strokeWidth={2} />
+                    Төлбөрийн хуудас нээх
+                  </a>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      navigator.clipboard.writeText(inAppPayLink).then(() => {
+                        setLinkCopied(true);
+                        setTimeout(() => setLinkCopied(false), 3000);
+                      }).catch(() => {});
+                    }}
+                    className="w-full rounded-xl border border-slate-200 py-2.5 text-xs font-medium text-slate-600 hover:bg-slate-50 transition-colors"
+                  >
+                    {linkCopied ? '✓ Холбоос хуулагдлаа' : 'Холбоосыг хуулах'}
+                  </button>
+                  <p className="text-[11px] text-slate-400 text-center leading-relaxed">
+                    Хуулсан холбоосоо Safari эсвэл Chrome-д наана уу
+                  </p>
+                </div>
+              )}
 
               {/* Reset link */}
               <button
