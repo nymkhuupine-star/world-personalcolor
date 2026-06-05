@@ -12,6 +12,7 @@ import { isQuestionnaireComplete } from '@/lib/personal-color/questionnaire';
 
 const MAX_SIZE = 1024;
 const JPEG_QUALITY = 0.85;
+const PRICE = 8_900; // ₮ — үнийн дүнг зөвхөн энд өөрчил
 
 function compressImage(file: File): Promise<File> {
   return new Promise((resolve) => {
@@ -217,7 +218,7 @@ export default function Card() {
         body: JSON.stringify({
           email:          email.trim(),
           analysisResult: { seasonName: pendingSeason.current, imageUrl: pendingImageUrl.current },
-          amount:         10,
+          amount:         PRICE,
         }),
       });
       const data = await res.json().catch(() => ({} as { followUpLink?: string; orderId?: string; error?: string }));
