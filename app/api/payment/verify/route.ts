@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import { getBonumInvoiceStatus } from '@/lib/bonum';
 import { deliverResult } from '@/lib/deliverResult';
 import {
   type SeasonName,
@@ -44,7 +45,7 @@ export async function GET(req: Request) {
 
     const stored = order.analysis_result as StoredAnalysis | null;
 
-    // Webhook already confirmed payment — fast path, no external API call needed.
+    // PRIMARY PATH: webhook already confirmed payment — no external API call needed.
     if (order.paid) {
       return Response.json({
         success:          true,
@@ -54,8 +55,55 @@ export async function GET(req: Request) {
       });
     }
 
-    // Payment not yet confirmed by webhook. Tell the client to retry.
-    return Response.json({ success: false, paid: false });
+    if (!order.invoice_id)
+      return Response.json({ success: false, paid: false });
+
+    // FALLBACK PATH: webhook may not have fired yet — ask Bonum directly.
+    // If Bonum API is unreachable, return unpaid (never trust the redirect blindly).
+    let bonumPaid = false;
+    try {
+      const status = await getBonumInvoiceStatus(order.invoice_id);
+      bonumPaid = status.paid;
+      console.log('verify: Bonum status for', orderId, '→', status.status, '| paid:', bonumPaid);
+    } catch (err) {
+      console.error('verify: Bonum status check failed for', orderId, ':', err);
+      return Response.json({ success: false, paid: false });
+    }
+
+    if (!bonumPaid)
+      return Response.json({ success: false, paid: false });
+
+    // Bonum confirms paid — atomic update (safe against concurrent webhook)
+    const { data: updatedRows } = await supabase
+      .from('analysis_orders')
+      .update({ paid: true, paid_at: new Date().toISOString() })
+      .eq('id', order.id)
+      .eq('paid', false)
+      .select('id');
+
+    // If nothing updated, webhook ran concurrently — return as already delivered
+    if (!updatedRows || updatedRows.length === 0) {
+      return Response.json({
+        success:          true,
+        alreadyDelivered: true,
+        result:           buildResult(stored),
+        imageUrl:         stored?.imageUrl ?? '',
+      });
+    }
+
+    // We marked it paid — deliver result
+    if (stored?.seasonName && order.email) {
+      await deliverResult(order.email, stored.seasonName, stored.imageUrl ?? null).catch(
+        (err) => console.error('verify: deliverResult error:', err),
+      );
+    }
+
+    return Response.json({
+      success:  true,
+      paid:     true,
+      result:   buildResult(stored),
+      imageUrl: stored?.imageUrl ?? '',
+    });
 
   } catch (err) {
     console.error('payment/verify error:', err);

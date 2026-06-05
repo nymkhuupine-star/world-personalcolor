@@ -9,11 +9,10 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!,
 );
 
-// Bonum sends the HMAC-SHA256 of the raw request body in x-checksum-v2.
 function verifyChecksum(rawBody: string, headerValue: string): boolean {
   const key = process.env.BONUM_MERCHANT_CHECKSUM_KEY;
   if (!key) {
-    console.warn('webhook: BONUM_MERCHANT_CHECKSUM_KEY not set — accepting without signature validation');
+    console.warn('webhook: BONUM_MERCHANT_CHECKSUM_KEY not set — skipping signature check');
     return true;
   }
   const computed = createHmac('sha256', Buffer.from(key, 'utf8'))
@@ -22,58 +21,122 @@ function verifyChecksum(rawBody: string, headerValue: string): boolean {
   return computed === headerValue;
 }
 
-type BonumWebhook = {
-  type:   string;
-  status: string;
-  body: {
-    amount:        number;
-    currency:      string;
-    completedAt:   string;
-    terminalId:    string;
-    invoiceId:     string;
-    paymentVendor: string;
-  };
-};
+// Extract invoice/transaction ID from all known Bonum payload shapes
+function extractField(
+  payload: Record<string, unknown>,
+  keys: string[],
+): string | null {
+  const body = payload.body as Record<string, unknown> | undefined;
+  const data = payload.data as Record<string, unknown> | undefined;
+  for (const k of keys) {
+    const v =
+      (body?.[k] as string | undefined) ??
+      (data?.[k] as string | undefined) ??
+      (payload[k] as string | undefined);
+    if (v) return v;
+  }
+  return null;
+}
 
 type StoredAnalysis = { seasonName: string; imageUrl?: string };
 
-// Statuses Bonum may send to indicate a completed payment
-const BONUM_SUCCESS_STATUSES = new Set(['SUCCESS', 'PAID', 'COMPLETED']);
+const SUCCESS_STATUSES = new Set(['SUCCESS', 'PAID', 'COMPLETED', 'APPROVED']);
 
 export async function POST(req: Request) {
   try {
     const rawBody = await req.text().catch(() => '');
     const checksumHeader = req.headers.get('x-checksum-v2');
 
+    // Log everything so we can diagnose in Vercel Functions logs
+    const hdrs: Record<string, string> = {};
+    req.headers.forEach((v, k) => { hdrs[k] = v; });
+    console.log('webhook | headers:', JSON.stringify(hdrs));
+    console.log('webhook | body:', rawBody.slice(0, 3000));
+
     if (checksumHeader && !verifyChecksum(rawBody, checksumHeader)) {
-      console.error('webhook: invalid checksum');
+      console.error('webhook: invalid checksum, header:', checksumHeader);
       return Response.json({ error: 'Invalid checksum' }, { status: 401 });
     }
 
-    const payload = rawBody ? JSON.parse(rawBody) as BonumWebhook : null;
+    let payload: Record<string, unknown>;
+    try {
+      payload = rawBody ? JSON.parse(rawBody) as Record<string, unknown> : {};
+    } catch {
+      console.error('webhook: JSON parse failed:', rawBody);
+      return Response.json({ error: 'Invalid JSON' }, { status: 400 });
+    }
 
-    if (!payload || payload.type !== 'PAYMENT' || !BONUM_SUCCESS_STATUSES.has(payload.status))
+    const type   = String(payload.type   ?? payload.event ?? '').toUpperCase();
+    const status = String(payload.status ?? '').toUpperCase();
+
+    console.log('webhook | type:', type, '| status:', status);
+
+    // Accept any payment/invoice/transaction event; ignore obviously unrelated types
+    if (type && !type.includes('PAYMENT') && !type.includes('INVOICE') && !type.includes('TRANSACTION')) {
+      console.log('webhook: ignoring non-payment type:', type);
       return Response.json({ received: true });
+    }
 
-    const { invoiceId, completedAt } = payload.body;
-    if (!invoiceId)
+    if (status && !SUCCESS_STATUSES.has(status)) {
+      console.log('webhook: non-success status, ignoring:', status);
+      return Response.json({ received: true });
+    }
+
+    // Bonum may send their invoiceId OR our transactionId — extract both
+    const bonumInvoiceId  = extractField(payload, ['invoiceId', 'invoice_id']);
+    const ourTransactionId = extractField(payload, ['transactionId', 'transaction_id', 'orderId', 'order_id']);
+    const completedAt     = extractField(payload, ['completedAt', 'completed_at', 'paidAt', 'paid_at']);
+
+    console.log('webhook | bonumInvoiceId:', bonumInvoiceId, '| ourTransactionId:', ourTransactionId);
+
+    if (!bonumInvoiceId && !ourTransactionId) {
+      console.error('webhook: no invoiceId or transactionId in payload:', JSON.stringify(payload));
       return Response.json({ error: 'invoiceId missing' }, { status: 400 });
+    }
 
-    const { data: order, error: findErr } = await supabase
-      .from('analysis_orders')
-      .select('id, paid, email, analysis_result')
-      .eq('invoice_id', invoiceId)
-      .single();
+    // Look up the order — try by Bonum invoiceId first, then by our order UUID
+    let order: { id: string; paid: boolean; email: string; analysis_result: unknown } | null = null;
 
-    if (findErr || !order)
+    if (bonumInvoiceId) {
+      const { data } = await supabase
+        .from('analysis_orders')
+        .select('id, paid, email, analysis_result')
+        .eq('invoice_id', bonumInvoiceId)
+        .single();
+      order = data;
+    }
+
+    if (!order && ourTransactionId) {
+      const { data } = await supabase
+        .from('analysis_orders')
+        .select('id, paid, email, analysis_result')
+        .eq('id', ourTransactionId)
+        .single();
+      order = data;
+    }
+
+    // Last resort: maybe Bonum sent their invoiceId in the transactionId field
+    if (!order && bonumInvoiceId) {
+      const { data } = await supabase
+        .from('analysis_orders')
+        .select('id, paid, email, analysis_result')
+        .eq('id', bonumInvoiceId)
+        .single();
+      order = data;
+    }
+
+    if (!order) {
+      console.error('webhook: order not found | bonumInvoiceId:', bonumInvoiceId, '| ourTransactionId:', ourTransactionId);
       return Response.json({ error: 'Order not found' }, { status: 404 });
+    }
+
+    console.log('webhook: found order', order.id, '| already paid:', order.paid);
 
     const paidAt = completedAt
       ? new Date(completedAt.replace(' ', 'T')).toISOString()
       : new Date().toISOString();
 
-    // Atomic update: only proceeds if not yet marked paid.
-    // This is race-condition safe against concurrent verify calls.
+    // Atomic update — race-condition safe
     const { data: updatedRows, error: updateErr } = await supabase
       .from('analysis_orders')
       .update({ paid: true, paid_at: paidAt })
@@ -82,14 +145,16 @@ export async function POST(req: Request) {
       .select('id');
 
     if (updateErr) {
-      console.error('webhook update error:', updateErr);
+      console.error('webhook: update error:', updateErr);
       return Response.json({ error: 'Update failed' }, { status: 500 });
     }
 
     if (!updatedRows || updatedRows.length === 0) {
-      // Another process (concurrent webhook or verify) already marked this paid.
+      console.log('webhook: already paid, skipping delivery for order:', order.id);
       return Response.json({ received: true });
     }
+
+    console.log('webhook: paid confirmed, delivering result for order:', order.id);
 
     const stored = order.analysis_result as StoredAnalysis | null;
     if (stored?.seasonName && order.email) {
