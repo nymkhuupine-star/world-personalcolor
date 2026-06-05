@@ -9,6 +9,7 @@ import supabase from '@/utils/supabase';
 import Questionnaire from './Questionnaire';
 import type { QuestionnaireAnswers } from '@/lib/personal-color/questionnaire';
 import { isQuestionnaireComplete } from '@/lib/personal-color/questionnaire';
+import { isInAppBrowser } from '@/lib/isInAppBrowser';
 
 const MAX_SIZE = 1024;
 const JPEG_QUALITY = 0.85;
@@ -56,6 +57,7 @@ export default function Card() {
   // Payment gate — set after successful analysis, never exposes season/colors to UI
   const [readyToPay, setReadyToPay] = useState(false);
   const [paying, setPaying] = useState(false);
+  const [copiedLink, setCopiedLink] = useState<string | null>(null);
   const pendingSeason   = useRef<string | null>(null);
   const pendingImageUrl = useRef<string | null>(null);
 
@@ -79,6 +81,7 @@ export default function Card() {
     setQuestionnaireAnswers({});
     setReadyToPay(false);
     setPaying(false);
+    setCopiedLink(null);
     pendingSeason.current   = null;
     pendingImageUrl.current = null;
   };
@@ -229,6 +232,14 @@ export default function Card() {
 
       if (data.orderId) {
         try { localStorage.setItem('pendingOrderId', data.orderId); } catch {}
+      }
+
+      // Messenger/Instagram in-app browsers block bank app deep links on Bonum's page.
+      // Auto-copy the payment URL so the user can paste it in Safari.
+      if (isInAppBrowser()) {
+        try { await navigator.clipboard.writeText(data.followUpLink); } catch {}
+        setCopiedLink(data.followUpLink);
+        return;
       }
 
       window.location.href = data.followUpLink;
@@ -466,6 +477,25 @@ export default function Card() {
                 </span>
                 <div className="absolute inset-0 bg-gradient-to-r from-violet-600 via-purple-600 to-pink-600 opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
               </button>
+
+              {/* In-app browser: auto-copied link + Safari instruction */}
+              {copiedLink && (
+                <div className="rounded-xl bg-emerald-50 border border-emerald-200 px-4 py-4 space-y-2 text-center">
+                  <p className="text-sm font-bold text-emerald-700">✓ Холбоос хуулагдлаа!</p>
+                  <p className="text-xs text-emerald-600 leading-relaxed">
+                    Safari нээж, дэлгэцийн дээд хаягийн мөрийг удаан дарж <strong>Paste</strong> хийгээд Enter дарна уу.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      navigator.clipboard.writeText(copiedLink).catch(() => {});
+                    }}
+                    className="text-xs text-emerald-600 underline"
+                  >
+                    Дахин хуулах
+                  </button>
+                </div>
+              )}
 
               {/* Reset link */}
               <button
