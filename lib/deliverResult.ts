@@ -45,10 +45,10 @@ export async function deliverResult(
     ? supabase.storage.from('reports').getPublicUrl(pdfPath).data.publicUrl
     : null;
 
-  // Find existing analyses row for this email + season
+  // Find existing analyses row for this email + season (to avoid duplicate DB rows)
   const { data: existing } = await supabase
     .from('analyses')
-    .select('id, email_sent')
+    .select('id')
     .eq('email', email)
     .eq('sub_type', season)
     .order('created_at', { ascending: false })
@@ -56,10 +56,6 @@ export async function deliverResult(
     .single();
 
   let analysisId: string | null = existing?.id ?? null;
-
-  // If email was already delivered and this is not a forced resend, stop here.
-  // This prevents duplicate emails from processPendingOrders, verify, etc.
-  if (existing?.email_sent === true && !force) return;
 
   if (!existing) {
     const { data: inserted, error: insertErr } = await supabase
