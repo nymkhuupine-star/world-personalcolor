@@ -217,7 +217,7 @@ export default function Card() {
         body: JSON.stringify({
           email:          email.trim(),
           analysisResult: { seasonName: pendingSeason.current, imageUrl: pendingImageUrl.current },
-          amount:         10,
+          amount:         8900,
         }),
       });
       const data = await res.json().catch(() => ({} as { followUpLink?: string; orderId?: string; error?: string }));
@@ -422,8 +422,8 @@ export default function Card() {
             >
               <p className="text-sm font-semibold text-amber-800">Анхааруулга</p>
               <p className="text-xs leading-relaxed text-amber-700">
-                Messenger браузер дотроос төлбөр хийхэд имэйл хүрэхгүй байж болно.
-                Илүү найдвартай ажиллахын тулд Safari эсвэл Chrome браузераар нэмж нэвтэрнэ үү.
+                Messenger/Instagram браузерт төлбөрийн дараах хуудас автоматаар нээгдэхгүй байж болно.
+                Гэхдээ имэйл таны хаяг руу заавал очно. Мөн нүүр хуудасны "Өмнөх үр дүн" хэсгээр имэйлээрээ үр дүнгийн байдлыг шалгах боломжтой.
               </p>
               <a
                 href={typeof window !== 'undefined' ? window.location.href : '/'}

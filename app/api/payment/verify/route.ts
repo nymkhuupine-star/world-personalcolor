@@ -34,29 +34,64 @@ export async function GET(req: Request) {
     if (findErr || !order)
       return Response.json({ error: 'Захиалга олдсонгүй.' }, { status: 404 });
 
-    if (order.paid)
-      return Response.json({ success: true, alreadyDelivered: true });
+    // Webhook already confirmed payment — return immediately without re-checking Bonum.
+    if (order.paid) {
+      const stored = order.analysis_result as StoredAnalysis | null;
+      const seasonName        = stored?.seasonName ?? '';
+      const season            = seasonName as SeasonName;
+      const baseSeason        = getBaseSeason(season);
+      const reasoning         = SEASON_DESCRIPTIONS[season] ?? SEASON_DESCRIPTIONS['True Spring'];
+      const recommendedColors = (SEASON_PALETTES[season] ?? SEASON_PALETTES['True Spring']) as string[];
+
+      return Response.json({
+        success: true,
+        alreadyDelivered: true,
+        result:  { season: baseSeason, subType: seasonName, reasoning, recommendedColors },
+        imageUrl: stored?.imageUrl ?? '',
+      });
+    }
 
     if (!order.invoice_id)
       return Response.json({ error: 'invoice_id байхгүй.' }, { status: 400 });
 
-    // Verify with Bonum; fall back to trusting redirect if endpoint unavailable
+    // Fallback: webhook may be slightly delayed — check Bonum directly.
+    // If Bonum API is unreachable, return unpaid rather than trusting the redirect.
     let paid = false;
     try {
       const status = await getBonumInvoiceStatus(order.invoice_id);
       paid = status.paid;
     } catch (err) {
-      console.error('verify: Bonum status check failed, trusting redirect:', err);
-      paid = true;
+      console.error('verify: Bonum status check failed:', err);
+      return Response.json({ success: false, paid: false });
     }
 
     if (!paid)
       return Response.json({ success: false, paid: false });
 
-    await supabase
+    // Atomic update: only marks paid if webhook has not already done so.
+    const { data: updatedRows } = await supabase
       .from('analysis_orders')
       .update({ paid: true, paid_at: new Date().toISOString() })
-      .eq('id', order.id);
+      .eq('id', order.id)
+      .eq('paid', false)
+      .select('id');
+
+    // If no rows updated, webhook ran concurrently and already handled it.
+    if (!updatedRows || updatedRows.length === 0) {
+      const stored = order.analysis_result as StoredAnalysis | null;
+      const seasonName        = stored?.seasonName ?? '';
+      const season            = seasonName as SeasonName;
+      const baseSeason        = getBaseSeason(season);
+      const reasoning         = SEASON_DESCRIPTIONS[season] ?? SEASON_DESCRIPTIONS['True Spring'];
+      const recommendedColors = (SEASON_PALETTES[season] ?? SEASON_PALETTES['True Spring']) as string[];
+
+      return Response.json({
+        success: true,
+        alreadyDelivered: true,
+        result:  { season: baseSeason, subType: seasonName, reasoning, recommendedColors },
+        imageUrl: stored?.imageUrl ?? '',
+      });
+    }
 
     const stored = order.analysis_result as StoredAnalysis | null;
     if (stored?.seasonName && order.email) {
@@ -65,7 +100,6 @@ export async function GET(req: Request) {
       );
     }
 
-    // Return result data for logged-in user save-analysis call
     const seasonName        = stored?.seasonName ?? '';
     const season            = seasonName as SeasonName;
     const baseSeason        = getBaseSeason(season);

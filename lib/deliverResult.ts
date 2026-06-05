@@ -37,24 +37,36 @@ export async function deliverResult(
     ? supabase.storage.from('reports').getPublicUrl(pdfPath).data.publicUrl
     : null;
 
-  // Insert analyses row
-  const { data: inserted, error: insertErr } = await supabase
+  // Insert analyses row only if no existing row for this email+season
+  const { data: existing } = await supabase
     .from('analyses')
-    .insert({
-      email,
-      image_path:         imageUrl,
-      season:             baseSeason,
-      sub_type:           season,
-      reasoning,
-      recommended_colors: recommendedColors,
-      email_sent:         false,
-      paid:               true,
-    })
     .select('id')
+    .eq('email', email)
+    .eq('sub_type', season)
+    .order('created_at', { ascending: false })
+    .limit(1)
     .single();
 
-  if (insertErr) console.error('analyses insert error:', insertErr);
-  const analysisId = inserted?.id ?? null;
+  let analysisId: string | null = existing?.id ?? null;
+  if (!existing) {
+    const { data: inserted, error: insertErr } = await supabase
+      .from('analyses')
+      .insert({
+        email,
+        image_path:         imageUrl,
+        season:             baseSeason,
+        sub_type:           season,
+        reasoning,
+        recommended_colors: recommendedColors,
+        email_sent:         false,
+        paid:               true,
+      })
+      .select('id')
+      .single();
+
+    if (insertErr) console.error('analyses insert error:', insertErr);
+    analysisId = inserted?.id ?? null;
+  }
 
   // Send email
   const { RESEND_API_KEY } = process.env;

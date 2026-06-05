@@ -9,9 +9,13 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!,
 );
 
+// Bonum sends the HMAC-SHA256 of the raw request body in x-checksum-v2.
 function verifyChecksum(rawBody: string, headerValue: string): boolean {
   const key = process.env.BONUM_MERCHANT_CHECKSUM_KEY;
-  if (!key) return true;
+  if (!key) {
+    console.warn('webhook: BONUM_MERCHANT_CHECKSUM_KEY not set — accepting without signature validation');
+    return true;
+  }
   const computed = createHmac('sha256', Buffer.from(key, 'utf8'))
     .update(rawBody, 'utf8')
     .digest('hex');
@@ -33,10 +37,11 @@ type BonumWebhook = {
 
 type StoredAnalysis = { seasonName: string; imageUrl?: string };
 
+// Statuses Bonum may send to indicate a completed payment
+const BONUM_SUCCESS_STATUSES = new Set(['SUCCESS', 'PAID', 'COMPLETED']);
+
 export async function POST(req: Request) {
   try {
-    // TODO: verify HMAC signature using BONUM_MERCHANT_CHECKSUM_KEY
-    // once Bonum documents their webhook signing scheme.
     const rawBody = await req.text().catch(() => '');
     const checksumHeader = req.headers.get('x-checksum-v2');
 
@@ -47,7 +52,7 @@ export async function POST(req: Request) {
 
     const payload = rawBody ? JSON.parse(rawBody) as BonumWebhook : null;
 
-    if (!payload || payload.type !== 'PAYMENT' || payload.status !== 'SUCCESS')
+    if (!payload || payload.type !== 'PAYMENT' || !BONUM_SUCCESS_STATUSES.has(payload.status))
       return Response.json({ received: true });
 
     const { invoiceId, completedAt } = payload.body;
@@ -63,27 +68,33 @@ export async function POST(req: Request) {
     if (findErr || !order)
       return Response.json({ error: 'Order not found' }, { status: 404 });
 
-    if (order.paid)
-      return Response.json({ received: true });
-
     const paidAt = completedAt
       ? new Date(completedAt.replace(' ', 'T')).toISOString()
       : new Date().toISOString();
 
-    const { error: updateErr } = await supabase
+    // Atomic update: only proceeds if not yet marked paid.
+    // This is race-condition safe against concurrent verify calls.
+    const { data: updatedRows, error: updateErr } = await supabase
       .from('analysis_orders')
       .update({ paid: true, paid_at: paidAt })
-      .eq('id', order.id);
+      .eq('id', order.id)
+      .eq('paid', false)
+      .select('id');
 
     if (updateErr) {
       console.error('webhook update error:', updateErr);
       return Response.json({ error: 'Update failed' }, { status: 500 });
     }
 
+    if (!updatedRows || updatedRows.length === 0) {
+      // Another process (concurrent webhook or verify) already marked this paid.
+      return Response.json({ received: true });
+    }
+
     const stored = order.analysis_result as StoredAnalysis | null;
     if (stored?.seasonName && order.email) {
       await deliverResult(order.email, stored.seasonName, stored.imageUrl ?? null).catch(
-        (err) => console.error('deliverResult error:', err),
+        (err) => console.error('webhook: deliverResult error:', err),
       );
     }
 

@@ -156,19 +156,23 @@ export default function Dashboard() {
     setPdfSuccess(null);
     setPdfError(null);
 
-    const { error } = await supabase.storage
-      .from('reports')
-      .upload(`${season}/${subtype}.pdf`, file, {
-        contentType: 'application/pdf',
-        upsert: true,
-      });
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('season', season);
+    formData.append('subtype', subtype);
 
-    if (error) {
-      setPdfError(error.message);
-    } else {
-      setPdfSuccess(id);
-      await fetchPdfStatuses();
-      setTimeout(() => setPdfSuccess(null), 3000);
+    try {
+      const res = await fetch('/api/admin/pdf', { method: 'POST', body: formData });
+      if (res.ok) {
+        setPdfSuccess(id);
+        await fetchPdfStatuses();
+        setTimeout(() => setPdfSuccess(null), 3000);
+      } else {
+        const data = await res.json().catch(() => ({})) as { error?: string };
+        setPdfError(data.error ?? `Алдаа гарлаа (${res.status}).`);
+      }
+    } catch {
+      setPdfError('Сервертэй холбогдож чадсангүй.');
     }
     setPdfUploading(null);
   };
