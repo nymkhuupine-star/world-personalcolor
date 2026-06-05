@@ -46,10 +46,6 @@ export async function POST(req: Request) {
     const expiresAt = new Date(Date.now() + SESSION_DAYS * 24 * 60 * 60 * 1000).toISOString();
     await supabase.from('sessions').insert({ token, email, expires_at: expiresAt });
 
-    // Deliver any paid-but-undelivered orders for this email
-    // This ensures email arrives regardless of which browser was used for payment
-    await processPendingOrders(email);
-
     const { data: analyses, error: analysesErr } = await supabase
       .from('analyses')
       .select('id, season, sub_type, reasoning, recommended_colors, created_at')
