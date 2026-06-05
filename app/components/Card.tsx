@@ -57,9 +57,6 @@ export default function Card() {
   // Payment gate — set after successful analysis, never exposes season/colors to UI
   const [readyToPay, setReadyToPay] = useState(false);
   const [paying, setPaying] = useState(false);
-  // In-app browser: store the Bonum followUpLink so user can tap it manually
-  const [inAppPayLink, setInAppPayLink] = useState<string | null>(null);
-  const [linkCopied, setLinkCopied] = useState(false);
   const pendingSeason   = useRef<string | null>(null);
   const pendingImageUrl = useRef<string | null>(null);
 
@@ -83,8 +80,6 @@ export default function Card() {
     setQuestionnaireAnswers({});
     setReadyToPay(false);
     setPaying(false);
-    setInAppPayLink(null);
-    setLinkCopied(false);
     pendingSeason.current   = null;
     pendingImageUrl.current = null;
   };
@@ -210,11 +205,19 @@ export default function Card() {
     }
   };
 
-  // Step 2 — user clicks "Төлбөр төлж тайлан авах" → create invoice → redirect
+  // Step 2 — user clicks "PDF тайлан авах" → create invoice → open Bonum
   const handlePay = async () => {
     if (paying || !pendingSeason.current || !pendingImageUrl.current) return;
     setPaying(true);
     setSubmitError(null);
+
+    // Open a blank window synchronously during the click event.
+    // This bypasses popup-blockers (including Messenger's in-app browser)
+    // because window.open() is called before any async work.
+    // We set the real URL once the invoice is ready.
+    let payWin: Window | null = null;
+    try { payWin = window.open('about:blank', '_blank'); } catch {}
+
     try {
       const res = await fetch('/api/payment/create', {
         method:  'POST',
@@ -226,22 +229,26 @@ export default function Card() {
         }),
       });
       const data = await res.json().catch(() => ({} as { followUpLink?: string; orderId?: string; error?: string }));
+
       if (!res.ok || !data.followUpLink) {
+        payWin?.close();
         setSubmitError(data.error ?? 'Төлбөр үүсгэхэд алдаа гарлаа. Дахин оролдоно уу.');
         return;
       }
-      // Save orderId so page-load check can verify payment if success page is missed
+
       if (data.orderId) {
         try { localStorage.setItem('pendingOrderId', data.orderId); } catch {}
       }
-      // In-app browsers (Messenger/Instagram) block window.location.href redirects.
-      // Show the link explicitly so the user can tap it to open in Safari/Chrome.
-      if (isInAppBrowser()) {
-        setInAppPayLink(data.followUpLink);
+
+      // Navigate the pre-opened window to the Bonum payment page
+      if (payWin && !payWin.closed) {
+        payWin.location.href = data.followUpLink;
       } else {
+        // Fallback: same-tab redirect (pop-up was blocked)
         window.location.href = data.followUpLink;
       }
     } catch (err) {
+      payWin?.close();
       console.error('handlePay error:', err);
       setSubmitError(err instanceof Error ? err.message : 'Алдаа гарлаа. Дахин оролдоно уу.');
     } finally {
@@ -502,59 +509,6 @@ export default function Card() {
                 </span>
                 <div className="absolute inset-0 bg-gradient-to-r from-violet-600 via-purple-600 to-pink-600 opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
               </button>
-
-              {/* In-app browser: copy-link flow (Messenger blocks bank app deep links) */}
-              {inAppPayLink && (
-                <div className="rounded-xl border-2 border-violet-300 bg-violet-50 px-4 py-4 space-y-3">
-                  {/* Step instructions */}
-                  <div className="space-y-2">
-                    <p className="text-xs font-bold text-violet-800 text-center">
-                      Safari-д нээж төлнө үү
-                    </p>
-                    <div className="space-y-1.5">
-                      {[
-                        '1. Доорх товчоор холбоосыг хуулна',
-                        '2. Safari эсвэл Chrome нээнэ',
-                        '3. Хаягийн мөрөнд наагаад Enter дарна',
-                        '4. Банкны апп-аараа төлнө',
-                      ].map((step) => (
-                        <p key={step} className="text-[11px] text-violet-700 leading-relaxed">{step}</p>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Copy button — primary action */}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      navigator.clipboard.writeText(inAppPayLink).then(() => {
-                        setLinkCopied(true);
-                        setTimeout(() => setLinkCopied(false), 4000);
-                      }).catch(() => {});
-                    }}
-                    className={`w-full flex items-center justify-center gap-2 rounded-xl py-3.5 text-sm font-bold transition-all ${
-                      linkCopied
-                        ? 'bg-emerald-500 text-white'
-                        : 'bg-gradient-to-r from-violet-500 via-purple-500 to-pink-500 text-white shadow-md'
-                    }`}
-                  >
-                    {linkCopied
-                      ? '✓ Холбоос хуулагдлаа — Safari-д наана уу!'
-                      : '📋 Холбоосыг хуулах'}
-                  </button>
-
-                  {/* Fallback: tap link (might stay in Messenger, but some users prefer) */}
-                  <a
-                    href={inAppPayLink}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex w-full items-center justify-center gap-1.5 rounded-xl border border-violet-200 bg-white py-2.5 text-xs font-medium text-violet-600"
-                  >
-                    <ExternalLink className="h-3.5 w-3.5" strokeWidth={2} />
-                    Эсвэл энд дарж нээх
-                  </a>
-                </div>
-              )}
 
               {/* Reset link */}
               <button
