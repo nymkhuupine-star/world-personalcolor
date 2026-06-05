@@ -217,7 +217,7 @@ export default function Card() {
         body: JSON.stringify({
           email:          email.trim(),
           analysisResult: { seasonName: pendingSeason.current, imageUrl: pendingImageUrl.current },
-          amount:         8900,
+          amount:         10,
         }),
       });
       const data = await res.json().catch(() => ({} as { followUpLink?: string; orderId?: string; error?: string }));
