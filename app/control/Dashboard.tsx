@@ -98,7 +98,27 @@ export default function Dashboard() {
   const [pdfSuccess, setPdfSuccess] = useState<string | null>(null);
   const [pdfError, setPdfError] = useState<string | null>(null);
   const [expandedSeason, setExpandedSeason] = useState<string | null>(null);
+  const [confirmingId, setConfirmingId] = useState<string | null>(null);
+  const [confirmedId, setConfirmedId] = useState<string | null>(null);
   const fileRefs = useRef<Record<string, HTMLInputElement | null>>({});
+
+  const handleConfirmOrder = async (orderId: string) => {
+    if (confirmingId) return;
+    setConfirmingId(orderId);
+    try {
+      const res = await fetch('/api/admin/confirm-order', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orderId }),
+      });
+      if (res.ok) {
+        setConfirmedId(orderId);
+        await fetchPortraits();
+        setTimeout(() => setConfirmedId(null), 4000);
+      }
+    } catch { /* silent */ }
+    setConfirmingId(null);
+  };
 
   const fetchPortraits = useCallback(async () => {
     setLoading(true);
@@ -566,8 +586,8 @@ export default function Dashboard() {
                     <table className="w-full">
                       <thead>
                         <tr className="border-b border-slate-100 bg-slate-50/70">
-                          {['#', 'Имэйл хаяг', 'Өнгөний төрөл', 'Дүн', 'Статус', 'Огноо'].map((h, i) => (
-                            <th key={h} className={`px-5 py-3 text-left text-[11px] font-semibold text-slate-400 ${i === 3 ? 'text-right' : ''} ${i === 4 ? 'text-center' : ''}`}>
+                          {['#', 'Имэйл хаяг', 'Өнгөний төрөл', 'Дүн', 'Статус', 'Огноо', ''].map((h, i) => (
+                            <th key={i} className={`px-5 py-3 text-left text-[11px] font-semibold text-slate-400 ${i === 3 ? 'text-right' : ''} ${i === 4 ? 'text-center' : ''}`}>
                               {h}
                             </th>
                           ))}
@@ -602,6 +622,21 @@ export default function Dashboard() {
                                 </td>
                                 <td className="px-5 py-4 text-xs text-slate-400 whitespace-nowrap">
                                   {o.paid && o.paid_at ? formatDate(o.paid_at) : formatDate(o.created_at)}
+                                </td>
+                                <td className="px-5 py-4 text-center">
+                                  {!o.paid && (
+                                    confirmedId === o.id ? (
+                                      <span className="text-xs text-emerald-600 font-semibold">✓ Илгээгдлээ</span>
+                                    ) : (
+                                      <button
+                                        onClick={() => handleConfirmOrder(o.id)}
+                                        disabled={confirmingId === o.id}
+                                        className="rounded-lg bg-violet-50 border border-violet-200 px-3 py-1.5 text-xs font-semibold text-violet-600 hover:bg-violet-100 transition disabled:opacity-50"
+                                      >
+                                        {confirmingId === o.id ? '...' : 'Баталгаажуулах'}
+                                      </button>
+                                    )
+                                  )}
                                 </td>
                               </tr>
                             );
