@@ -222,7 +222,7 @@ export default function Card() {
         body: JSON.stringify({
           email:          email.trim(),
           analysisResult: { seasonName: pendingSeason.current, imageUrl: pendingImageUrl.current },
-          amount:         10,
+          amount:         8900,
         }),
       });
       const data = await res.json().catch(() => ({} as { followUpLink?: string; orderId?: string; error?: string }));
@@ -503,36 +503,56 @@ export default function Card() {
                 <div className="absolute inset-0 bg-gradient-to-r from-violet-600 via-purple-600 to-pink-600 opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
               </button>
 
-              {/* In-app browser: show tap-able link instead of JS redirect */}
+              {/* In-app browser: copy-link flow (Messenger blocks bank app deep links) */}
               {inAppPayLink && (
-                <div className="rounded-xl border border-violet-200 bg-white px-4 py-4 space-y-3">
-                  <p className="text-xs font-semibold text-slate-700 text-center">
-                    Доорх товчийг дарж Safari-д нээнэ үү
-                  </p>
-                  <a
-                    href={inAppPayLink}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-violet-500 via-purple-500 to-pink-500 py-3.5 text-sm font-bold text-white shadow-md"
-                  >
-                    <ExternalLink className="h-4 w-4" strokeWidth={2} />
-                    Төлбөрийн хуудас нээх
-                  </a>
+                <div className="rounded-xl border-2 border-violet-300 bg-violet-50 px-4 py-4 space-y-3">
+                  {/* Step instructions */}
+                  <div className="space-y-2">
+                    <p className="text-xs font-bold text-violet-800 text-center">
+                      Safari-д нээж төлнө үү
+                    </p>
+                    <div className="space-y-1.5">
+                      {[
+                        '1. Доорх товчоор холбоосыг хуулна',
+                        '2. Safari эсвэл Chrome нээнэ',
+                        '3. Хаягийн мөрөнд наагаад Enter дарна',
+                        '4. Банкны апп-аараа төлнө',
+                      ].map((step) => (
+                        <p key={step} className="text-[11px] text-violet-700 leading-relaxed">{step}</p>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Copy button — primary action */}
                   <button
                     type="button"
                     onClick={() => {
                       navigator.clipboard.writeText(inAppPayLink).then(() => {
                         setLinkCopied(true);
-                        setTimeout(() => setLinkCopied(false), 3000);
+                        setTimeout(() => setLinkCopied(false), 4000);
                       }).catch(() => {});
                     }}
-                    className="w-full rounded-xl border border-slate-200 py-2.5 text-xs font-medium text-slate-600 hover:bg-slate-50 transition-colors"
+                    className={`w-full flex items-center justify-center gap-2 rounded-xl py-3.5 text-sm font-bold transition-all ${
+                      linkCopied
+                        ? 'bg-emerald-500 text-white'
+                        : 'bg-gradient-to-r from-violet-500 via-purple-500 to-pink-500 text-white shadow-md'
+                    }`}
                   >
-                    {linkCopied ? '✓ Холбоос хуулагдлаа' : 'Холбоосыг хуулах'}
+                    {linkCopied
+                      ? '✓ Холбоос хуулагдлаа — Safari-д наана уу!'
+                      : '📋 Холбоосыг хуулах'}
                   </button>
-                  <p className="text-[11px] text-slate-400 text-center leading-relaxed">
-                    Хуулсан холбоосоо Safari эсвэл Chrome-д наана уу
-                  </p>
+
+                  {/* Fallback: tap link (might stay in Messenger, but some users prefer) */}
+                  <a
+                    href={inAppPayLink}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex w-full items-center justify-center gap-1.5 rounded-xl border border-violet-200 bg-white py-2.5 text-xs font-medium text-violet-600"
+                  >
+                    <ExternalLink className="h-3.5 w-3.5" strokeWidth={2} />
+                    Эсвэл энд дарж нээх
+                  </a>
                 </div>
               )}
 
