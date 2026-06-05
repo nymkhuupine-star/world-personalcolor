@@ -204,15 +204,11 @@ export default function Card() {
     }
   };
 
-  // Step 2 — user clicks "PDF тайлан авах" → create invoice → open Bonum
+  // Step 2 — user clicks "PDF тайлан авах" → create invoice → redirect to Bonum
   const handlePay = async () => {
     if (paying || !pendingSeason.current || !pendingImageUrl.current) return;
     setPaying(true);
     setSubmitError(null);
-
- 
-    let payWin: Window | null = null;
-    try { payWin = window.open('about:blank', '_blank'); } catch {}
 
     try {
       const res = await fetch('/api/payment/create', {
@@ -227,7 +223,6 @@ export default function Card() {
       const data = await res.json().catch(() => ({} as { followUpLink?: string; orderId?: string; error?: string }));
 
       if (!res.ok || !data.followUpLink) {
-        payWin?.close();
         setSubmitError(data.error ?? 'Төлбөр үүсгэхэд алдаа гарлаа. Дахин оролдоно уу.');
         return;
       }
@@ -236,15 +231,8 @@ export default function Card() {
         try { localStorage.setItem('pendingOrderId', data.orderId); } catch {}
       }
 
-      // Navigate the pre-opened window to the Bonum payment page
-      if (payWin && !payWin.closed) {
-        payWin.location.href = data.followUpLink;
-      } else {
-        // Fallback: same-tab redirect (pop-up was blocked)
-        window.location.href = data.followUpLink;
-      }
+      window.location.href = data.followUpLink;
     } catch (err) {
-      payWin?.close();
       console.error('handlePay error:', err);
       setSubmitError(err instanceof Error ? err.message : 'Алдаа гарлаа. Дахин оролдоно уу.');
     } finally {
