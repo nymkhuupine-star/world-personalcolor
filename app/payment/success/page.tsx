@@ -1,24 +1,28 @@
 'use client';
 
-import { Suspense, useCallback, useEffect, useState, type JSX } from 'react';
+import { Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useUser } from '@clerk/nextjs';
 import { motion } from 'framer-motion';
 import { CheckCircle, Loader2, Mail, ArrowRight, AlertCircle, RefreshCw } from 'lucide-react';
 import Link from 'next/link';
 
-type State = 'verifying' | 'success' | 'already' | 'unpaid' | 'error';
+// Webhook typically fires within 1-5s. Poll for up to 30s before showing manual retry.
+const AUTO_RETRY_LIMIT    = 10;
+const AUTO_RETRY_INTERVAL = 3000; // ms
+
+type State = 'verifying' | 'waiting' | 'success' | 'already' | 'unpaid' | 'error';
 
 type VerifyResponse = {
-  success?:         boolean;
-  paid?:            boolean;
+  success?:          boolean;
+  paid?:             boolean;
   alreadyDelivered?: boolean;
-  error?:           string;
+  error?:            string;
   result?: {
-    season:             string;
-    subType:            string;
-    reasoning:          string;
-    recommendedColors:  string[];
+    season:            string;
+    subType:           string;
+    reasoning:         string;
+    recommendedColors: string[];
   };
   imageUrl?: string;
 };
@@ -27,22 +31,24 @@ function PaymentSuccessContent() {
   const { isSignedIn } = useUser();
   const searchParams   = useSearchParams();
   const orderId        = searchParams.get('orderId');
+
   const [state, setState]       = useState<State>('verifying');
   const [errorMsg, setErrorMsg] = useState('');
   const [retrying, setRetrying] = useState(false);
+  const [autoCount, setAutoCount] = useState(0);
+  const autoCountRef = useRef(0);
 
-  const verify = useCallback(async () => {
+  const verify = useCallback(async (): Promise<boolean> => {
     if (!orderId) {
       setState('error');
       setErrorMsg('Захиалгын дугаар байхгүй байна.');
-      return;
+      return false;
     }
     try {
       const res  = await fetch(`/api/payment/verify?orderId=${encodeURIComponent(orderId)}`);
       const data = await res.json() as VerifyResponse;
 
       if (data.alreadyDelivered || (data.success && data.paid)) {
-        // Save to user_analyses for logged-in Clerk users (/my-results page)
         if (isSignedIn && data.result && !data.alreadyDelivered) {
           fetch('/api/save-analysis', {
             method:  'POST',
@@ -51,31 +57,75 @@ function PaymentSuccessContent() {
           }).catch((err) => console.error('save-analysis error:', err));
         }
         setState(data.alreadyDelivered ? 'already' : 'success');
-      } else if (data.success === false && data.paid === false) {
-        setState('unpaid');
-      } else {
-        setState('error');
-        setErrorMsg(data.error ?? 'Баталгаажуулахад алдаа гарлаа.');
+        return true;
       }
+
+      if (data.success === false && data.paid === false) {
+        return false; // caller decides whether to retry or show unpaid
+      }
+
+      setState('error');
+      setErrorMsg(data.error ?? 'Баталгаажуулахад алдаа гарлаа.');
+      return false;
     } catch {
       setState('error');
       setErrorMsg('Сүлжээний алдаа гарлаа.');
+      return false;
     }
   }, [orderId, isSignedIn]);
 
-  useEffect(() => { verify(); }, [verify]);
+  // On mount: first check, then auto-retry while waiting for webhook.
+  useEffect(() => {
+    let cancelled = false;
+    let timer: ReturnType<typeof setTimeout>;
+
+    const run = async () => {
+      const paid = await verify();
+      if (paid || cancelled) return;
+
+      // Not paid yet — enter waiting state and schedule retries
+      setState('waiting');
+      autoCountRef.current = 0;
+      setAutoCount(0);
+
+      const retry = async () => {
+        if (cancelled) return;
+        autoCountRef.current += 1;
+        setAutoCount(autoCountRef.current);
+
+        const success = await verify();
+        if (success || cancelled) return;
+
+        if (autoCountRef.current < AUTO_RETRY_LIMIT) {
+          timer = setTimeout(retry, AUTO_RETRY_INTERVAL);
+        } else {
+          // Exhausted retries — show manual button
+          setState('unpaid');
+        }
+      };
+
+      timer = setTimeout(retry, AUTO_RETRY_INTERVAL);
+    };
+
+    void run();
+    return () => { cancelled = true; clearTimeout(timer); };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleRetry = async () => {
     setRetrying(true);
     setState('verifying');
-    await verify();
+    autoCountRef.current = 0;
+    setAutoCount(0);
+    const paid = await verify();
+    if (!paid) setState('unpaid');
     setRetrying(false);
   };
 
   return (
     <div className="rounded-[2rem] bg-white border border-slate-100 shadow-xl p-10 text-center space-y-6">
 
-      {/* Verifying */}
+      {/* Verifying (first load) */}
       {state === 'verifying' && (
         <>
           <div className="flex justify-center">
@@ -86,6 +136,33 @@ function PaymentSuccessContent() {
               Төлбөр баталгаажиж байна...
             </h1>
             <p className="text-sm text-slate-500">Түр хүлээнэ үү.</p>
+          </div>
+        </>
+      )}
+
+      {/* Waiting — auto-polling for webhook */}
+      {state === 'waiting' && (
+        <>
+          <div className="flex justify-center">
+            <Loader2 className="h-16 w-16 text-violet-400 animate-spin" strokeWidth={1.5} />
+          </div>
+          <div className="space-y-2">
+            <h1 className="font-serif text-2xl font-bold text-slate-900">
+              Баталгаажилтыг хүлээж байна...
+            </h1>
+            <p className="text-sm text-slate-500 leading-relaxed">
+              Төлбөрийг шалгаж байна. Энэ хэдэн секунд болно.
+            </p>
+          </div>
+          <div className="flex items-center justify-center gap-2">
+            {Array.from({ length: AUTO_RETRY_LIMIT }).map((_, i) => (
+              <span
+                key={i}
+                className={`h-1.5 w-1.5 rounded-full transition-colors duration-300 ${
+                  i < autoCount ? 'bg-violet-400' : 'bg-slate-200'
+                }`}
+              />
+            ))}
           </div>
         </>
       )}
@@ -122,7 +199,7 @@ function PaymentSuccessContent() {
         </>
       )}
 
-      {/* Unpaid / pending */}
+      {/* Unpaid — manual retry after auto-retries exhausted */}
       {state === 'unpaid' && (
         <>
           <div className="flex justify-center">
@@ -133,8 +210,8 @@ function PaymentSuccessContent() {
           <div className="space-y-2">
             <h1 className="font-serif text-2xl font-bold text-slate-900">Баталгаажаагүй байна</h1>
             <p className="text-sm text-slate-500 leading-relaxed">
-              Төлбөр хараахан баталгаажаагүй байна.
-              Түр хүлээгээд дахин шалгана уу.
+              Төлбөр баталгаажих хугацаа хэтэрлээ. Хэдэн минутын дараа дахин шалгана уу.
+              Хэрэв имэйл ирсэн бол амжилттай гэсэн үг.
             </p>
           </div>
           <button
