@@ -1,16 +1,20 @@
+// Bonum PSP — https://merchant.bonum.mn
+// Docs: auth GET, invoice POST, webhook body.invoiceId / body.transactionId
+
 const BONUM_API        = (process.env.BONUM_API        ?? '').trim();
 const BONUM_TERMINAL   = (process.env.BONUM_TERMINAL_ID ?? '').trim();
 const BONUM_APP_SECRET = (process.env.BONUM_APP_SECRET  ?? '').trim();
 
 const CALLBACK_BASE = 'https://www.personalcolor.mn/payment/success';
 
+// GET /bonum-gateway/ecommerce/auth/create
+// Returns: { accessToken, tokenType, expiresIn, refreshToken, ... }
 async function getToken(): Promise<string> {
   const res = await fetch(`${BONUM_API}/bonum-gateway/ecommerce/auth/create`, {
-    method: 'POST',
+    method: 'GET',
     headers: {
       Authorization:   `AppSecret ${BONUM_APP_SECRET}`,
       'X-TERMINAL-ID': BONUM_TERMINAL,
-      'Content-Type':  'application/json',
     },
     cache: 'no-store',
   });
@@ -20,20 +24,16 @@ async function getToken(): Promise<string> {
     throw new Error(`Bonum auth error ${res.status}: ${text}`);
   }
 
-  const raw  = await res.json() as Record<string, unknown>;
-  // Bonum may nest the token under a "data" key
-  const data   = (raw.data as Record<string, unknown> | undefined) ?? raw;
+  const data = await res.json() as Record<string, unknown>;
 
+  // Docs: accessToken at root level
   const token =
-    (data.token        as string | undefined) ??
     (data.accessToken  as string | undefined) ??
     (data.access_token as string | undefined) ??
-    (raw.token         as string | undefined) ??
-    (raw.accessToken   as string | undefined) ??
-    (raw.access_token  as string | undefined);
+    (data.token        as string | undefined);
 
   if (!token)
-    throw new Error(`Bonum auth: token missing. Response: ${JSON.stringify(raw)}`);
+    throw new Error(`Bonum auth: accessToken missing. Response: ${JSON.stringify(data)}`);
 
   return token;
 }
@@ -43,6 +43,8 @@ export type BonumInvoice = {
   followUpLink: string;
 };
 
+// POST /bonum-gateway/ecommerce/invoices
+// Returns: { invoiceId, followUpLink } at root
 export async function createBonumInvoice(
   transactionId: string,
   amount: number,
@@ -72,26 +74,14 @@ export async function createBonumInvoice(
     throw new Error(`Bonum invoice error ${res.status}: ${text}`);
   }
 
-  const raw  = await res.json() as Record<string, unknown>;
-  const data = (raw.data as Record<string, unknown> | undefined) ?? raw;
+  const data = await res.json() as Record<string, unknown>;
 
-  const invoiceId =
-    (data.invoiceId    as string | undefined) ??
-    (data.invoice_id   as string | undefined) ??
-    (raw.invoiceId     as string | undefined) ??
-    (raw.invoice_id    as string | undefined);
-
-  const followUpLink =
-    (data.followUpLink  as string | undefined) ??
-    (data.follow_up_link as string | undefined) ??
-    (data.paymentUrl    as string | undefined) ??
-    (data.payment_url   as string | undefined) ??
-    (raw.followUpLink   as string | undefined) ??
-    (raw.follow_up_link as string | undefined) ??
-    (raw.paymentUrl     as string | undefined);
+  // Docs: invoiceId and followUpLink at root
+  const invoiceId    = data.invoiceId    as string | undefined;
+  const followUpLink = data.followUpLink as string | undefined;
 
   if (!invoiceId || !followUpLink)
-    throw new Error(`Bonum invoice: missing fields. Response: ${JSON.stringify(raw)}`);
+    throw new Error(`Bonum invoice: missing fields. Response: ${JSON.stringify(data)}`);
 
   return { invoiceId, followUpLink };
 }
@@ -102,12 +92,16 @@ export type BonumInvoiceStatus = {
   invoiceId: string;
 };
 
+// GET /bonum-gateway/ecommerce/invoices/{invoiceId}
+// NOTE: Bonum docs mark this as test-only. In production the webhook is the
+// reliable source of truth. This is used only as a short-window fallback.
 export async function getBonumInvoiceStatus(invoiceId: string): Promise<BonumInvoiceStatus> {
   const token = await getToken();
 
   const res = await fetch(
     `${BONUM_API}/bonum-gateway/ecommerce/invoices/${encodeURIComponent(invoiceId)}`,
     {
+      method: 'GET',
       headers: {
         Authorization:   `Bearer ${token}`,
         'X-TERMINAL-ID': BONUM_TERMINAL,
@@ -122,24 +116,20 @@ export async function getBonumInvoiceStatus(invoiceId: string): Promise<BonumInv
   }
 
   const raw  = await res.json() as Record<string, unknown>;
-  // Bonum may return {"status":"PAID"} or {"data":{"status":"PAID"}}
-  const data = (raw.data as Record<string, unknown> | undefined) ?? raw;
+  // Handle both flat and nested { data: { status } } shapes
+  const body = (raw.data as Record<string, unknown> | undefined) ?? raw;
 
   const statusStr = String(
-    (data.status as string | undefined) ??
-    (raw.status  as string | undefined) ??
-    '',
+    (body.status as string | undefined) ?? (raw.status as string | undefined) ?? '',
   ).toUpperCase();
 
   const paid =
-    statusStr === 'PAID' ||
-    statusStr === 'SUCCESS' ||
+    statusStr === 'PAID'      ||
+    statusStr === 'SUCCESS'   ||
     statusStr === 'COMPLETED' ||
-    statusStr === 'APPROVED' ||
-    data.paid === true ||
+    statusStr === 'APPROVED'  ||
+    body.paid === true        ||
     raw.paid  === true;
-
-  console.log('getBonumInvoiceStatus | invoiceId:', invoiceId, '| status:', statusStr, '| paid:', paid);
 
   return { paid, status: statusStr, invoiceId };
 }

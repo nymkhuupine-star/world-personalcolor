@@ -9,6 +9,7 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!,
 );
 
+// Bonum docs: HmacSHA256(rawBody, MERCHANT_CHECKSUM_KEY) → hex → compare x-checksum-v2
 function verifyChecksum(rawBody: string, headerValue: string): boolean {
   const key = process.env.BONUM_MERCHANT_CHECKSUM_KEY;
   if (!key) {
@@ -21,22 +22,23 @@ function verifyChecksum(rawBody: string, headerValue: string): boolean {
   return computed === headerValue;
 }
 
-// Extract invoice/transaction ID from all known Bonum payload shapes
-function extractField(
-  payload: Record<string, unknown>,
-  keys: string[],
-): string | null {
-  const body = payload.body as Record<string, unknown> | undefined;
-  const data = payload.data as Record<string, unknown> | undefined;
-  for (const k of keys) {
-    const v =
-      (body?.[k] as string | undefined) ??
-      (data?.[k] as string | undefined) ??
-      (payload[k] as string | undefined);
-    if (v) return v;
-  }
-  return null;
-}
+type BonumWebhookBody = {
+  amount:        number;
+  currency:      string;
+  completedAt?:  string;
+  terminalId?:   string;
+  invoiceId?:    string;   // Bonum's internal invoice ID
+  transactionId?: string;  // Our transactionId we passed at invoice creation
+  paymentVendor?: string;
+  status?:       string;
+};
+
+type BonumWebhook = {
+  type:    string;   // "PAYMENT"
+  status:  string;   // "SUCCESS" | "FAILED"
+  message?: string;
+  body:    BonumWebhookBody;
+};
 
 type StoredAnalysis = { seasonName: string; imageUrl?: string };
 
@@ -47,54 +49,50 @@ export async function POST(req: Request) {
     const rawBody = await req.text().catch(() => '');
     const checksumHeader = req.headers.get('x-checksum-v2');
 
-    // Log everything so we can diagnose in Vercel Functions logs
-    const hdrs: Record<string, string> = {};
-    req.headers.forEach((v, k) => { hdrs[k] = v; });
-    console.log('webhook | headers:', JSON.stringify(hdrs));
-    console.log('webhook | body:', rawBody.slice(0, 3000));
+    // Log for Vercel Functions debug — visible at vercel.com → project → Functions → webhook
+    console.log('webhook | raw body:', rawBody.slice(0, 3000));
 
     if (checksumHeader && !verifyChecksum(rawBody, checksumHeader)) {
-      console.error('webhook: invalid checksum, header:', checksumHeader);
+      console.error('webhook: invalid checksum');
       return Response.json({ error: 'Invalid checksum' }, { status: 401 });
     }
 
-    let payload: Record<string, unknown>;
+    let payload: BonumWebhook;
     try {
-      payload = rawBody ? JSON.parse(rawBody) as Record<string, unknown> : {};
+      payload = JSON.parse(rawBody) as BonumWebhook;
     } catch {
       console.error('webhook: JSON parse failed:', rawBody);
       return Response.json({ error: 'Invalid JSON' }, { status: 400 });
     }
 
-    const type   = String(payload.type   ?? payload.event ?? '').toUpperCase();
-    const status = String(payload.status ?? '').toUpperCase();
+    const type   = (payload.type   ?? '').toUpperCase();
+    const status = (payload.status ?? '').toUpperCase();
 
-    console.log('webhook | type:', type, '| status:', status);
+    console.log('webhook | type:', type, '| status:', status, '| body.invoiceId:', payload.body?.invoiceId, '| body.transactionId:', payload.body?.transactionId);
 
-    // Accept any payment/invoice/transaction event; ignore obviously unrelated types
-    if (type && !type.includes('PAYMENT') && !type.includes('INVOICE') && !type.includes('TRANSACTION')) {
-      console.log('webhook: ignoring non-payment type:', type);
+    if (type !== 'PAYMENT') {
+      console.log('webhook: ignoring non-PAYMENT type:', type);
       return Response.json({ received: true });
     }
 
-    if (status && !SUCCESS_STATUSES.has(status)) {
-      console.log('webhook: non-success status, ignoring:', status);
+    if (!SUCCESS_STATUSES.has(status)) {
+      console.log('webhook: non-success status:', status);
       return Response.json({ received: true });
     }
 
-    // Bonum may send their invoiceId OR our transactionId — extract both
-    const bonumInvoiceId  = extractField(payload, ['invoiceId', 'invoice_id']);
-    const ourTransactionId = extractField(payload, ['transactionId', 'transaction_id', 'orderId', 'order_id']);
-    const completedAt     = extractField(payload, ['completedAt', 'completed_at', 'paidAt', 'paid_at']);
-
-    console.log('webhook | bonumInvoiceId:', bonumInvoiceId, '| ourTransactionId:', ourTransactionId);
+    // Bonum webhook body contains BOTH:
+    //   body.invoiceId    = Bonum's own invoice ID (stored in our analysis_orders.invoice_id)
+    //   body.transactionId = our UUID we passed at invoice creation (= our analysis_orders.id)
+    const bonumInvoiceId   = payload.body?.invoiceId   ?? null;
+    const ourTransactionId = payload.body?.transactionId ?? null;
+    const completedAt      = payload.body?.completedAt ?? null;
 
     if (!bonumInvoiceId && !ourTransactionId) {
-      console.error('webhook: no invoiceId or transactionId in payload:', JSON.stringify(payload));
+      console.error('webhook: no invoiceId or transactionId in body:', JSON.stringify(payload.body));
       return Response.json({ error: 'invoiceId missing' }, { status: 400 });
     }
 
-    // Look up the order — try by Bonum invoiceId first, then by our order UUID
+    // Look up order — try Bonum invoiceId first, then our transactionId (UUID)
     let order: { id: string; paid: boolean; email: string; analysis_result: unknown } | null = null;
 
     if (bonumInvoiceId) {
@@ -115,16 +113,6 @@ export async function POST(req: Request) {
       order = data;
     }
 
-    // Last resort: maybe Bonum sent their invoiceId in the transactionId field
-    if (!order && bonumInvoiceId) {
-      const { data } = await supabase
-        .from('analysis_orders')
-        .select('id, paid, email, analysis_result')
-        .eq('id', bonumInvoiceId)
-        .single();
-      order = data;
-    }
-
     if (!order) {
       console.error('webhook: order not found | bonumInvoiceId:', bonumInvoiceId, '| ourTransactionId:', ourTransactionId);
       return Response.json({ error: 'Order not found' }, { status: 404 });
@@ -136,7 +124,7 @@ export async function POST(req: Request) {
       ? new Date(completedAt.replace(' ', 'T')).toISOString()
       : new Date().toISOString();
 
-    // Atomic update — race-condition safe
+    // Atomic update — race-condition safe against concurrent verify calls
     const { data: updatedRows, error: updateErr } = await supabase
       .from('analysis_orders')
       .update({ paid: true, paid_at: paidAt })
@@ -150,11 +138,11 @@ export async function POST(req: Request) {
     }
 
     if (!updatedRows || updatedRows.length === 0) {
-      console.log('webhook: already paid, skipping delivery for order:', order.id);
+      console.log('webhook: already paid, skipping:', order.id);
       return Response.json({ received: true });
     }
 
-    console.log('webhook: paid confirmed, delivering result for order:', order.id);
+    console.log('webhook: marked paid, delivering for order:', order.id);
 
     const stored = order.analysis_result as StoredAnalysis | null;
     if (stored?.seasonName && order.email) {
