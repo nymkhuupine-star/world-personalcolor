@@ -12,7 +12,7 @@ import { isQuestionnaireComplete } from '@/lib/personal-color/questionnaire';
 
 const MAX_SIZE = 1024;
 const JPEG_QUALITY = 0.85;
-const PRICE = 10; // ₮ — үнийн дүнг зөвхөн энд өөрчил
+const PRICE = 8900; // ₮ — үнийн дүнг зөвхөн энд өөрчил
 
 function compressImage(file: File): Promise<File> {
   return new Promise((resolve) => {
