@@ -9,47 +9,62 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!,
 );
 
-// Bonum docs: HmacSHA256(rawBody, MERCHANT_CHECKSUM_KEY) → hex → compare x-checksum-v2
 function verifyChecksum(rawBody: string, headerValue: string): boolean {
   const key = process.env.BONUM_MERCHANT_CHECKSUM_KEY;
+
   if (!key) {
     console.warn('webhook: BONUM_MERCHANT_CHECKSUM_KEY not set — skipping signature check');
     return true;
   }
+
   const computed = createHmac('sha256', Buffer.from(key, 'utf8'))
     .update(rawBody, 'utf8')
     .digest('hex');
+
   return computed === headerValue;
 }
 
 type BonumWebhookBody = {
-  amount:        number;
-  currency:      string;
-  completedAt?:  string;
-  terminalId?:   string;
-  invoiceId?:    string;   // Bonum's internal invoice ID
-  transactionId?: string;  // Our transactionId we passed at invoice creation
+  amount: number;
+  currency: string;
+  completedAt?: string;
+  terminalId?: string;
+  invoiceId?: string;
+  transactionId?: string;
   paymentVendor?: string;
-  status?:       string;
+  status?: string;
 };
 
 type BonumWebhook = {
-  type:    string;   // "PAYMENT"
-  status:  string;   // "SUCCESS" | "FAILED"
+  type: string;
+  status: string;
   message?: string;
-  body:    BonumWebhookBody;
+  body: BonumWebhookBody;
 };
 
-type StoredAnalysis = { seasonName: string; imageUrl?: string };
+type StoredAnalysis = {
+  seasonName: string;
+  imageUrl?: string | null;
+  confidence?: number;
+  reasoning?: string;
+  recommendedColors?: string[];
+};
 
 const SUCCESS_STATUSES = new Set(['SUCCESS', 'PAID', 'COMPLETED', 'APPROVED']);
+
+function getBaseSeasonFromSeasonName(seasonName: string) {
+  if (seasonName.includes('Spring')) return 'Spring';
+  if (seasonName.includes('Summer')) return 'Summer';
+  if (seasonName.includes('Autumn')) return 'Autumn';
+  if (seasonName.includes('Winter')) return 'Winter';
+  return seasonName;
+}
 
 export async function POST(req: Request) {
   try {
     const rawBody = await req.text().catch(() => '');
     const checksumHeader = req.headers.get('x-checksum-v2');
 
-    // Log for Vercel Functions debug — visible at vercel.com → project → Functions → webhook
     console.log('webhook | raw body:', rawBody.slice(0, 3000));
 
     if (checksumHeader && !verifyChecksum(rawBody, checksumHeader)) {
@@ -58,6 +73,7 @@ export async function POST(req: Request) {
     }
 
     let payload: BonumWebhook;
+
     try {
       payload = JSON.parse(rawBody) as BonumWebhook;
     } catch {
@@ -65,69 +81,93 @@ export async function POST(req: Request) {
       return Response.json({ error: 'Invalid JSON' }, { status: 400 });
     }
 
-    const type   = (payload.type   ?? '').toUpperCase();
+    const type = (payload.type ?? '').toUpperCase();
     const status = (payload.status ?? '').toUpperCase();
 
-    console.log('webhook | type:', type, '| status:', status, '| body.invoiceId:', payload.body?.invoiceId, '| body.transactionId:', payload.body?.transactionId);
+    console.log(
+      'webhook | type:',
+      type,
+      '| status:',
+      status,
+      '| body.invoiceId:',
+      payload.body?.invoiceId,
+      '| body.transactionId:',
+      payload.body?.transactionId,
+    );
 
     if (type !== 'PAYMENT') {
-      console.log('webhook: ignoring non-PAYMENT type:', type);
       return Response.json({ received: true });
     }
 
     if (!SUCCESS_STATUSES.has(status)) {
-      console.log('webhook: non-success status:', status);
       return Response.json({ received: true });
     }
 
-    // Bonum webhook body contains BOTH:
-    //   body.invoiceId    = Bonum's own invoice ID (stored in our analysis_orders.invoice_id)
-    //   body.transactionId = our UUID we passed at invoice creation (= our analysis_orders.id)
-    const bonumInvoiceId   = payload.body?.invoiceId   ?? null;
+    const bonumInvoiceId = payload.body?.invoiceId ?? null;
     const ourTransactionId = payload.body?.transactionId ?? null;
-    const completedAt      = payload.body?.completedAt ?? null;
+    const completedAt = payload.body?.completedAt ?? null;
 
     if (!bonumInvoiceId && !ourTransactionId) {
-      console.error('webhook: no invoiceId or transactionId in body:', JSON.stringify(payload.body));
+      console.error('webhook: no invoiceId or transactionId in body:', payload.body);
       return Response.json({ error: 'invoiceId missing' }, { status: 400 });
     }
 
-    // Look up order — try Bonum invoiceId first, then our transactionId (UUID)
-    let order: { id: string; paid: boolean; email: string; analysis_result: unknown } | null = null;
+    let order: {
+      id: string;
+      paid: boolean;
+      email: string;
+      analysis_result: unknown;
+    } | null = null;
 
     if (bonumInvoiceId) {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('analysis_orders')
         .select('id, paid, email, analysis_result')
         .eq('invoice_id', bonumInvoiceId)
         .single();
+
+      if (error) {
+        console.warn('webhook: order lookup by invoice_id failed:', error.message);
+      }
+
       order = data;
     }
 
     if (!order && ourTransactionId) {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('analysis_orders')
         .select('id, paid, email, analysis_result')
         .eq('id', ourTransactionId)
         .single();
+
+      if (error) {
+        console.warn('webhook: order lookup by id failed:', error.message);
+      }
+
       order = data;
     }
 
     if (!order) {
-      console.error('webhook: order not found | bonumInvoiceId:', bonumInvoiceId, '| ourTransactionId:', ourTransactionId);
+      console.error(
+        'webhook: order not found | bonumInvoiceId:',
+        bonumInvoiceId,
+        '| ourTransactionId:',
+        ourTransactionId,
+      );
+
       return Response.json({ error: 'Order not found' }, { status: 404 });
     }
-
-    console.log('webhook: found order', order.id, '| already paid:', order.paid);
 
     const paidAt = completedAt
       ? new Date(completedAt.replace(' ', 'T')).toISOString()
       : new Date().toISOString();
 
-    // Atomic update — race-condition safe against concurrent verify calls
     const { data: updatedRows, error: updateErr } = await supabase
       .from('analysis_orders')
-      .update({ paid: true, paid_at: paidAt })
+      .update({
+        paid: true,
+        paid_at: paidAt,
+      })
       .eq('id', order.id)
       .eq('paid', false)
       .select('id');
@@ -142,13 +182,42 @@ export async function POST(req: Request) {
       return Response.json({ received: true });
     }
 
-    console.log('webhook: marked paid, delivering for order:', order.id);
-
     const stored = order.analysis_result as StoredAnalysis | null;
-    if (stored?.seasonName && order.email) {
-      await deliverResult(order.email, stored.seasonName, stored.imageUrl ?? null).catch(
-        (err) => console.error('webhook: deliverResult error:', err),
-      );
+    const normalizedEmail = order.email.toLowerCase().trim();
+
+    if (!stored?.seasonName || !normalizedEmail) {
+      console.error('webhook: missing stored analysis or email:', {
+        email: order.email,
+        stored,
+      });
+
+      return Response.json({ received: true });
+    }
+
+    await deliverResult(
+      normalizedEmail,
+      stored.seasonName,
+      stored.imageUrl ?? null,
+    ).catch((err) => {
+      console.error('webhook: deliverResult error:', err);
+    });
+
+    const { error: analysisInsertError } = await supabase
+      .from('analyses')
+      .insert({
+        email: normalizedEmail,
+        image_path: stored.imageUrl ?? null,
+        season: getBaseSeasonFromSeasonName(stored.seasonName),
+        sub_type: stored.seasonName,
+        reasoning: stored.reasoning ?? null,
+        recommended_colors: stored.recommendedColors ?? null,
+        email_sent: true,
+        paid: true,
+        order_id: order.id,
+      });
+
+    if (analysisInsertError) {
+      console.error('webhook: analyses insert error:', analysisInsertError);
     }
 
     return Response.json({ received: true });
