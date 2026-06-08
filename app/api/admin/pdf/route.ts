@@ -80,36 +80,30 @@ export async function POST(req: Request) {
   if (check.error) return check.error;
 
   try {
-    const formData = await req.formData();
-    const file = formData.get('file') as File | null;
-    const season = formData.get('season') as string | null;
-    const subtype = formData.get('subtype') as string | null;
+    const { season, subtype } = (await req.json()) as { season?: string; subtype?: string };
 
-    if (!file || !season || !subtype) {
-      return Response.json({ error: 'file, season, subtype required.' }, { status: 400 });
+    if (typeof season !== 'string' || !isSeasonKey(season)) {
+      return Response.json({ error: 'Invalid season.' }, { status: 400 });
     }
-    if (!isSeasonKey(season) || !isSubtypeKeyForSeason(season, subtype)) {
-      return Response.json({ error: 'Invalid season or subtype.' }, { status: 400 });
-    }
-    if (file.type !== 'application/pdf') {
-      return Response.json({ error: 'Only PDF files allowed.' }, { status: 400 });
+    if (typeof subtype !== 'string' || !isSubtypeKeyForSeason(season, subtype)) {
+      return Response.json({ error: 'Invalid subtype.' }, { status: 400 });
     }
 
     const sb = adminClient();
     const path = `${season}/${subtype}.pdf`;
-    const { error } = await sb.storage.from(BUCKET).upload(path, file, {
-      contentType: 'application/pdf',
-      upsert: true,
-    });
 
-    if (error) {
-      console.error('Supabase upload error:', error);
-      return Response.json({ error: 'Failed to upload file.' }, { status: 500 });
+    // Delete existing file first so the signed URL works as an upsert.
+    await sb.storage.from(BUCKET).remove([path]);
+
+    const { data, error } = await sb.storage.from(BUCKET).createSignedUploadUrl(path);
+    if (error || !data) {
+      console.error('Supabase signed URL error:', error);
+      return Response.json({ error: 'Failed to create upload URL.' }, { status: 500 });
     }
 
-    return Response.json({ success: true, path });
+    return Response.json({ signedUrl: data.signedUrl, token: data.token, path });
   } catch (err) {
-    console.error('PDF upload error:', err);
+    console.error('PDF signed URL error:', err);
     return Response.json({ error: 'Internal server error.' }, { status: 500 });
   }
 }

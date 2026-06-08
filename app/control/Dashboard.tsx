@@ -170,33 +170,44 @@ export default function Dashboard() {
     setPdfDeleting(null);
   };
 
-  const handlePdfUpload = async (season: SeasonKey, subtype: string, file: File) => {
+   const handlePdfUpload = async (season: SeasonKey, subtype: string, file: File) => {
     const id = reportId(season, subtype);
     setPdfUploading(id);
     setPdfSuccess(null);
     setPdfError(null);
 
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('season', season);
-    formData.append('subtype', subtype);
-
     try {
-      const res = await fetch('/api/admin/pdf', { method: 'POST', body: formData });
-      if (res.ok) {
+      // Step 1: get a signed upload URL from the server
+      const signRes = await fetch('/api/admin/pdf', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ season, subtype }),
+      });
+      if (!signRes.ok) {
+        const data = await signRes.json().catch(() => ({})) as { error?: string };
+        setPdfError(data.error ?? `Алдаа гарлаа (${signRes.status}).`);
+        setPdfUploading(null);
+        return;
+      }
+      const { signedUrl, token, path } = await signRes.json() as { signedUrl: string; token: string; path: string };
+
+      // Step 2: upload the file directly to Supabase Storage (no server body-size limit)
+      const { error: uploadError } = await supabase.storage
+        .from('reports')
+        .uploadToSignedUrl(path, token, file, { contentType: 'application/pdf' });
+
+      if (uploadError) {
+        setPdfError(uploadError.message ?? 'Upload амжилтгүй боллоо.');
+      } else {
         setPdfSuccess(id);
         await fetchPdfStatuses();
         setTimeout(() => setPdfSuccess(null), 3000);
-      } else {
-        const data = await res.json().catch(() => ({})) as { error?: string };
-        setPdfError(data.error ?? `Алдаа гарлаа (${res.status}).`);
       }
     } catch {
       setPdfError('Сервертэй холбогдож чадсангүй.');
     }
     setPdfUploading(null);
   };
-
   const today        = new Date().toDateString();
   const todayCount   = portraits.filter(p => new Date(p.created_at).toDateString() === today).length;
   const paidOrders   = orders.filter(o => o.paid);
