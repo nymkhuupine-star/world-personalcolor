@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { Inter, Playfair_Display } from "next/font/google";
 import { ClerkProvider } from "@clerk/nextjs";
 import "./globals.css";
-import InAppBrowserGuard from "@/components/InAppBrowserGuard";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -65,28 +64,10 @@ export default function RootLayout({
         lang="mn"
         className={`${inter.variable} ${playfair.variable} h-full antialiased`}
       >
-        <head>
-          {/* Runs synchronously — gesture context still alive from Messenger tap */}
-          <script dangerouslySetInnerHTML={{ __html: `
-(function(){
-  try{
-    var ua=navigator.userAgent||'';
-    if(!/FBAN|FBAV|FB_IAB|FBIOS|FBANDROID|MessengerForiOS|Instagram/i.test(ua))return;
-    var url=location.href;
-    if(/Android/i.test(ua)){
-      location.href='intent://'+url.replace(/^https?:\\/\\//,'')+'#Intent;scheme=https;package=com.android.chrome;end;';
-    } else if(/iPhone|iPad|iPod/i.test(ua)){
-      window.open(url,'_blank');
-    }
-  }catch(e){}
-})();
-          `}} />
-        </head>
         <body
           suppressHydrationWarning
           className="min-h-full flex flex-col bg-white"
         >
-          <InAppBrowserGuard />
           <main className="flex-1">{children}</main>
         </body>
       </html>
