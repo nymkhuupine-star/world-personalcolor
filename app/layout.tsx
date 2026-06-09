@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter, Playfair_Display } from "next/font/google";
 import { ClerkProvider } from "@clerk/nextjs";
 import "./globals.css";
+import InAppBrowserGuard from "@/components/InAppBrowserGuard";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -68,6 +69,7 @@ export default function RootLayout({
           suppressHydrationWarning
           className="min-h-full flex flex-col bg-white"
         >
+          <InAppBrowserGuard />
           <main className="flex-1">{children}</main>
         </body>
       </html>
