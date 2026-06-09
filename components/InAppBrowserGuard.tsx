@@ -20,17 +20,13 @@ export default function InAppBrowserGuard() {
     const { inApp, isAndroid } = detectInAppBrowser();
     if (!inApp) return;
 
-    const currentUrl = window.location.href;
-    setUrl(currentUrl);
+    setUrl(window.location.href);
 
     if (isAndroid) {
-      // Android: intent scheme-ээр Chrome-д нээхийг оролдох
-      const host = currentUrl.replace(/^https?:\/\//, '');
-      window.location.href = `intent://${host}#Intent;scheme=https;package=com.android.chrome;end;`;
-      // Chrome байхгүй тохиолдолд fallback modal
-      setTimeout(() => setShow(true), 1500);
+      // Android: head script-ийн intent:// redirect амжаагүй бол fallback modal
+      setTimeout(() => setShow(true), 1800);
     } else {
-      // iOS: автомат redirect хийхгүй — хуудас crash болдог тул шууд modal харуулна
+      // iOS: head script-ийн window.open амжаагүй бол шууд modal харуулна
       setShow(true);
     }
   }, []);
@@ -39,9 +35,9 @@ export default function InAppBrowserGuard() {
     try {
       await navigator.clipboard.writeText(url);
       setCopied(true);
-      setTimeout(() => setCopied(false), 2500);
+      setTimeout(() => setCopied(false), 3000);
     } catch {
-      // fallback: select text
+      // clipboard API unavailable
     }
   }
 
@@ -58,30 +54,28 @@ export default function InAppBrowserGuard() {
         </h2>
         <p className="mb-5 text-center text-sm text-gray-500 leading-relaxed">
           Messenger дотоод хөтчид банкны апп ажилладаггүй.
-          Дараах аргуудын аль нэгийг ашиглана уу.
         </p>
 
-        {/* Step-by-step iOS instruction */}
         {isIOS && (
-          <div className="mb-5 rounded-xl bg-gray-50 p-4 text-sm text-gray-600 leading-relaxed space-y-2">
-            <p className="font-medium text-gray-800">Safari-д нээх заавар:</p>
+          <div className="mb-4 rounded-xl bg-gray-50 p-4 text-sm text-gray-600 leading-relaxed space-y-1.5">
+            <p className="font-semibold text-gray-800">Safari-д нээх заавар:</p>
             <p>1. Доор баруун булангийн <strong>···</strong> товч дарна уу</p>
-            <p>2. <strong>&quot;Safari-д нээх&quot;</strong> гэснийг сонгоно уу</p>
+            <p>2. <strong>&quot;Safari-д нээх&quot;</strong> сонгоно уу</p>
           </div>
         )}
 
         <div className="flex flex-col gap-3">
           <button
             onClick={handleCopy}
-            className="w-full rounded-xl bg-pink-500 px-4 py-3 text-sm font-medium text-white active:opacity-80"
+            className="w-full rounded-xl bg-pink-500 px-4 py-3 text-sm font-semibold text-white active:opacity-80 transition-opacity"
           >
-            {copied ? '✅ Хуулагдлаа! Хөтчөө нээж paste хийнэ үү' : '🔗 Холбоос хуулах'}
+            {copied ? '✅ Хуулагдлаа — хөтчөө нээж paste хийнэ үү' : '🔗 Холбоос хуулах'}
           </button>
 
           {!isIOS && (
             <a
               href={`googlechrome-x-callback://x-callback-url/open?url=${encodeURIComponent(url)}`}
-              className="block w-full rounded-xl bg-green-600 px-4 py-3 text-center text-sm font-medium text-white active:opacity-80"
+              className="block w-full rounded-xl bg-green-600 px-4 py-3 text-center text-sm font-semibold text-white active:opacity-80"
             >
               Chrome-д нээх
             </a>
