@@ -15,23 +15,40 @@ const playfair = Playfair_Display({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://personalcolor.mn"),
+  metadataBase: new URL("https://www.personalcolor.mn"),
+
   title: "Personal Color AI",
+
+  description:
+    "AI-д суурилсан хувийн өнгөний шинжилгээ — улирлын палитраа олж, илүү зөв сонголт хий.",
+
   icons: {
     icon: "/favicon-rounded.png",
     apple: "/favicon-rounded.png",
   },
-  description: "AI-д суурилсан хувийн өнгөний шинжилгээ — улирлын палитраа олж, илүү зөв сонголт хий.",
+
+  verification: {
+    google: "x2DYp-Y7tupEzGcBgx5kGGTetGyzf_dv2BU68BXIRnI",
+  },
 
   openGraph: {
     title: "Personal Color AI",
-    description: "AI-д суурилсан хувийн өнгөний шинжилгээ — улирлын палитраа олж, илүү зөв сонголт хий.",
-    images: [{ url: "/personal%20(6).png", width: 1080, height: 1080 }],
+    description:
+      "AI-д суурилсан хувийн өнгөний шинжилгээ — улирлын палитраа олж, илүү зөв сонголт хий.",
+    images: [
+      {
+        url: "/personal%20(6).png",
+        width: 1080,
+        height: 1080,
+      },
+    ],
   },
+
   twitter: {
     card: "summary_large_image",
     title: "Personal Color AI",
-    description: "AI-д суурилсан хувийн өнгөний шинжилгээ — улирлын палитраа олж, илүү зөв сонголт хий.",
+    description:
+      "AI-д суурилсан хувийн өнгөний шинжилгээ — улирлын палитраа олж, илүү зөв сонголт хий.",
     images: ["/personal%20(6).png"],
   },
 };
@@ -47,7 +64,10 @@ export default function RootLayout({
         lang="mn"
         className={`${inter.variable} ${playfair.variable} h-full antialiased`}
       >
-        <body suppressHydrationWarning className="min-h-full flex flex-col bg-white">
+        <body
+          suppressHydrationWarning
+          className="min-h-full flex flex-col bg-white"
+        >
           <main className="flex-1">{children}</main>
         </body>
       </html>
