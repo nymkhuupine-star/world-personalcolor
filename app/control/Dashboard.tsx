@@ -62,6 +62,7 @@ type Order = {
   paid_at: string | null;
   created_at: string;
   analysis_result: { seasonName?: string } | null;
+  admin_confirmed: boolean | null;
 };
 
 type PdfStatuses = Record<string, boolean>;
@@ -211,19 +212,20 @@ export default function Dashboard() {
   const today        = new Date().toDateString();
   const todayCount   = portraits.filter(p => new Date(p.created_at).toDateString() === today).length;
   const paidOrders   = orders.filter(o => o.paid);
-  const totalRevenue = paidOrders.reduce((sum, o) => sum + (o.amount ?? 0), 0);
+  const bonumOrders  = paidOrders.filter(o => !o.admin_confirmed);
+  const totalRevenue = bonumOrders.reduce((sum, o) => sum + (o.amount ?? 0), 0);
 
   // Build daily revenue chart data for current month
   const now = new Date();
   const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
-  const thisMonthRevenue = paidOrders
+  const thisMonthRevenue = bonumOrders
     .filter(o => o.paid_at && new Date(o.paid_at).getMonth() === now.getMonth() && new Date(o.paid_at).getFullYear() === now.getFullYear())
     .reduce((sum, o) => sum + (o.amount ?? 0), 0);
 
   const chartData = Array.from({ length: daysInMonth }, (_, i) => {
     const day = i + 1;
     const label = String(day).padStart(2, '0');
-    const revenue = paidOrders
+    const revenue = bonumOrders
       .filter(o => {
         if (!o.paid_at) return false;
         const d = new Date(o.paid_at);
@@ -544,9 +546,9 @@ export default function Dashboard() {
                     bg: 'bg-emerald-50',
                   },
                   {
-                    label: 'Төлбөр төлсөн',
-                    value: String(paidOrders.length),
-                    note: 'Хэрэглэгч',
+                    label: 'Bonum төлбөр',
+                    value: String(bonumOrders.length),
+                    note: 'Бодит төлбөр',
                     color: 'text-blue-600',
                     bg: 'bg-blue-50',
                   },
@@ -627,7 +629,9 @@ export default function Dashboard() {
                                 </td>
                                 <td className="px-5 py-4 text-center">
                                   {o.paid
-                                    ? <span className="inline-flex items-center gap-1 rounded-lg bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-600"><CheckCircle className="h-3 w-3" strokeWidth={2.5} />Амжилттай</span>
+                                    ? o.admin_confirmed
+                                      ? <span className="inline-flex items-center gap-1 rounded-lg bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-500"><CheckCircle className="h-3 w-3" strokeWidth={2.5} />Гараар</span>
+                                      : <span className="inline-flex items-center gap-1 rounded-lg bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-600"><CheckCircle className="h-3 w-3" strokeWidth={2.5} />Bonum</span>
                                     : <span className="inline-flex items-center gap-1 rounded-lg bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-500"><XCircle className="h-3 w-3" strokeWidth={2} />Дуусаагүй</span>
                                   }
                                 </td>

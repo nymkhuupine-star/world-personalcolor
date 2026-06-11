@@ -40,7 +40,7 @@ export async function POST(req: Request) {
   if (!order.paid) {
     await supabase
       .from('analysis_orders')
-      .update({ paid: true, paid_at: new Date().toISOString() })
+      .update({ paid: true, paid_at: new Date().toISOString(), admin_confirmed: true })
       .eq('id', order.id);
   }
 
