@@ -1,4 +1,4 @@
-import { auth, currentUser } from '@clerk/nextjs/server';
+import { cookies } from 'next/headers';
 import { createClient } from '@supabase/supabase-js';
 
 export const runtime = 'nodejs';
@@ -8,14 +8,15 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!,
 );
 
-export async function GET() {
-  const { userId } = await auth();
-  if (!userId) return Response.json({ error: 'Unauthorized' }, { status: 401 });
+async function requireAdmin(): Promise<boolean> {
+  const cookieStore = await cookies();
+  const token = cookieStore.get('admin_token')?.value;
+  return !!process.env.ADMIN_SECRET && token === process.env.ADMIN_SECRET;
+}
 
-  const user = await currentUser();
-  const email = user?.emailAddresses?.[0]?.emailAddress;
-  if (!email || email !== process.env.NEXT_PUBLIC_ADMIN_EMAIL)
-    return Response.json({ error: 'Forbidden' }, { status: 403 });
+export async function GET() {
+  if (!await requireAdmin())
+    return Response.json({ error: 'Unauthorized' }, { status: 401 });
 
   const { data, error } = await supabase
     .from('analysis_orders')

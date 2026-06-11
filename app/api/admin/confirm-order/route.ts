@@ -1,4 +1,4 @@
-import { auth, currentUser } from '@clerk/nextjs/server';
+import { cookies } from 'next/headers';
 import { createClient } from '@supabase/supabase-js';
 import { deliverResult } from '@/lib/deliverResult';
 
@@ -11,14 +11,15 @@ const supabase = createClient(
 
 type StoredAnalysis = { seasonName: string; imageUrl?: string };
 
-export async function POST(req: Request) {
-  const { userId } = await auth();
-  if (!userId) return Response.json({ error: 'Unauthorized' }, { status: 401 });
+async function requireAdmin(): Promise<boolean> {
+  const cookieStore = await cookies();
+  const token = cookieStore.get('admin_token')?.value;
+  return !!process.env.ADMIN_SECRET && token === process.env.ADMIN_SECRET;
+}
 
-  const user = await currentUser();
-  const email = user?.emailAddresses?.[0]?.emailAddress ?? '';
-  if (!email || email !== process.env.NEXT_PUBLIC_ADMIN_EMAIL)
-    return Response.json({ error: 'Forbidden' }, { status: 403 });
+export async function POST(req: Request) {
+  if (!await requireAdmin())
+    return Response.json({ error: 'Unauthorized' }, { status: 401 });
 
   const { orderId } = await req.json().catch(() => ({})) as { orderId?: string };
   if (!orderId) return Response.json({ error: 'orderId шаардлагатай.' }, { status: 400 });

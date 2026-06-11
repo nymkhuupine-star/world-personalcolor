@@ -1,4 +1,4 @@
-import { auth, currentUser } from '@clerk/nextjs/server';
+import { cookies } from 'next/headers';
 import { createClient } from '@supabase/supabase-js';
 import { REPORT_GROUPS, isSeasonKey, isSubtypeKeyForSeason, reportId } from '@/utils/reportPdfs';
 
@@ -14,16 +14,11 @@ function adminClient() {
 }
 
 async function requireAdmin(): Promise<{ error: Response } | { error: null }> {
-  const { userId } = await auth();
-  if (!userId) return { error: Response.json({ error: 'Unauthorized' }, { status: 401 }) };
-
-  const user = await currentUser();
-  const email = user?.emailAddresses?.[0]?.emailAddress ?? '';
-  const adminEmail = process.env.NEXT_PUBLIC_ADMIN_EMAIL ?? '';
-
-  if (!adminEmail || email !== adminEmail) {
-    return { error: Response.json({ error: 'Forbidden' }, { status: 403 }) };
-  }
+  const cookieStore = await cookies();
+  const token = cookieStore.get('admin_token')?.value;
+  const secret = process.env.ADMIN_SECRET;
+  if (!secret || token !== secret)
+    return { error: Response.json({ error: 'Unauthorized' }, { status: 401 }) };
   return { error: null };
 }
 

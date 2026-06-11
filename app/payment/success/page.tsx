@@ -2,7 +2,6 @@
 
 import { Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { useUser } from '@clerk/nextjs';
 import { motion } from 'framer-motion';
 import { CheckCircle, Loader2, Mail, ArrowRight, AlertCircle, RefreshCw } from 'lucide-react';
 import Link from 'next/link';
@@ -28,7 +27,6 @@ type VerifyResponse = {
 };
 
 function PaymentSuccessContent() {
-  const { isSignedIn } = useUser();
   const searchParams   = useSearchParams();
   const orderId        = searchParams.get('orderId');
 
@@ -49,13 +47,6 @@ function PaymentSuccessContent() {
       const data = await res.json() as VerifyResponse;
 
       if (data.alreadyDelivered || (data.success && data.paid)) {
-        if (isSignedIn && data.result && !data.alreadyDelivered) {
-          fetch('/api/save-analysis', {
-            method:  'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ result: data.result, imageUrl: data.imageUrl ?? '' }),
-          }).catch((err) => console.error('save-analysis error:', err));
-        }
         setState(data.alreadyDelivered ? 'already' : 'success');
         return true;
       }
@@ -72,7 +63,7 @@ function PaymentSuccessContent() {
       setErrorMsg('Сүлжээний алдаа гарлаа.');
       return false;
     }
-  }, [orderId, isSignedIn]);
+  }, [orderId]);
 
   // On mount: first check, then auto-retry while waiting for webhook.
   useEffect(() => {

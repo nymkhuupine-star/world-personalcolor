@@ -5,7 +5,6 @@ import Image from 'next/image';
 import { useRouter, usePathname } from 'next/navigation';
 import { Menu, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { SignInButton, SignOutButton, UserButton, useUser } from '@clerk/nextjs';
 
 type NavItem = {
   href: string;
@@ -19,7 +18,6 @@ const NAV_ITEMS: NavItem[] = [
 
 export default function Header() {
   const [open, setOpen] = useState(false);
-  const { isSignedIn } = useUser();
   const router = useRouter();
   const pathname = usePathname();
 
@@ -71,42 +69,21 @@ export default function Header() {
               {item.label}
             </button>
           ))}
-          {!isSignedIn && (
-            <button
-              onClick={() => handleNav('#search-result')}
-              className="px-4 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-400/60"
-            >
-              Өмнөх үр дүн хайх
-            </button>
-          )}
+          <button
+            onClick={() => handleNav('#search-result')}
+            className="px-4 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-400/60"
+          >
+            Өмнөх үр дүн хайх
+          </button>
         </nav>
 
         <div className="hidden items-center gap-2 lg:flex">
-          {isSignedIn ? (
-            <>
-              <Link
-                href="/my-results"
-                className="px-4 py-2 text-sm font-semibold text-violet-600 transition-colors hover:bg-violet-50 rounded-full focus:outline-none"
-              >
-                Миний үр дүн
-              </Link>
-              <UserButton />
-            </>
-          ) : (
-            <>
-              <SignInButton mode="modal">
-                <button className="px-4 py-2 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-100 focus:outline-none">
-                  Нэвтрэх
-                </button>
-              </SignInButton>
-              <button
-                onClick={() => handleNav('#upload')}
-                className="rounded-full bg-gradient-to-r from-violet-500 via-purple-500 to-pink-500 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-violet-200 transition-all hover:scale-[1.04] hover:shadow-violet-300 focus:outline-none active:scale-[0.97]"
-              >
-                Шинжилгээ эхлүүлэх
-              </button>
-            </>
-          )}
+          <button
+            onClick={() => handleNav('#upload')}
+            className="rounded-full bg-gradient-to-r from-violet-500 via-purple-500 to-pink-500 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-violet-200 transition-all hover:scale-[1.04] hover:shadow-violet-300 focus:outline-none active:scale-[0.97]"
+          >
+            Шинжилгээ эхлүүлэх
+          </button>
         </div>
 
         <button
@@ -158,58 +135,21 @@ export default function Header() {
                     <span className="text-slate-400">→</span>
                   </button>
                 ))}
-                {!isSignedIn && (
+                <button
+                  onClick={() => { setOpen(false); handleNav('#search-result'); }}
+                  className="flex w-full items-center justify-between rounded-xl px-4 py-3 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-100"
+                >
+                  <span>Өмнөх үр дүн хайх</span>
+                  <span className="text-slate-400">→</span>
+                </button>
+                <div className="mt-3 px-1">
                   <button
-                    onClick={() => { setOpen(false); handleNav('#search-result'); }}
-                    className="flex w-full items-center justify-between rounded-xl px-4 py-3 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-100"
+                    onClick={() => { setOpen(false); handleNav('#upload'); }}
+                    className="inline-flex w-full items-center justify-center text-center rounded-xl bg-gradient-to-r from-violet-500 via-purple-500 to-pink-500 px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-violet-200 transition-all hover:scale-[1.03] active:scale-[0.97]"
                   >
-                    <span>Өмнөх үр дүн хайх</span>
-                    <span className="text-slate-400">→</span>
+                    Шинжилгээ эхлүүлэх
                   </button>
-                )}
-
-                {isSignedIn ? (
-                  <div className="mt-3 flex flex-col gap-2 px-1">
-                    <Link
-                      href="/my-results"
-                      onClick={() => setOpen(false)}
-                      className="inline-flex items-center justify-center rounded-xl bg-violet-50 border border-violet-200 px-4 py-3 text-sm font-semibold text-violet-600 transition-colors hover:bg-violet-100"
-                    >
-                      Миний үр дүн
-                    </Link>
-                    <button
-                      onClick={() => { setOpen(false); handleNav('#upload'); }}
-                      className="inline-flex items-center justify-center rounded-xl bg-gradient-to-r from-violet-500 via-purple-500 to-pink-500 px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-violet-200"
-                    >
-                      Шинжилгээ эхлүүлэх
-                    </button>
-                    <SignOutButton redirectUrl="/">
-                      <button
-                        onClick={() => setOpen(false)}
-                        className="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-500 transition-colors hover:bg-slate-50"
-                      >
-                        Гарах
-                      </button>
-                    </SignOutButton>
-                  </div>
-                ) : (
-                  <div className="mt-3 grid grid-cols-2 gap-2 px-1">
-                    <SignInButton mode="modal">
-                      <button
-                        onClick={() => setOpen(false)}
-                        className="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 shadow-sm transition-colors hover:bg-slate-50"
-                      >
-                        Нэвтрэх
-                      </button>
-                    </SignInButton>
-                    <button
-                      onClick={() => { setOpen(false); handleNav('#upload'); }}
-                      className="inline-flex items-center justify-center text-center rounded-xl bg-gradient-to-r from-violet-500 via-purple-500 to-pink-500 px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-violet-200 transition-all hover:scale-[1.03] active:scale-[0.97]"
-                    >
-                      Шинжилгээ эхлүүлэх
-                    </button>
-                  </div>
-                )}
+                </div>
               </div>
             </div>
           </div>

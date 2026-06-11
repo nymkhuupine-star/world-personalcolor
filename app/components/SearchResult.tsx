@@ -3,7 +3,6 @@
 import { useState, useRef, useEffect, KeyboardEvent } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Mail, Key, Sparkles, Calendar, ArrowRight, RefreshCw, CheckCircle, Send } from 'lucide-react';
-import { useUser } from '@clerk/nextjs';
 
 type Analysis = {
   id: string;
@@ -34,7 +33,6 @@ const SESSION_KEY = 'pc_search_session';
 type Step = 'email' | 'code' | 'results';
 
 export default function SearchResult() {
-  const { isSignedIn } = useUser();
   const [step, setStep] = useState<Step>('email');
   const [email, setEmail] = useState('');
   const [digits, setDigits] = useState(['', '', '', '', '', '']);
@@ -184,8 +182,6 @@ export default function SearchResult() {
     setError('');
     setCountdown(0);
   }
-
-  if (isSignedIn) return null;
 
   return (
     <section id="search-result" className="py-20 px-6 bg-pink-100/100 from-slate-50 to-white">

@@ -1,21 +1,15 @@
-import { auth, currentUser } from '@clerk/nextjs/server';
-import { notFound } from 'next/navigation';
+import { cookies } from 'next/headers';
+import { redirect } from 'next/navigation';
 import Dashboard from './Dashboard';
-
-const ADMIN_EMAIL = process.env.NEXT_PUBLIC_ADMIN_EMAIL;
+import AdminLogin from './AdminLogin';
 
 export default async function ControlPage() {
-  const { userId } = await auth();
+  const cookieStore = await cookies();
+  const token = cookieStore.get('admin_token')?.value;
+  const secret = process.env.ADMIN_SECRET;
 
-  if (!userId) {
-    notFound();
-  }
-
-  const user = await currentUser();
-  const email = user?.emailAddresses?.[0]?.emailAddress;
-
-  if (!email || email !== ADMIN_EMAIL) {
-    notFound();
+  if (!secret || token !== secret) {
+    return <AdminLogin />;
   }
 
   return <Dashboard />;

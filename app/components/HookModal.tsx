@@ -1,7 +1,6 @@
 'use client';
 
 import { motion, AnimatePresence } from 'framer-motion';
-import { SignInButton } from '@clerk/nextjs';
 import { X, Mail } from 'lucide-react';
 
 type Props = {
@@ -45,15 +44,16 @@ export default function HookModal({ onDismiss }: Props) {
                   Үр дүн имэйлээр илгээгдлээ
                 </p>
                 <p className="text-sm leading-relaxed text-slate-500">
-                  Та энэ үр дүнгээ хадгалж, хүссэн үедээ орж харахыг хүсвэл нэвтэрч орно уу.
+                  Өмнөх үр дүнгээ дахин харахыг хүсвэл имэйлээрээ хайж болно.
                 </p>
               </div>
 
-              <SignInButton mode="modal" forceRedirectUrl="/">
-                <button className="w-full rounded-2xl bg-gradient-to-r from-violet-500 via-purple-500 to-pink-500 py-3.5 text-sm font-bold text-white shadow-lg shadow-violet-200 transition-all hover:scale-[1.02] hover:shadow-violet-300 active:scale-[0.98]">
-                  Нэвтрэх / Бүртгүүлэх
-                </button>
-              </SignInButton>
+              <button
+                onClick={onDismiss}
+                className="w-full rounded-2xl bg-gradient-to-r from-violet-500 via-purple-500 to-pink-500 py-3.5 text-sm font-bold text-white shadow-lg shadow-violet-200 transition-all hover:scale-[1.02] hover:shadow-violet-300 active:scale-[0.98]"
+              >
+                Хаах
+              </button>
             </div>
           </div>
         </motion.div>

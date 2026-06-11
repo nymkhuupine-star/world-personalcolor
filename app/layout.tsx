@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { Inter, Playfair_Display } from "next/font/google";
-import { ClerkProvider } from "@clerk/nextjs";
+
 import "./globals.css";
 
 const inter = Inter({
@@ -59,18 +59,16 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <ClerkProvider afterSignOutUrl="/">
-      <html
-        lang="mn"
-        className={`${inter.variable} ${playfair.variable} h-full antialiased`}
+    <html
+      lang="mn"
+      className={`${inter.variable} ${playfair.variable} h-full antialiased`}
+    >
+      <body
+        suppressHydrationWarning
+        className="min-h-full flex flex-col bg-white"
       >
-        <body
-          suppressHydrationWarning
-          className="min-h-full flex flex-col bg-white"
-        >
-          <main className="flex-1">{children}</main>
-        </body>
-      </html>
-    </ClerkProvider>
+        <main className="flex-1">{children}</main>
+      </body>
+    </html>
   );
 }

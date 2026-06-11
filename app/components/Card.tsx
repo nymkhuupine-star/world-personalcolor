@@ -3,7 +3,6 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import { useEffect, useRef, useState, type ChangeEvent, type DragEvent } from 'react';
 import Image from 'next/image';
-import { useUser } from '@clerk/nextjs';
 import { CreditCard, Droplets, Eye, Lock, Sparkles, Sun, Upload, X } from 'lucide-react';
 import supabase from '@/utils/supabase';
 import Questionnaire from './Questionnaire';
@@ -41,8 +40,6 @@ function compressImage(file: File): Promise<File> {
 }
 
 export default function Card() {
-  useUser(); // keep Clerk context initialised
-
   const [file, setFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [email, setEmail] = useState('');
