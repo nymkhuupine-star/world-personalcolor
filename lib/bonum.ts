@@ -139,7 +139,7 @@ export async function createBonumInvoice(
       callback:      `${CALLBACK_BASE}?orderId=${transactionId}`,
       transactionId,
       expiresIn:     3600,
-      providers:     ['QPAY'],
+      providers:     ['QPAY', 'SOCIALPAY', 'MONPAY', 'HIPAY', 'MOST_MONEY', 'KHANBANK', 'GOLOMT', 'TDB', 'XACBANK', 'STATEBANK', 'CAPITRON', 'NIBANK', 'BOGDBANK', 'TRANSBANK', 'CHINGGISKHAAN', 'ARIG'],
     }),
     cache: 'no-store',
   });
