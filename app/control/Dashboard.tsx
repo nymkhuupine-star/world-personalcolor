@@ -213,22 +213,24 @@ export default function Dashboard() {
   const todayCount   = portraits.filter(p => new Date(p.created_at).toDateString() === today).length;
   const paidOrders   = orders.filter(o => o.paid);
   const bonumOrders  = paidOrders.filter(o => !o.admin_confirmed);
-  const totalRevenue = paidOrders.reduce((sum, o) => sum + (o.amount ?? 0), 0);
+  // Only count real payments (amount >= 1000) to exclude test/zero-amount entries
+  const realPaidOrders = paidOrders.filter(o => (o.amount ?? 0) >= 1000);
+  const totalRevenue = realPaidOrders.reduce((sum, o) => sum + (o.amount ?? 0), 0);
 
   // Build daily revenue chart data for current month
   const now = new Date();
   const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
-  const thisMonthRevenue = paidOrders
+  const thisMonthRevenue = realPaidOrders
     .filter(o => o.paid_at && new Date(o.paid_at).getMonth() === now.getMonth() && new Date(o.paid_at).getFullYear() === now.getFullYear())
     .reduce((sum, o) => sum + (o.amount ?? 0), 0);
-  const todayRevenue = paidOrders
+  const todayRevenue = realPaidOrders
     .filter(o => o.paid_at && new Date(o.paid_at).toDateString() === today)
     .reduce((sum, o) => sum + (o.amount ?? 0), 0);
 
   const chartData = Array.from({ length: daysInMonth }, (_, i) => {
     const day = i + 1;
     const label = String(day).padStart(2, '0');
-    const revenue = paidOrders
+    const revenue = realPaidOrders
       .filter(o => {
         if (!o.paid_at) return false;
         const d = new Date(o.paid_at);
