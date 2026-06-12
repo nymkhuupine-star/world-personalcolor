@@ -20,7 +20,7 @@ const plans = [
   },
   {
     name: 'Premium',
-    price: '9,900',
+    price: '14,900',
     description: 'Танд зориулсан цогц загварын гарын авлага',
     features: [
       'Дэлгэрэнгүй 10 хуудас тайлан',
