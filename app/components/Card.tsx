@@ -11,7 +11,7 @@ import { isQuestionnaireComplete } from '@/lib/personal-color/questionnaire';
 
 const MAX_SIZE = 1024;
 const JPEG_QUALITY = 0.85;
-const PRICE = 14900; // ₮ — үнийн дүнг зөвхөн энд өөрчил
+const PRICE = 8900; // ₮ — үнийн дүнг зөвхөн энд өөрчил
 
 function compressImage(file: File): Promise<File> {
   return new Promise((resolve) => {
@@ -440,7 +440,7 @@ export default function Card() {
                   <Lock className="h-3.5 w-3.5" strokeWidth={1.5} />
                   Дэлгэрэнгүй үр дүн + PDF тайлан
                 </div>
-                <span className="text-base font-bold text-slate-800">14,900₮</span>
+                <span className="text-base font-bold text-slate-800">8,900₮</span>
               </div>
 
               {/* Pay button */}
@@ -458,7 +458,7 @@ export default function Card() {
                   ) : (
                     <>
                       <CreditCard className="h-4 w-4" strokeWidth={1.75} />
-                      PDF тайлан авах — 14,900₮
+                      PDF тайлан авах — 8,900₮
                     </>
                   )}
                 </span>

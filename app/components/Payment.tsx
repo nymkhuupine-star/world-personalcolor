@@ -74,7 +74,7 @@ export default function Payment() {
                   </p>
                   <div className="mt-3 flex items-end gap-1.5">
                     <span className=" text-[4.5rem] font-bold leading-none tracking-tight text-slate-900">
-                      14,900
+                      8,900
                     </span>
                     <span className="mb-2 text-2xl font-semibold text-slate-400">₮</span>
                   </div>
