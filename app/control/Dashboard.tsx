@@ -253,10 +253,16 @@ export default function Dashboard() {
     return { day: label, revenue };
   });
 
+  const handleRefresh = () => {
+    if (section === 'overview' || section === 'payments') void fetchOrders();
+    if (section === 'registrations') void fetchAnalyses();
+    if (section === 'pdfs') void fetchPdfStatuses();
+  };
+
   return (
     <div className="flex min-h-screen bg-slate-50">
-      {/* Sidebar */}
-      <aside className="fixed inset-y-0 left-0 z-40 flex w-60 flex-col border-r border-slate-200 bg-white">
+      {/* Sidebar — desktop only */}
+      <aside className="hidden md:fixed md:inset-y-0 md:left-0 md:z-40 md:flex md:w-60 md:flex-col border-r border-slate-200 bg-white">
         {/* Logo */}
         <div className="flex items-center gap-3 border-b border-slate-100 px-5 py-5">
           <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-violet-600 via-fuchsia-500 to-rose-400 shadow-sm">
@@ -277,9 +283,7 @@ export default function Dashboard() {
                 key={key}
                 onClick={() => setSection(key)}
                 className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all ${
-                  active
-                    ? 'bg-violet-50 text-violet-700'
-                    : 'text-slate-500 hover:bg-slate-50 hover:text-slate-700'
+                  active ? 'bg-violet-50 text-violet-700' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-700'
                 }`}
               >
                 <Icon className={`h-4 w-4 ${active ? 'text-violet-500' : 'text-slate-400'}`} strokeWidth={1.5} />
@@ -298,36 +302,32 @@ export default function Dashboard() {
       </aside>
 
       {/* Main content */}
-      <div className="ml-60 flex-1">
+      <div className="flex-1 md:ml-60 pb-20 md:pb-0">
         {/* Topbar */}
-        <div className="sticky top-0 z-30 flex items-center justify-between border-b border-slate-200 bg-white/80 px-8 py-4 backdrop-blur-md">
+        <div className="sticky top-0 z-30 flex items-center justify-between border-b border-slate-200 bg-white/90 px-4 py-3 md:px-8 md:py-4 backdrop-blur-md">
           <div>
-            <h1 className="text-base font-bold text-slate-900">
+            <h1 className="text-sm font-bold text-slate-900 md:text-base">
               {NAV.find(n => n.key === section)?.label}
             </h1>
-            <p className="text-xs text-slate-400">Personal Color AI — Admin</p>
+            <p className="text-[10px] text-slate-400 md:text-xs">Personal Color AI — Admin</p>
           </div>
           <button
-            onClick={() => {
-              if (section === 'overview' || section === 'payments') void fetchOrders();
-              if (section === 'registrations') void fetchAnalyses();
-              if (section === 'pdfs') void fetchPdfStatuses();
-            }}
+            onClick={handleRefresh}
             disabled={loading}
-            className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-600 shadow-sm transition hover:bg-slate-50 disabled:opacity-50"
+            className="flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 shadow-sm transition hover:bg-slate-50 disabled:opacity-50"
           >
             <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} strokeWidth={1.5} />
-            Шинэчлэх
+            <span className="hidden sm:inline">Шинэчлэх</span>
           </button>
         </div>
 
-        <div className="px-8 py-8 space-y-6">
+        <div className="px-4 py-4 space-y-4 md:px-8 md:py-8 md:space-y-6">
 
           {/* ── OVERVIEW ── */}
           {section === 'overview' && (
             <>
               {/* Stat cards */}
-              <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
+              <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-5">
                 {[
                   {
                     label: 'Өнөөдрийн орлого',
@@ -481,14 +481,14 @@ export default function Dashboard() {
             return (
               <div className="rounded-2xl border border-slate-100 bg-white shadow-sm overflow-hidden">
                 {/* Header + Search */}
-                <div className="border-b border-slate-100 px-6 py-4 flex items-center justify-between gap-4">
+                <div className="border-b border-slate-100 px-4 py-3 md:px-6 md:py-4 flex flex-wrap items-center justify-between gap-3">
                   <div className="flex items-center gap-3">
                     <h2 className="text-sm font-bold text-slate-900">Шинжилгээний бүртгэл</h2>
                     <span className="rounded-full bg-violet-50 px-2.5 py-0.5 text-xs font-semibold text-violet-600">
                       {analyses.length}
                     </span>
                   </div>
-                  <div className="relative w-56">
+                  <div className="relative w-full sm:w-56">
                     <input
                       value={regSearch}
                       onChange={e => setRegSearch(e.target.value)}
@@ -580,7 +580,7 @@ export default function Dashboard() {
           {section === 'payments' && (
             <div className="space-y-4">
               {/* Summary cards */}
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-4">
                 {[
                   {
                     label: 'Нийт орлого',
@@ -617,12 +617,12 @@ export default function Dashboard() {
 
               {/* Orders table */}
               <div className="rounded-2xl border border-slate-100 bg-white shadow-sm overflow-hidden">
-                <div className="border-b border-slate-100 px-6 py-4 flex items-center justify-between gap-4">
+                <div className="border-b border-slate-100 px-4 py-3 md:px-6 md:py-4 flex flex-wrap items-center justify-between gap-3">
                   <div className="flex items-center gap-3">
                     <h2 className="text-sm font-bold text-slate-900">Захиалгын бүртгэл</h2>
                     <span className="rounded-full bg-violet-50 px-2.5 py-0.5 text-xs font-semibold text-violet-600">{orders.length}</span>
                   </div>
-                  <div className="relative w-56">
+                  <div className="relative w-full sm:w-56">
                     <input
                       value={paySearch}
                       onChange={e => setPaySearch(e.target.value)}
@@ -867,6 +867,25 @@ export default function Dashboard() {
           )}
         </div>
       </div>
+
+      {/* Bottom nav — mobile only */}
+      <nav className="fixed bottom-0 inset-x-0 z-40 flex border-t border-slate-200 bg-white md:hidden">
+        {NAV.map(({ key, label, icon: Icon }) => {
+          const active = section === key;
+          return (
+            <button
+              key={key}
+              onClick={() => setSection(key)}
+              className={`flex flex-1 flex-col items-center gap-0.5 py-2.5 text-[10px] font-medium transition-colors ${
+                active ? 'text-violet-600' : 'text-slate-400'
+              }`}
+            >
+              <Icon className={`h-5 w-5 ${active ? 'text-violet-500' : 'text-slate-400'}`} strokeWidth={1.5} />
+              {label}
+            </button>
+          );
+        })}
+      </nav>
     </div>
   );
 }
