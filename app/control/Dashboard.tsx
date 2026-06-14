@@ -1,7 +1,7 @@
 /* eslint-disable react-hooks/set-state-in-effect */
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { createClient } from '@supabase/supabase-js';
 import {
@@ -13,7 +13,6 @@ import {
   CreditCard,
   FileText,
   Folder,
-  ImageIcon,
   TrendingUp,
   Clock,
   RefreshCw,
@@ -34,12 +33,6 @@ const supabase = createClient(
 );
 
 type Section = 'overview' | 'registrations' | 'payments' | 'pdfs';
-
-type Portrait = {
-  name: string;
-  created_at: string;
-  metadata: { size: number; mimetype: string } | null;
-};
 
 type Analysis = {
   id: string;
@@ -82,15 +75,15 @@ function formatDate(d: string) {
   return new Date(d).toLocaleString('mn-MN', {
     year: 'numeric', month: '2-digit', day: '2-digit',
     hour: '2-digit', minute: '2-digit',
+    timeZone: 'Asia/Ulaanbaatar',
   });
 }
 
 export default function Dashboard() {
   const [section, setSection] = useState<Section>('overview');
-  const [portraits, setPortraits] = useState<Portrait[]>([]);
   const [analyses, setAnalyses] = useState<Analysis[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [regSearch, setRegSearch] = useState('');
   const [paySearch, setPaySearch] = useState('');
   const [pdfStatuses, setPdfStatuses] = useState<PdfStatuses>({});
@@ -101,7 +94,31 @@ export default function Dashboard() {
   const [expandedSeason, setExpandedSeason] = useState<string | null>(null);
   const [confirmingId, setConfirmingId] = useState<string | null>(null);
   const [confirmedId, setConfirmedId] = useState<string | null>(null);
+  const loadedSections = useRef<Set<Section>>(new Set());
   const fileRefs = useRef<Record<string, HTMLInputElement | null>>({});
+
+  const fetchOrders = useCallback(async () => {
+    setLoading(true);
+    const res = await fetch('/api/admin/orders').then(r => r.ok ? r.json() : []);
+    setOrders(Array.isArray(res) ? res as Order[] : []);
+    setLoading(false);
+  }, []);
+
+  const fetchAnalyses = useCallback(async () => {
+    setLoading(true);
+    const { data, error } = await supabase
+      .from('analyses')
+      .select('id,email,image_path,season,sub_type,email_sent,paid,created_at')
+      .order('created_at', { ascending: false })
+      .limit(200);
+    if (!error && data) setAnalyses(data as Analysis[]);
+    setLoading(false);
+  }, []);
+
+  const fetchPdfStatuses = useCallback(async () => {
+    const res = await fetch('/api/admin/pdf');
+    if (res.ok) setPdfStatuses(await res.json());
+  }, []);
 
   const handleConfirmOrder = async (orderId: string) => {
     if (confirmingId) return;
@@ -114,38 +131,28 @@ export default function Dashboard() {
       });
       if (res.ok) {
         setConfirmedId(orderId);
-        await fetchPortraits();
+        await fetchOrders();
         setTimeout(() => setConfirmedId(null), 4000);
       }
     } catch { /* silent */ }
     setConfirmingId(null);
   };
 
-  const fetchPortraits = useCallback(async () => {
-    setLoading(true);
-    const [storageRes, dbRes, ordersRes] = await Promise.all([
-      supabase.storage.from('portraits').list('', {
-        limit: 200,
-        sortBy: { column: 'created_at', order: 'desc' },
-      }),
-      supabase.from('analyses').select('*').order('created_at', { ascending: false }).limit(200),
-      fetch('/api/admin/orders').then(r => r.ok ? r.json() : []),
-    ]);
-    if (!storageRes.error && storageRes.data) setPortraits(storageRes.data as Portrait[]);
-    if (!dbRes.error && dbRes.data) setAnalyses(dbRes.data as Analysis[]);
-    setOrders(Array.isArray(ordersRes) ? ordersRes as Order[] : []);
-    setLoading(false);
-  }, []);
-
-  const fetchPdfStatuses = useCallback(async () => {
-    const res = await fetch('/api/admin/pdf');
-    if (res.ok) setPdfStatuses(await res.json());
-  }, []);
-
+  // Load data only when section is first visited
   useEffect(() => {
-    void fetchPortraits();
-    void fetchPdfStatuses();
-  }, [fetchPortraits, fetchPdfStatuses]);
+    if (loadedSections.current.has(section)) return;
+    loadedSections.current.add(section);
+    if (section === 'overview' || section === 'payments') void fetchOrders();
+    if (section === 'registrations') void fetchAnalyses();
+    if (section === 'pdfs') void fetchPdfStatuses();
+  }, [section, fetchOrders, fetchAnalyses, fetchPdfStatuses]);
+
+  // fetch orders on mount for Overview stats
+  useEffect(() => {
+    loadedSections.current.add('overview');
+    void fetchOrders();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handlePdfDelete = async (season: SeasonKey, subtype: string) => {
     const id = reportId(season, subtype);
@@ -209,23 +216,29 @@ export default function Dashboard() {
     }
     setPdfUploading(null);
   };
-  const today        = new Date().toDateString();
-  const todayCount   = portraits.filter(p => new Date(p.created_at).toDateString() === today).length;
+  const UB_TZ = 'Asia/Ulaanbaatar';
+  const today = new Date().toLocaleDateString('en-CA', { timeZone: UB_TZ }); // 'YYYY-MM-DD'
+  const ubFmt = new Intl.DateTimeFormat('en-CA', { timeZone: UB_TZ, year: 'numeric', month: '2-digit', day: '2-digit' });
+  const toUBDate = (d: string) => ubFmt.format(new Date(d));
   const paidOrders   = orders.filter(o => o.paid);
   const bonumOrders  = paidOrders.filter(o => !o.admin_confirmed);
   // Only count real payments (amount >= 1000) to exclude test/zero-amount entries
   const realPaidOrders = paidOrders.filter(o => (o.amount ?? 0) >= 1000);
   const totalRevenue = realPaidOrders.reduce((sum, o) => sum + (o.amount ?? 0), 0);
 
-  // Build daily revenue chart data for current month
+  // Build daily revenue chart data for current month (Ulaanbaatar time)
   const now = new Date();
-  const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+  const ubNow = new Date(now.toLocaleString('en-US', { timeZone: UB_TZ }));
+  const daysInMonth = new Date(ubNow.getFullYear(), ubNow.getMonth() + 1, 0).getDate();
   const thisMonthRevenue = realPaidOrders
-    .filter(o => o.paid_at && new Date(o.paid_at).getMonth() === now.getMonth() && new Date(o.paid_at).getFullYear() === now.getFullYear())
+    .filter(o => {
+      if (!o.paid_at) return false;
+      const d = new Date(new Date(o.paid_at).toLocaleString('en-US', { timeZone: UB_TZ }));
+      return d.getMonth() === ubNow.getMonth() && d.getFullYear() === ubNow.getFullYear();
+    })
     .reduce((sum, o) => sum + (o.amount ?? 0), 0);
-  const todayRevenue = realPaidOrders
-    .filter(o => o.paid_at && new Date(o.paid_at).toDateString() === today)
-    .reduce((sum, o) => sum + (o.amount ?? 0), 0);
+  const todayOrders = realPaidOrders.filter(o => o.paid_at && toUBDate(o.paid_at) === today);
+  const todayRevenue = todayOrders.reduce((sum, o) => sum + (o.amount ?? 0), 0);
 
   const chartData = Array.from({ length: daysInMonth }, (_, i) => {
     const day = i + 1;
@@ -233,8 +246,8 @@ export default function Dashboard() {
     const revenue = realPaidOrders
       .filter(o => {
         if (!o.paid_at) return false;
-        const d = new Date(o.paid_at);
-        return d.getDate() === day && d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+        const d = new Date(new Date(o.paid_at).toLocaleString('en-US', { timeZone: UB_TZ }));
+        return d.getDate() === day && d.getMonth() === ubNow.getMonth() && d.getFullYear() === ubNow.getFullYear();
       })
       .reduce((sum, o) => sum + (o.amount ?? 0), 0);
     return { day: label, revenue };
@@ -295,7 +308,11 @@ export default function Dashboard() {
             <p className="text-xs text-slate-400">Personal Color AI — Admin</p>
           </div>
           <button
-            onClick={() => { fetchPortraits(); fetchPdfStatuses(); }}
+            onClick={() => {
+              if (section === 'overview' || section === 'payments') void fetchOrders();
+              if (section === 'registrations') void fetchAnalyses();
+              if (section === 'pdfs') void fetchPdfStatuses();
+            }}
             disabled={loading}
             className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-600 shadow-sm transition hover:bg-slate-50 disabled:opacity-50"
           >
@@ -315,7 +332,7 @@ export default function Dashboard() {
                   {
                     label: 'Өнөөдрийн орлого',
                     value: `${todayRevenue.toLocaleString()}₮`,
-                    sub: 'Өнөөдөр олсон дүн',
+                    sub: `${todayOrders.length} захиалга (${today})`,
                     icon: TrendingUp,
                     color: 'text-rose-600',
                     bg: 'bg-rose-50',
@@ -374,7 +391,7 @@ export default function Dashboard() {
                 <div className="border-b border-slate-100 px-6 py-4">
                   <h2 className="text-sm font-bold text-slate-900">Нийт орлого</h2>
                   <p className="text-xs text-slate-400 mt-0.5">
-                    {now.getFullYear()} оны {now.getMonth() + 1}-р сарын өдөр тутмын орлого
+                    {ubNow.getFullYear()} оны {ubNow.getMonth() + 1}-р сарын өдөр тутмын орлого
                   </p>
                 </div>
                 <div className="px-2 py-6">
@@ -406,7 +423,7 @@ export default function Dashboard() {
                         />
                         <Tooltip
                           formatter={(v) => [`${Number(v).toLocaleString()}₮`, 'Орлого']}
-                          labelFormatter={l => `${now.getMonth() + 1}/${l}`}
+                          labelFormatter={l => `${ubNow.getMonth() + 1}/${l}`}
                           contentStyle={{ borderRadius: 12, border: '1px solid #e2e8f0', fontSize: 12 }}
                         />
                         <Area
@@ -506,9 +523,21 @@ export default function Dashboard() {
                         </tr>
                       </thead>
                       <tbody>
-                        {filtered.map((a, i) => {
+                        {filtered.map((a, i, arr) => {
+                          const thisDay = toUBDate(a.created_at);
+                          const prevDay = i > 0 ? toUBDate(arr[i - 1].created_at) : thisDay;
+                          const showDivider = i > 0 && thisDay !== prevDay;
+                          const dividerLabel = new Intl.DateTimeFormat('mn-MN', { year: 'numeric', month: 'long', day: 'numeric', timeZone: UB_TZ }).format(new Date(thisDay + 'T12:00:00Z'));
                           return (
-                            <tr key={a.id} className="border-b border-slate-50 hover:bg-slate-50/60 transition-colors">
+                          <React.Fragment key={a.id}>
+                            {showDivider && (
+                              <tr>
+                                <td colSpan={6} className="px-5 py-2 bg-slate-50 border-y border-slate-200">
+                                  <span className="text-[11px] font-semibold text-slate-400 tracking-wide">{dividerLabel}</span>
+                                </td>
+                              </tr>
+                            )}
+                            <tr className="border-b border-slate-50 hover:bg-slate-50/60 transition-colors">
                               <td className="px-5 py-4 text-xs text-slate-300 font-mono w-10">{i + 1}</td>
                               <td className="px-5 py-4">
                                 <span className="text-sm font-medium text-slate-800">{a.email}</span>
@@ -536,6 +565,7 @@ export default function Dashboard() {
                                 }
                               </td>
                             </tr>
+                          </React.Fragment>
                           );
                         })}
                       </tbody>
@@ -623,10 +653,25 @@ export default function Dashboard() {
                       <tbody>
                         {orders
                           .filter(o => !paySearch || o.email.toLowerCase().includes(paySearch.toLowerCase()) || (o.analysis_result?.seasonName ?? '').toLowerCase().includes(paySearch.toLowerCase()))
-                          .map((o, i) => {
+                          .map((o, i, arr) => {
                             const sName = o.analysis_result?.seasonName ?? '';
+                            const dateKey = (ord: Order) => toUBDate((ord.paid && ord.paid_at) ? ord.paid_at : ord.created_at);
+                            const thisDay = dateKey(o);
+                            const prevDay = i > 0 ? dateKey(arr[i - 1]) : thisDay;
+                            const showDivider = i > 0 && thisDay !== prevDay;
+                            const dividerLabel = new Intl.DateTimeFormat('mn-MN', { year: 'numeric', month: 'long', day: 'numeric', timeZone: UB_TZ }).format(new Date(thisDay + 'T12:00:00Z'));
                             return (
-                              <tr key={o.id} className="border-b border-slate-50 hover:bg-slate-50/60 transition-colors">
+                              <React.Fragment key={o.id}>
+                                {showDivider && (
+                                  <tr>
+                                    <td colSpan={7} className="px-5 py-2 bg-slate-50 border-y border-slate-200">
+                                      <span className="text-[11px] font-semibold text-slate-400 tracking-wide">
+                                        {dividerLabel}
+                                      </span>
+                                    </td>
+                                  </tr>
+                                )}
+                              <tr className="border-b border-slate-50 hover:bg-slate-50/60 transition-colors">
                                 <td className="px-5 py-4 text-xs text-slate-300 font-mono w-10">{i + 1}</td>
                                 <td className="px-5 py-4">
                                   <span className="text-sm font-medium text-slate-800">{o.email}</span>
@@ -668,6 +713,7 @@ export default function Dashboard() {
                                   )}
                                 </td>
                               </tr>
+                              </React.Fragment>
                             );
                           })}
                       </tbody>

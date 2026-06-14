@@ -158,8 +158,9 @@ export async function POST(req: Request) {
       return Response.json({ error: 'Order not found' }, { status: 404 });
     }
 
+    // completedAt is Mongolia local time (UTC+8) — append offset before parsing
     const paidAt = completedAt
-      ? new Date(completedAt.replace(' ', 'T')).toISOString()
+      ? new Date(completedAt.replace(' ', 'T') + '+08:00').toISOString()
       : new Date().toISOString();
 
     const { data: updatedRows, error: updateErr } = await supabase
