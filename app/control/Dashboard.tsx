@@ -83,6 +83,7 @@ export default function Dashboard() {
   const [section, setSection] = useState<Section>('overview');
   const [analyses, setAnalyses] = useState<Analysis[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
+  const [expandedDays, setExpandedDays] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(false);
   const [regSearch, setRegSearch] = useState('');
   const [paySearch, setPaySearch] = useState('');
@@ -510,68 +511,86 @@ export default function Dashboard() {
                     <Users className="h-8 w-8 text-slate-200" strokeWidth={1.5} />
                     <p>{regSearch ? 'Хайлтад тохирох бүртгэл олдсонгүй' : 'Одоохондоо бүртгэл байхгүй'}</p>
                   </div>
-                ) : (
-                  <div className="overflow-x-auto">
-                    <table className="w-full">
-                      <thead>
-                        <tr className="border-b border-slate-100 bg-slate-50/70">
-                          {['#', 'Имэйл хаяг', 'Өнгөний төрөл', 'Огноо', 'Төлбөр', 'Имэйл'].map((h, i) => (
-                            <th key={h} className={`px-5 py-3 text-left text-[11px] font-semibold text-slate-400 ${i >= 4 ? 'text-center' : ''}`}>
-                              {h}
-                            </th>
-                          ))}
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {filtered.map((a, i, arr) => {
-                          const thisDay = toUBDate(a.created_at);
-                          const prevDay = i > 0 ? toUBDate(arr[i - 1].created_at) : thisDay;
-                          const showDivider = i > 0 && thisDay !== prevDay;
-                          const dividerLabel = new Intl.DateTimeFormat('mn-MN', { year: 'numeric', month: 'long', day: 'numeric', timeZone: UB_TZ }).format(new Date(thisDay + 'T12:00:00Z'));
+                ) : (() => {
+                    // group by UB date
+                    const groups: { day: string; label: string; items: Analysis[] }[] = [];
+                    filtered.forEach(a => {
+                      const d = toUBDate(a.created_at);
+                      if (!groups.length || groups[groups.length - 1].day !== d) {
+                        const label = new Intl.DateTimeFormat('mn-MN', { year: 'numeric', month: 'long', day: 'numeric', timeZone: UB_TZ }).format(new Date(d + 'T12:00:00Z'));
+                        groups.push({ day: d, label, items: [] });
+                      }
+                      groups[groups.length - 1].items.push(a);
+                    });
+                    return (
+                      <div>
+                        {groups.map(({ day, label, items }) => {
+                          const isToday = day === today;
+                          const isOpen = isToday || expandedDays.has(day);
+                          const toggle = () => setExpandedDays(prev => {
+                            const next = new Set(prev);
+                            if (next.has(day)) next.delete(day); else next.add(day);
+                            return next;
+                          });
                           return (
-                          <React.Fragment key={a.id}>
-                            {showDivider && (
-                              <tr>
-                                <td colSpan={6} className="px-5 py-2 bg-slate-50 border-y border-slate-200">
-                                  <span className="text-[11px] font-semibold text-slate-400 tracking-wide">{dividerLabel}</span>
-                                </td>
-                              </tr>
-                            )}
-                            <tr className="border-b border-slate-50 hover:bg-slate-50/60 transition-colors">
-                              <td className="px-5 py-4 text-xs text-slate-300 font-mono w-10">{i + 1}</td>
-                              <td className="px-5 py-4">
-                                <span className="text-sm font-medium text-slate-800">{a.email}</span>
-                              </td>
-                              <td className="px-5 py-4">
-                                {a.season ? (
-                                  <span className="inline-flex items-center gap-1.5 rounded-lg bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600">
-                                    {a.sub_type || `${SEASON_MN[a.season] ?? a.season}`}
-                                  </span>
-                                ) : <span className="text-xs text-slate-300">—</span>}
-                              </td>
-                              <td className="px-5 py-4 text-xs text-slate-400 whitespace-nowrap">
-                                {formatDate(a.created_at)}
-                              </td>
-                              <td className="px-5 py-4 text-center">
-                                {a.paid
-                                  ? <span className="inline-flex items-center gap-1 rounded-lg bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-600"><CheckCircle className="h-3 w-3" strokeWidth={2.5} />Төлсөн</span>
-                                  : <span className="inline-flex items-center gap-1 rounded-lg bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-400"><XCircle className="h-3 w-3" strokeWidth={2} />Үгүй</span>
-                                }
-                              </td>
-                              <td className="px-5 py-4 text-center">
-                                {a.email_sent
-                                  ? <span className="inline-flex items-center gap-1 rounded-lg bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-600"><CheckCircle className="h-3 w-3" strokeWidth={2.5} />Илгээсэн</span>
-                                  : <span className="inline-flex items-center gap-1 rounded-lg bg-rose-50 px-2.5 py-1 text-xs font-semibold text-rose-500"><XCircle className="h-3 w-3" strokeWidth={2} />Үгүй</span>
-                                }
-                              </td>
-                            </tr>
-                          </React.Fragment>
+                            <div key={day}>
+                              {/* Day header */}
+                              <button onClick={toggle} className="flex w-full items-center justify-between px-5 py-2.5 bg-slate-50 border-y border-slate-200 hover:bg-slate-100 transition-colors">
+                                <span className="text-[11px] font-semibold text-slate-500 tracking-wide">
+                                  {isToday ? `Өнөөдөр — ${label}` : label}
+                                </span>
+                                <span className="flex items-center gap-2 text-[11px] text-slate-400">
+                                  {items.length} бүртгэл
+                                  <ChevronDown className={`h-3.5 w-3.5 transition-transform ${isOpen ? 'rotate-180' : ''}`} strokeWidth={2} />
+                                </span>
+                              </button>
+                              {/* Rows */}
+                              {isOpen && (
+                                <div className="overflow-x-auto">
+                                  <table className="w-full">
+                                    {isToday && (
+                                      <thead>
+                                        <tr className="border-b border-slate-100 bg-slate-50/50">
+                                          {['#', 'Имэйл хаяг', 'Өнгөний төрөл', 'Огноо', 'Төлбөр', 'Имэйл'].map((h, i) => (
+                                            <th key={h} className={`px-5 py-2.5 text-left text-[11px] font-semibold text-slate-400 ${i >= 4 ? 'text-center' : ''}`}>{h}</th>
+                                          ))}
+                                        </tr>
+                                      </thead>
+                                    )}
+                                    <tbody>
+                                      {items.map((a, idx) => (
+                                        <tr key={a.id} className="border-b border-slate-50 hover:bg-slate-50/60 transition-colors">
+                                          <td className="px-5 py-3 text-xs text-slate-300 font-mono w-10">{idx + 1}</td>
+                                          <td className="px-5 py-3 text-sm font-medium text-slate-800">{a.email}</td>
+                                          <td className="px-5 py-3">
+                                            {a.season
+                                              ? <span className="inline-flex items-center gap-1.5 rounded-lg bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600">{a.sub_type || SEASON_MN[a.season] || a.season}</span>
+                                              : <span className="text-xs text-slate-300">—</span>}
+                                          </td>
+                                          <td className="px-5 py-3 text-xs text-slate-400 whitespace-nowrap">{formatDate(a.created_at)}</td>
+                                          <td className="px-5 py-3 text-center">
+                                            {a.paid
+                                              ? <span className="inline-flex items-center gap-1 rounded-lg bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-600"><CheckCircle className="h-3 w-3" strokeWidth={2.5} />Төлсөн</span>
+                                              : <span className="inline-flex items-center gap-1 rounded-lg bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-400"><XCircle className="h-3 w-3" strokeWidth={2} />Үгүй</span>}
+                                          </td>
+                                          <td className="px-5 py-3 text-center">
+                                            {a.email_sent
+                                              ? <span className="inline-flex items-center gap-1 rounded-lg bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-600"><CheckCircle className="h-3 w-3" strokeWidth={2.5} />Илгээсэн</span>
+                                              : <span className="inline-flex items-center gap-1 rounded-lg bg-rose-50 px-2.5 py-1 text-xs font-semibold text-rose-500"><XCircle className="h-3 w-3" strokeWidth={2} />Үгүй</span>}
+                                          </td>
+                                        </tr>
+                                      ))}
+                                    </tbody>
+                                  </table>
+                                </div>
+                              )}
+                            </div>
                           );
                         })}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
+                      </div>
+                    );
+                  })()
+                }
               </div>
             );
           })()}
@@ -638,88 +657,92 @@ export default function Dashboard() {
                   <div className="flex items-center justify-center gap-2 py-20 text-slate-400 text-sm">
                     <Loader2 className="h-4 w-4 animate-spin" /> Уншиж байна...
                   </div>
-                ) : (
-                  <div className="overflow-x-auto">
-                    <table className="w-full">
-                      <thead>
-                        <tr className="border-b border-slate-100 bg-slate-50/70">
-                          {['#', 'Имэйл хаяг', 'Өнгөний төрөл', 'Дүн', 'Статус', 'Огноо', ''].map((h, i) => (
-                            <th key={i} className={`px-5 py-3 text-left text-[11px] font-semibold text-slate-400 ${i === 3 ? 'text-right' : ''} ${i === 4 ? 'text-center' : ''}`}>
-                              {h}
-                            </th>
-                          ))}
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {orders
-                          .filter(o => !paySearch || o.email.toLowerCase().includes(paySearch.toLowerCase()) || (o.analysis_result?.seasonName ?? '').toLowerCase().includes(paySearch.toLowerCase()))
-                          .map((o, i, arr) => {
-                            const sName = o.analysis_result?.seasonName ?? '';
-                            const dateKey = (ord: Order) => toUBDate((ord.paid && ord.paid_at) ? ord.paid_at : ord.created_at);
-                            const thisDay = dateKey(o);
-                            const prevDay = i > 0 ? dateKey(arr[i - 1]) : thisDay;
-                            const showDivider = i > 0 && thisDay !== prevDay;
-                            const dividerLabel = new Intl.DateTimeFormat('mn-MN', { year: 'numeric', month: 'long', day: 'numeric', timeZone: UB_TZ }).format(new Date(thisDay + 'T12:00:00Z'));
-                            return (
-                              <React.Fragment key={o.id}>
-                                {showDivider && (
-                                  <tr>
-                                    <td colSpan={7} className="px-5 py-2 bg-slate-50 border-y border-slate-200">
-                                      <span className="text-[11px] font-semibold text-slate-400 tracking-wide">
-                                        {dividerLabel}
-                                      </span>
-                                    </td>
-                                  </tr>
-                                )}
-                              <tr className="border-b border-slate-50 hover:bg-slate-50/60 transition-colors">
-                                <td className="px-5 py-4 text-xs text-slate-300 font-mono w-10">{i + 1}</td>
-                                <td className="px-5 py-4">
-                                  <span className="text-sm font-medium text-slate-800">{o.email}</span>
-                                </td>
-                                <td className="px-5 py-4">
-                                  {sName ? (
-                                    <span className="inline-flex items-center gap-1.5 rounded-lg bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600">
-                                      {sName}
-                                    </span>
-                                  ) : <span className="text-xs text-slate-300">—</span>}
-                                </td>
-                                <td className="px-5 py-4 text-right">
-                                  <span className="text-sm font-bold text-slate-800">{(o.amount ?? 0).toLocaleString()}₮</span>
-                                </td>
-                                <td className="px-5 py-4 text-center">
-                                  {o.paid
-                                    ? o.admin_confirmed
-                                      ? <span className="inline-flex items-center gap-1 rounded-lg bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-500"><CheckCircle className="h-3 w-3" strokeWidth={2.5} />Гараар</span>
-                                      : <span className="inline-flex items-center gap-1 rounded-lg bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-600"><CheckCircle className="h-3 w-3" strokeWidth={2.5} />Bonum</span>
-                                    : <span className="inline-flex items-center gap-1 rounded-lg bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-500"><XCircle className="h-3 w-3" strokeWidth={2} />Дуусаагүй</span>
-                                  }
-                                </td>
-                                <td className="px-5 py-4 text-xs text-slate-400 whitespace-nowrap">
-                                  {o.paid && o.paid_at ? formatDate(o.paid_at) : formatDate(o.created_at)}
-                                </td>
-                                <td className="px-5 py-4 text-center">
-                                  {!o.paid && (
-                                    confirmedId === o.id ? (
-                                      <span className="text-xs text-emerald-600 font-semibold">✓ Илгээгдлээ</span>
-                                    ) : (
-                                      <button
-                                        onClick={() => handleConfirmOrder(o.id)}
-                                        disabled={confirmingId === o.id}
-                                        className="rounded-lg bg-violet-50 border border-violet-200 px-3 py-1.5 text-xs font-semibold text-violet-600 hover:bg-violet-100 transition disabled:opacity-50"
-                                      >
-                                        {confirmingId === o.id ? '...' : 'Баталгаажуулах'}
-                                      </button>
-                                    )
-                                  )}
-                                </td>
-                              </tr>
-                              </React.Fragment>
-                            );
-                          })}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
+                ) : (() => {
+                    const dateKey = (o: Order) => toUBDate((o.paid && o.paid_at) ? o.paid_at : o.created_at);
+                    const filtered = orders.filter(o => !paySearch || o.email.toLowerCase().includes(paySearch.toLowerCase()) || (o.analysis_result?.seasonName ?? '').toLowerCase().includes(paySearch.toLowerCase()));
+                    const groups: { day: string; label: string; items: Order[] }[] = [];
+                    filtered.forEach(o => {
+                      const d = dateKey(o);
+                      if (!groups.length || groups[groups.length - 1].day !== d) {
+                        const label = new Intl.DateTimeFormat('mn-MN', { year: 'numeric', month: 'long', day: 'numeric', timeZone: UB_TZ }).format(new Date(d + 'T12:00:00Z'));
+                        groups.push({ day: d, label, items: [] });
+                      }
+                      groups[groups.length - 1].items.push(o);
+                    });
+                    return (
+                      <div>
+                        {groups.map(({ day, label, items }) => {
+                          const isToday = day === today;
+                          const isOpen = isToday || expandedDays.has(day);
+                          const toggle = () => setExpandedDays(prev => {
+                            const next = new Set(prev);
+                            if (next.has(day)) next.delete(day); else next.add(day);
+                            return next;
+                          });
+                          const dayRevenue = items.filter(o => o.paid && (o.amount ?? 0) >= 1000).reduce((s, o) => s + (o.amount ?? 0), 0);
+                          return (
+                            <div key={day}>
+                              <button onClick={toggle} className="flex w-full items-center justify-between px-5 py-2.5 bg-slate-50 border-y border-slate-200 hover:bg-slate-100 transition-colors">
+                                <span className="text-[11px] font-semibold text-slate-500 tracking-wide">
+                                  {isToday ? `Өнөөдөр — ${label}` : label}
+                                </span>
+                                <span className="flex items-center gap-3 text-[11px] text-slate-400">
+                                  <span className="font-semibold text-emerald-600">{dayRevenue.toLocaleString()}₮</span>
+                                  {items.length} захиалга
+                                  <ChevronDown className={`h-3.5 w-3.5 transition-transform ${isOpen ? 'rotate-180' : ''}`} strokeWidth={2} />
+                                </span>
+                              </button>
+                              {isOpen && (
+                                <div className="overflow-x-auto">
+                                  <table className="w-full">
+                                    {isToday && (
+                                      <thead>
+                                        <tr className="border-b border-slate-100 bg-slate-50/50">
+                                          {['#', 'Имэйл хаяг', 'Өнгөний төрөл', 'Дүн', 'Статус', 'Огноо', ''].map((h, i) => (
+                                            <th key={i} className={`px-5 py-2.5 text-left text-[11px] font-semibold text-slate-400 ${i === 3 ? 'text-right' : ''} ${i === 4 ? 'text-center' : ''}`}>{h}</th>
+                                          ))}
+                                        </tr>
+                                      </thead>
+                                    )}
+                                    <tbody>
+                                      {items.map((o, idx) => {
+                                        const sName = o.analysis_result?.seasonName ?? '';
+                                        return (
+                                          <tr key={o.id} className="border-b border-slate-50 hover:bg-slate-50/60 transition-colors">
+                                            <td className="px-5 py-3 text-xs text-slate-300 font-mono w-10">{idx + 1}</td>
+                                            <td className="px-5 py-3 text-sm font-medium text-slate-800">{o.email}</td>
+                                            <td className="px-5 py-3">
+                                              {sName ? <span className="inline-flex items-center gap-1.5 rounded-lg bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600">{sName}</span> : <span className="text-xs text-slate-300">—</span>}
+                                            </td>
+                                            <td className="px-5 py-3 text-right font-bold text-sm text-slate-800">{(o.amount ?? 0).toLocaleString()}₮</td>
+                                            <td className="px-5 py-3 text-center">
+                                              {o.paid
+                                                ? o.admin_confirmed
+                                                  ? <span className="inline-flex items-center gap-1 rounded-lg bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-500"><CheckCircle className="h-3 w-3" strokeWidth={2.5} />Гараар</span>
+                                                  : <span className="inline-flex items-center gap-1 rounded-lg bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-600"><CheckCircle className="h-3 w-3" strokeWidth={2.5} />Bonum</span>
+                                                : <span className="inline-flex items-center gap-1 rounded-lg bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-500"><XCircle className="h-3 w-3" strokeWidth={2} />Дуусаагүй</span>}
+                                            </td>
+                                            <td className="px-5 py-3 text-xs text-slate-400 whitespace-nowrap">{o.paid && o.paid_at ? formatDate(o.paid_at) : formatDate(o.created_at)}</td>
+                                            <td className="px-5 py-3 text-center">
+                                              {!o.paid && (confirmedId === o.id
+                                                ? <span className="text-xs text-emerald-600 font-semibold">✓ Илгээгдлээ</span>
+                                                : <button onClick={() => handleConfirmOrder(o.id)} disabled={confirmingId === o.id} className="rounded-lg bg-violet-50 border border-violet-200 px-3 py-1.5 text-xs font-semibold text-violet-600 hover:bg-violet-100 transition disabled:opacity-50">{confirmingId === o.id ? '...' : 'Баталгаажуулах'}</button>
+                                              )}
+                                            </td>
+                                          </tr>
+                                        );
+                                      })}
+                                    </tbody>
+                                  </table>
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    );
+                  })()
+                }
               </div>
             </div>
           )}
