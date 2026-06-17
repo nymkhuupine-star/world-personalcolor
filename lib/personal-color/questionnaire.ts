@@ -53,11 +53,13 @@ export function questionnaireToMetrics(a: QuestionnaireAnswers): Partial<ColorMe
   let warm = 50, cool = 50, neutral = 20;
   let light = 33, medium = 34, deep = 33;
   let low = 33, medC = 34, high = 33;
+  // Chroma: soft=Summer/Autumn, clear=Spring/Winter, bright=Bright Spring/Winter
+  let soft = 33, clear = 33, bright = 33;
 
-  // Q1: Венийн өнгө → хамгийн хүчтэй undertone дохио
-  if (a.vein === 'blue_green') { cool += 35; warm -= 20; }
-  if (a.vein === 'purple_red') { warm += 35; cool -= 20; }
-  if (a.vein === 'both')       { neutral += 30; }
+  // Q1: Венийн өнгө → хамгийн хүчтэй undertone дохио + chroma hint
+  if (a.vein === 'blue_green') { cool += 35; warm -= 20; clear += 8; }
+  if (a.vein === 'purple_red') { warm += 35; cool -= 20; clear += 12; soft -= 10; }
+  if (a.vein === 'both')       { neutral += 30; soft += 12; }
 
   // Q2: Будсан үсний байгалийн өнгө → value + undertone
   if (a.hairDyed === 'yes' && a.naturalHairColor) {
@@ -80,10 +82,19 @@ export function questionnaireToMetrics(a: QuestionnaireAnswers): Partial<ColorMe
     low     += e.low;
   }
 
-  // Q4: Гоёлын металл → undertone-ийн хамгийн тодорхой дохио
-  if (a.jewelryPreference === 'gold')   { warm    += 30; cool -= 10; }
-  if (a.jewelryPreference === 'silver') { cool    += 30; warm -= 10; }
-  if (a.jewelryPreference === 'both')   { neutral += 20; }
+  // Q4: Гоёлын металл → undertone + chroma (хамгийн тодорхой дохио)
+  if (a.jewelryPreference === 'gold') {
+    warm  += 30; cool -= 10;
+    clear += 20; soft -= 15;  // алт = Spring/Autumn → тодорхой/дулаан хром
+  }
+  if (a.jewelryPreference === 'silver') {
+    cool  += 30; warm -= 10;
+    clear += 15; bright += 10; soft -= 10;  // мөнгө = Winter/Summer → тунгалаг хром
+  }
+  if (a.jewelryPreference === 'both') {
+    neutral += 20;
+    soft += 10;  // хоёулаа = мутед/зөөлөн хром
+  }
   // 'unsure' → дохио өгөхгүй
 
   const c = (v: number) => Math.max(0, Math.min(100, Math.round(v)));
@@ -91,6 +102,7 @@ export function questionnaireToMetrics(a: QuestionnaireAnswers): Partial<ColorMe
   return {
     undertone: { warm: c(warm), cool: c(cool), neutral: c(neutral) },
     value:     { light: c(light), medium: c(medium), deep: c(deep) },
+    chroma:    { soft: c(soft), clear: c(clear), bright: c(bright) },
     contrast:  { low: c(low), medium: c(medC), high: c(high) },
   };
 }
@@ -114,7 +126,7 @@ export function mergeMetrics(
   return {
     undertone: blend(image.undertone, questionnaire.undertone) as ColorMetrics['undertone'],
     value:     blend(image.value,     questionnaire.value)     as ColorMetrics['value'],
-    chroma:    image.chroma,
+    chroma:    blend(image.chroma,    questionnaire.chroma)    as ColorMetrics['chroma'],
     contrast:  blend(image.contrast,  questionnaire.contrast)  as ColorMetrics['contrast'],
   };
 }

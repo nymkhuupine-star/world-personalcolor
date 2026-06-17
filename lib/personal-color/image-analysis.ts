@@ -287,10 +287,11 @@ function calcUndertone(
     ? skinLab.b * 0.80 + hairLab.b * 0.20
     : skinLab.b;
 
-  // warm: b* 7 → 0, b* 30 → 100
-  const warm = clampRound((effB - 7) / 23 * 100);
-  // cool: b* 25 → 0, b* 3 → 100
-  const cool = clampRound((25 - effB) / 22 * 100);
+  // Neutral midpoint b*=12 (typical East-Asian skin). Symmetric ±10 range.
+  // warm: b* 2 → 0, b* 22 → 100
+  const warm = clampRound((effB - 2) / 20 * 100);
+  // cool: b* 22 → 0, b* 2 → 100
+  const cool = clampRound((22 - effB) / 20 * 100);
   // neutral peaks when warm ≈ cool
   const neutral = clampRound(100 - Math.abs(warm - cool) * 0.85);
 
