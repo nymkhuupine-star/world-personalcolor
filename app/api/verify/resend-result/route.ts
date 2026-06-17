@@ -1,5 +1,5 @@
-import { Resend } from 'resend';
 import { createClient } from '@supabase/supabase-js';
+import { sendMail } from '@/lib/mailer';
 import { seasonNameToStoragePath, getBaseSeason, type SeasonName } from '@/lib/personal-color/rule-engine';
 
 export const runtime = 'nodejs';
@@ -15,10 +15,6 @@ const SEASON_MN: Record<string, string> = {
 
 export async function POST(req: Request) {
   try {
-    const { RESEND_API_KEY } = process.env;
-    if (!RESEND_API_KEY)
-      return Response.json({ error: 'Server configuration error.' }, { status: 500 });
-
     const body = await req.json().catch(() => ({})) as { email?: unknown; analysisId?: unknown };
     const { email, analysisId } = body;
 
@@ -27,7 +23,6 @@ export async function POST(req: Request) {
     if (typeof analysisId !== 'string' || !analysisId)
       return Response.json({ error: 'analysisId шаардлагатай.' }, { status: 400 });
 
-    // Try analyses table first (unauthenticated users), then user_analyses (authenticated)
     let analysis: { season: string; sub_type: string; reasoning: string | null } | null = null;
 
     const { data: a1 } = await supabase
@@ -52,7 +47,6 @@ export async function POST(req: Request) {
     if (!analysis)
       return Response.json({ error: 'Үр дүн олдсонгүй.' }, { status: 404 });
 
-    // PDF URL from storage
     const { folder, file: subtypeFile } = seasonNameToStoragePath(analysis.sub_type as SeasonName);
     const pdfPath = `${folder}/${subtypeFile}.pdf`;
     const { data: listed } = await supabase.storage.from('reports').list(folder, { search: `${subtypeFile}.pdf` });
@@ -63,9 +57,7 @@ export async function POST(req: Request) {
     const baseSeason = getBaseSeason(analysis.sub_type as SeasonName);
     const seasonMn = SEASON_MN[baseSeason] ?? baseSeason;
 
-    const resend = new Resend(RESEND_API_KEY);
-    const { error: emailError } = await resend.emails.send({
-      from: process.env.RESEND_FROM_EMAIL ?? 'Personal Color AI <noreply@personalcolor.mn>',
+    await sendMail({
       to: email,
       subject: `Таны хувийн өнгөний үр дүн — ${seasonMn} (${analysis.sub_type})`,
       html: `
@@ -89,14 +81,9 @@ export async function POST(req: Request) {
       `,
     });
 
-    if (emailError) {
-      console.error('Resend error:', emailError);
-      return Response.json({ error: 'Имэйл илгээхэд алдаа гарлаа.' }, { status: 502 });
-    }
-
     return Response.json({ success: true });
   } catch (err) {
     console.error('resend-result error:', err);
-    return Response.json({ error: 'Дотоод алдаа гарлаа.' }, { status: 500 });
+    return Response.json({ error: 'Имэйл илгээхэд алдаа гарлаа.' }, { status: 500 });
   }
 }

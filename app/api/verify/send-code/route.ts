@@ -1,5 +1,5 @@
-import { Resend } from 'resend';
 import { createClient } from '@supabase/supabase-js';
+import { sendMail } from '@/lib/mailer';
 
 export const runtime = 'nodejs';
 
@@ -18,10 +18,6 @@ function generateCode(): string {
 
 export async function POST(req: Request) {
   try {
-    const { RESEND_API_KEY } = process.env;
-    if (!RESEND_API_KEY)
-      return Response.json({ error: 'Server configuration error.' }, { status: 500 });
-
     const body = await req.json().catch(() => ({})) as { email?: unknown };
     const { email } = body;
 
@@ -62,10 +58,8 @@ export async function POST(req: Request) {
       return Response.json({ error: 'Код хадгалахад алдаа гарлаа.' }, { status: 500 });
     }
 
-    const resend = new Resend(RESEND_API_KEY);
     const year = new Date().getFullYear();
-    const { error: emailError } = await resend.emails.send({
-      from: process.env.RESEND_FROM_EMAIL ?? 'Personal Color AI <noreply@personalcolor.mn>',
+    await sendMail({
       to: email,
       subject: 'Таны баталгаажуулах код',
       html: `
@@ -83,14 +77,9 @@ export async function POST(req: Request) {
       `,
     });
 
-    if (emailError) {
-      console.error('Resend error:', emailError);
-      return Response.json({ error: 'Имэйл илгээхэд алдаа гарлаа.' }, { status: 502 });
-    }
-
     return Response.json({ success: true });
   } catch (err) {
     console.error('send-code unexpected error:', err);
-    return Response.json({ error: 'Дотоод алдаа гарлаа.' }, { status: 500 });
+    return Response.json({ error: 'Имэйл илгээхэд алдаа гарлаа.' }, { status: 500 });
   }
 }

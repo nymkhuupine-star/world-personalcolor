@@ -1,5 +1,5 @@
-import { Resend } from 'resend';
 import { createClient } from '@supabase/supabase-js';
+import { sendMail } from '@/lib/mailer';
 import {
   type SeasonName,
   SEASON_PALETTES,
@@ -44,15 +44,6 @@ function isAllowedImageUrl(v: string) {
 
 export async function POST(req: Request) {
   try {
-    const { RESEND_API_KEY } = process.env;
-
-    if (!RESEND_API_KEY) {
-      return Response.json(
-        { error: 'API keys missing.' },
-        { status: 500 },
-      );
-    }
-
     const body = (await req.json()) as {
       imageUrl: unknown;
       email: unknown;
@@ -109,50 +100,29 @@ export async function POST(req: Request) {
       ? supabase.storage.from('reports').getPublicUrl(pdfPath).data.publicUrl
       : null;
 
-    const resend = new Resend(RESEND_API_KEY);
-
-    const { error: emailError } = await resend.emails.send({
-      from:
-        process.env.RESEND_FROM_EMAIL ??
-        'Personal Color AI <onboarding@resend.dev>',
+    await sendMail({
       to: normalizedEmail,
       subject: 'Таны хувийн өнгөний оношлогоо бэлэн боллоо!',
       html: `
         <div style="font-family:sans-serif;max-width:600px;margin:auto;border:1px solid #eee;padding:24px;border-radius:12px">
           <h2 style="color:#333">Сайн байна уу?</h2>
           <p>Таны хувийн өнгөний шинжилгээний үр дүн бэлэн боллоо.</p>
-
           <div style="background:#f9f9f9;padding:16px;border-radius:8px;border-left:4px solid #7c3aed">
             <p><strong>Таны улирал:</strong> ${SEASON_MN[baseSeason]} (${season})</p>
             <p><strong>Тайлбар:</strong> ${reasoning}</p>
           </div>
-
-          ${
-            pdfUrl
-              ? `
+          ${pdfUrl ? `
           <div style="margin-top:20px;text-align:center">
             <a href="${pdfUrl}" target="_blank"
               style="display:inline-block;background:#7c3aed;color:#fff;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:600;font-size:15px">
               📄 PDF тайланг үзэх
             </a>
-          </div>`
-              : ''
-          }
-
+          </div>` : ''}
           <hr style="margin:20px 0"/>
           <p style="font-size:12px;color:#888;text-align:center">© ${new Date().getFullYear()} Personal Color AI</p>
         </div>
       `,
     });
-
-    if (emailError) {
-      console.error('Resend error:', emailError);
-
-      return Response.json(
-        { error: 'Имэйл илгээхэд алдаа гарлаа. Дахин оролдоно уу.' },
-        { status: 502 },
-      );
-    }
 
     const { error: insertError } = await supabase.from('analyses').insert({
       email: normalizedEmail,

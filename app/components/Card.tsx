@@ -14,7 +14,7 @@ const JPEG_QUALITY = 0.85;
 const PRICE = 8900; // ₮ — үнийн дүнг зөвхөн энд өөрчил
 
 // Түр зогсоох тугшлага — true байхад форм хаагдаж мессеж харагдана
-const PAUSED = true;
+const PAUSED = false;
 
 function compressImage(file: File): Promise<File> {
   return new Promise((resolve) => {

@@ -1,5 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
-import { Resend } from 'resend';
+import { sendMail } from '@/lib/mailer';
 import {
   type SeasonName,
   SEASON_PALETTES,
@@ -78,12 +78,9 @@ export async function deliverResult(
   }
 
   // Send email
-  const { RESEND_API_KEY } = process.env;
-  if (!RESEND_API_KEY) return;
+  if (!process.env.GMAIL_USER) return;
 
-  const resend = new Resend(RESEND_API_KEY);
-  const { error: emailErr } = await resend.emails.send({
-    from:    process.env.RESEND_FROM_EMAIL ?? 'Personal Color AI <noreply@personalcolor.mn>',
+  await sendMail({
     to:      email,
     subject: 'Таны хувийн өнгөний оношлогоо бэлэн боллоо!',
     html: `
@@ -106,8 +103,6 @@ export async function deliverResult(
       </div>
     `,
   });
-
-  if (emailErr) throw new Error(`Resend: ${JSON.stringify(emailErr)}`);
 
   if (analysisId) {
     await supabase.from('analyses').update({ email_sent: true }).eq('id', analysisId);
