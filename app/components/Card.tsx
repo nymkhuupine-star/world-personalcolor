@@ -13,6 +13,9 @@ const MAX_SIZE = 1024;
 const JPEG_QUALITY = 0.85;
 const PRICE = 8900; // ₮ — үнийн дүнг зөвхөн энд өөрчил
 
+// Түр зогсоох тугшлага — true байхад форм хаагдаж мессеж харагдана
+const PAUSED = true;
+
 function compressImage(file: File): Promise<File> {
   return new Promise((resolve) => {
     const img = new window.Image();
@@ -243,6 +246,31 @@ export default function Card() {
     { icon: Droplets, label: 'Будалтгүй' },
     { icon: Eye,      label: 'Урагш харах' },
   ];
+
+  if (PAUSED) {
+    return (
+      <motion.div
+        initial={{ opacity: 0, y: 48 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.85, delay: 0.25, ease: [0.22, 1, 0.36, 1] }}
+      >
+        <div
+          className="flex flex-col items-center gap-6 rounded-[2rem] border border-pink-100 p-10 text-center shadow-[0_24px_64px_-12px_rgba(0,0,0,0.1),0_0_0_1px_rgba(255,255,255,0.6)] backdrop-blur-2xl"
+          style={{ backgroundColor: 'oklch(97% 0.018 18.334)' }}
+        >
+          <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-violet-100">
+            <Sparkles className="h-8 w-8 text-violet-500" strokeWidth={1.5} />
+          </div>
+          <div className="space-y-2">
+            <p className="text-lg font-bold text-slate-800">Удахгүй нээгдэнэ!</p>
+            <p className="text-sm leading-relaxed text-slate-500">
+              Та маргааш дахин орж өөрийн хувийн өнгөө тодорхойлуулаарай.
+            </p>
+          </div>
+        </div>
+      </motion.div>
+    );
+  }
 
   return (
     <motion.div

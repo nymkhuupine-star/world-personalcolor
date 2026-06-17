@@ -194,6 +194,10 @@ export async function getBonumInvoiceStatus(invoiceId: string): Promise<BonumInv
       _mem = null;
       await adminClient().from('app_config').delete().eq('key', DB_TOKEN_KEY).then(() => {}, () => {});
     }
+    // 400 = нэхэмжлэх хугацаа дууссан → төлөгдөөгүй гэж үзнэ, алдаа шидэхгүй
+    if (res.status === 400) {
+      return { paid: false, status: 'EXPIRED', invoiceId };
+    }
     throw new Error(`Bonum invoice status error ${res.status}: ${text}`);
   }
 
