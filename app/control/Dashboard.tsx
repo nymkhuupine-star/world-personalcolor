@@ -202,7 +202,7 @@ export default function Dashboard({
     })
     .reduce((sum, o) => sum + (o.amount ?? 0), 0);
 
-  const todayOrders = realPaidOrders.filter(o => o.paid_at && toUBDate(o.paid_at) === today);
+  const todayOrders = realPaidOrders.filter(o => o.paid_at && toUBDate(o.paid_at) === today && !o.admin_confirmed);
   const todayRevenue = todayOrders.reduce((sum, o) => sum + (o.amount ?? 0), 0);
 
   const chartData = Array.from({ length: daysInMonth }, (_, i) => {
