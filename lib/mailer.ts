@@ -1,24 +1,22 @@
-import nodemailer from 'nodemailer';
+import { Resend } from 'resend';
+
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 export async function sendMail(opts: {
   to: string;
   subject: string;
   html: string;
+  text?: string;
 }): Promise<void> {
-  const transporter = nodemailer.createTransport({
-    host: 'smtp.gmail.com',
-    port: 587,
-    secure: false,
-    auth: {
-      user: process.env.GMAIL_USER,
-      pass: process.env.GMAIL_APP_PASSWORD,
-    },
-  });
+  const from = process.env.RESEND_FROM_EMAIL ?? 'Personal Color AI <noreply@personalcolor.mn>';
 
-  await transporter.sendMail({
-    from: `Personal Color AI <${process.env.GMAIL_USER}>`,
+  const { error } = await resend.emails.send({
+    from,
     to: opts.to,
     subject: opts.subject,
     html: opts.html,
+    text: opts.text ?? opts.html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim(),
   });
+
+  if (error) throw new Error(`Resend error: ${error.message}`);
 }

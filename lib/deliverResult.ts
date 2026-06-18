@@ -83,10 +83,15 @@ export async function deliverResult(
   await sendMail({
     to:      email,
     subject: 'Таны хувийн өнгөний оношлогоо бэлэн боллоо!',
+    text: `Сайн байна уу?\n\nТаны хувийн өнгөний шинжилгээний үр дүн бэлэн боллоо.\n\nТаны улирал: ${SEASON_MN[baseSeason] ?? baseSeason} (${season})\n\n${reasoning}${pdfUrl ? `\n\nPDF тайлан: ${pdfUrl}` : ''}\n\n© ${new Date().getFullYear()} Personal Color AI`,
     html: `
       <div style="font-family:sans-serif;max-width:600px;margin:auto;border:1px solid #eee;padding:24px;border-radius:12px">
         <h2 style="color:#333">Сайн байна уу?</h2>
         <p>Таны хувийн өнгөний шинжилгээний үр дүн бэлэн боллоо.</p>
+        ${imageUrl ? `
+        <div style="margin-bottom:20px;text-align:center">
+          <img src="${imageUrl}" alt="Таны зураг" style="max-width:100%;max-height:300px;border-radius:12px;object-fit:cover;border:1px solid #eee"/>
+        </div>` : ''}
         <div style="background:#f9f9f9;padding:16px;border-radius:8px;border-left:4px solid #7c3aed">
           <p><strong>Таны улирал:</strong> ${SEASON_MN[baseSeason] ?? baseSeason} (${season})</p>
           <p><strong>Тайлбар:</strong> ${reasoning}</p>
