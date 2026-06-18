@@ -16,6 +16,7 @@ export type EyeColor =
   | 'blue';       // Цэнхэр
 
 export type QuestionnaireAnswers = {
+  gender:             'male' | 'female';
   vein:               'blue_green' | 'purple_red' | 'both';
   hairDyed:           'yes' | 'no';
   naturalHairColor?:  NaturalHairColor; // зөвхөн hairDyed === 'yes' үед

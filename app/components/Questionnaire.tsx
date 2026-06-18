@@ -46,12 +46,15 @@ const EYE_COLORS: { value: EyeColor; label: string; swatch: string }[] = [
   { value: 'blue',        label: 'Цэнхэр',     swatch: '#4A7AB5' },
 ];
 
-type StepKey = 'vein' | 'hairDyed' | 'naturalHairColor' | 'eyeColor' | 'jewelryPreference';
+type StepKey = 'gender' | 'vein' | 'hairDyed' | 'naturalHairColor' | 'eyeColor' | 'jewelryPreference';
 
 function getSteps(answers: PartialAnswers): StepKey[] {
-  const steps: StepKey[] = ['vein', 'hairDyed'];
-  if (answers.hairDyed === 'yes') steps.push('naturalHairColor');
-  steps.push('eyeColor', 'jewelryPreference');
+  const steps: StepKey[] = ['gender'];
+  if (answers.gender !== 'male') {
+    steps.push('vein', 'hairDyed');
+    if (answers.hairDyed === 'yes') steps.push('naturalHairColor');
+    steps.push('eyeColor', 'jewelryPreference');
+  }
   return steps;
 }
 
@@ -90,6 +93,27 @@ export default function Questionnaire({ answers, onChange }: Props) {
 
   const renderStep = (key: StepKey) => {
     switch (key) {
+      case 'gender':
+        return (
+          <div className="space-y-2.5">
+            <p className="text-xs font-medium text-slate-600">Та хэн бэ?</p>
+            <div className="grid grid-cols-2 gap-1.5">
+              {[
+                { value: 'female' as const, label: 'Эмэгтэй', icon: '👩' },
+                { value: 'male'   as const, label: 'Эрэгтэй', icon: '👨' },
+              ].map(o => (
+                <OptionBtn key={o.value} active={answers.gender === o.value}
+                  onClick={() => pick({ ...answers, gender: o.value })}>
+                  <span className="text-xl leading-none">{o.icon}</span>
+                  <span className={`text-[10px] font-medium ${answers.gender === o.value ? 'text-violet-700' : 'text-slate-600'}`}>
+                    {o.label}
+                  </span>
+                </OptionBtn>
+              ))}
+            </div>
+          </div>
+        );
+
       case 'vein':
         return (
           <div className="space-y-2.5">

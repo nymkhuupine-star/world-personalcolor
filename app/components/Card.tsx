@@ -347,12 +347,7 @@ export default function Card() {
                 <p className="text-sm font-semibold text-slate-700">Зургаа оруулна уу</p>
                 <p className="text-xs text-slate-500">Нүүр тод харагдах хөрөг зураг</p>
               </div>
-              <div className="mx-4 rounded-xl px-4 py-3 text-center flex flex-col items-center gap-2" style={{ background: '#FCFBFF', border: '1px solid #E9DDFE' }}>
-                <Info className="h-5 w-5 text-violet-400" strokeWidth={1.8} />
-                <p className="text-xs text-violet-700 leading-relaxed">
-                  Эрэгтэй тайлан удахгүй нэмэгдэх тул түр хүлээгээрэй.
-                </p>
-              </div>
+
             </div>
           )}
 
@@ -403,8 +398,21 @@ export default function Card() {
           </div>
         )}
 
+        {/* Male notice */}
+        <AnimatePresence>
+          {questionnaireAnswers.gender === 'male' && (
+            <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+              className="rounded-2xl border px-5 py-4 flex items-start gap-3" style={{ background: '#FCFBFF', border: '1px solid #E9DDFE' }}>
+              <Info className="h-4 w-4 shrink-0 text-violet-400 mt-0.5" strokeWidth={1.8} />
+              <p className="text-xs text-violet-700 leading-relaxed">
+                Эрэгтэй тайлан удахгүй нэмэгдэх тул түр хүлээгээрэй.
+              </p>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         {/* Email input — payment gate харагдахаас өмнө л харагдана */}
-        {(!file || isQuestionnaireComplete(questionnaireAnswers)) && !readyToPay && (
+        {(!file || isQuestionnaireComplete(questionnaireAnswers)) && !readyToPay && questionnaireAnswers.gender !== 'male' && (
           <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} className="space-y-2">
             <label htmlFor="email" className="block text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-600">
               Имэйл хаяг
@@ -453,7 +461,7 @@ export default function Card() {
         </AnimatePresence>
 
         {/* CTA — зураг оруулаагүй эсвэл асуулт дуусаагүй, payment gate харагдахгүй үед */}
-        {(!file || isQuestionnaireComplete(questionnaireAnswers)) && !readyToPay && (
+        {(!file || isQuestionnaireComplete(questionnaireAnswers)) && !readyToPay && questionnaireAnswers.gender !== 'male' && (
           <button
             onClick={handleUpload}
             disabled={uploading}
