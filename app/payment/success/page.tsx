@@ -24,6 +24,7 @@ type VerifyResponse = {
   success?:          boolean;
   paid?:             boolean;
   alreadyDelivered?: boolean;
+  emailSent?:        boolean;
   error?:            string;
   pdfUrl?:           string | null;
   result?:           AnalysisResult;
@@ -49,9 +50,10 @@ function PaymentSuccessContent() {
   const [errorMsg, setErrorMsg]     = useState('');
   const [retrying, setRetrying]     = useState(false);
   const [autoCount, setAutoCount]   = useState(0);
-  const [pdfUrl, setPdfUrl]         = useState<string | null>(null);
-  const [result, setResult]         = useState<AnalysisResult | null>(null);
-  const [emailState, setEmailState] = useState<EmailState>('idle');
+  const [pdfUrl, setPdfUrl]           = useState<string | null>(null);
+  const [result, setResult]           = useState<AnalysisResult | null>(null);
+  const [emailState, setEmailState]   = useState<EmailState>('idle');
+  const [autoEmailSent, setAutoEmailSent] = useState(false);
   const autoCountRef = useRef(0);
 
   const verify = useCallback(async (): Promise<boolean> => {
@@ -67,6 +69,7 @@ function PaymentSuccessContent() {
       if (data.alreadyDelivered || (data.success && data.paid)) {
         setPdfUrl(data.pdfUrl ?? null);
         setResult(data.result ?? null);
+        if (data.emailSent) setAutoEmailSent(true);
         setState(data.alreadyDelivered ? 'already' : 'success');
         return true;
       }
@@ -220,6 +223,12 @@ function PaymentSuccessContent() {
                 ) : null;
               })()}
             </div>
+            {autoEmailSent && (
+              <div className="mt-3 flex items-center gap-2 rounded-xl bg-emerald-50 border border-emerald-100 px-3 py-2">
+                <Mail className="h-4 w-4 shrink-0 text-emerald-500" strokeWidth={2} />
+                <p className="text-xs text-emerald-700">Тайлан таны имэйл хаяг руу илгээгдлээ.</p>
+              </div>
+            )}
           </div>
 
           {/* PDF iframe */}

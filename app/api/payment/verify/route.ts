@@ -103,19 +103,20 @@ export async function GET(req: Request) {
       });
     }
 
-    // We marked it paid — deliver result (no auto email, user requests it on page)
+    // Deliver result and send email automatically
     if (stored?.seasonName && order.email) {
-      await deliverResult(order.email, stored.seasonName, stored.imageUrl ?? null, { skipEmail: true }).catch(
+      await deliverResult(order.email, stored.seasonName, stored.imageUrl ?? null).catch(
         (err) => console.error('verify: deliverResult error:', err),
       );
     }
 
     return Response.json({
-      success:  true,
-      paid:     true,
-      result:   buildResult(stored),
-      imageUrl: stored?.imageUrl ?? '',
-      pdfUrl:   stored?.seasonName ? getPdfUrl(stored.seasonName) : null,
+      success:   true,
+      paid:      true,
+      emailSent: true,
+      result:    buildResult(stored),
+      imageUrl:  stored?.imageUrl ?? '',
+      pdfUrl:    stored?.seasonName ? getPdfUrl(stored.seasonName) : null,
     });
 
   } catch (err) {

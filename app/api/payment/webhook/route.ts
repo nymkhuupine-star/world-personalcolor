@@ -199,7 +199,7 @@ export async function POST(req: Request) {
       normalizedEmail,
       stored.seasonName,
       stored.imageUrl ?? null,
-      { skipEmail: true },
+      {},
     ).catch((err) => {
       console.error('webhook: deliverResult error:', err);
     });
