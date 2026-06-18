@@ -3,7 +3,7 @@
 import { Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { CheckCircle, Loader2, Mail, ArrowRight, AlertCircle, RefreshCw } from 'lucide-react';
+import { CheckCircle, Loader2, Mail, Download, ArrowRight, AlertCircle, RefreshCw, Sparkles } from 'lucide-react';
 import Link from 'next/link';
 
 // Webhook typically fires within 1-5s. Poll for up to 30s before showing manual retry.
@@ -11,29 +11,47 @@ const AUTO_RETRY_LIMIT    = 20;   // 20 × 3s = 60s
 const AUTO_RETRY_INTERVAL = 3000; // ms
 
 type State = 'verifying' | 'waiting' | 'success' | 'already' | 'unpaid' | 'error';
+type EmailState = 'idle' | 'sending' | 'sent' | 'error';
+
+type AnalysisResult = {
+  season:            string;
+  subType:           string;
+  reasoning:         string;
+  recommendedColors: string[];
+};
 
 type VerifyResponse = {
   success?:          boolean;
   paid?:             boolean;
   alreadyDelivered?: boolean;
   error?:            string;
-  result?: {
-    season:            string;
-    subType:           string;
-    reasoning:         string;
-    recommendedColors: string[];
-  };
-  imageUrl?: string;
+  pdfUrl?:           string | null;
+  result?:           AnalysisResult;
+  imageUrl?:         string;
+};
+
+const SEASON_MN: Record<string, string> = {
+  Spring: 'Хавар', Summer: 'Зун', Autumn: 'Намар', Winter: 'Өвөл',
+};
+
+const SEASON_STYLE: Record<string, { gradient: string; bg: string; text: string; ring: string }> = {
+  Spring: { gradient: 'from-rose-400 to-pink-300',     bg: 'bg-rose-50',   text: 'text-rose-600',   ring: 'ring-rose-100' },
+  Summer: { gradient: 'from-violet-400 to-purple-300', bg: 'bg-violet-50', text: 'text-violet-600', ring: 'ring-violet-100' },
+  Autumn: { gradient: 'from-amber-400 to-orange-300',  bg: 'bg-amber-50',  text: 'text-amber-600',  ring: 'ring-amber-100' },
+  Winter: { gradient: 'from-sky-400 to-blue-300',      bg: 'bg-sky-50',    text: 'text-sky-600',    ring: 'ring-sky-100' },
 };
 
 function PaymentSuccessContent() {
   const searchParams   = useSearchParams();
   const orderId        = searchParams.get('orderId');
 
-  const [state, setState]       = useState<State>('verifying');
-  const [errorMsg, setErrorMsg] = useState('');
-  const [retrying, setRetrying] = useState(false);
-  const [autoCount, setAutoCount] = useState(0);
+  const [state, setState]           = useState<State>('verifying');
+  const [errorMsg, setErrorMsg]     = useState('');
+  const [retrying, setRetrying]     = useState(false);
+  const [autoCount, setAutoCount]   = useState(0);
+  const [pdfUrl, setPdfUrl]         = useState<string | null>(null);
+  const [result, setResult]         = useState<AnalysisResult | null>(null);
+  const [emailState, setEmailState] = useState<EmailState>('idle');
   const autoCountRef = useRef(0);
 
   const verify = useCallback(async (): Promise<boolean> => {
@@ -47,12 +65,14 @@ function PaymentSuccessContent() {
       const data = await res.json() as VerifyResponse;
 
       if (data.alreadyDelivered || (data.success && data.paid)) {
+        setPdfUrl(data.pdfUrl ?? null);
+        setResult(data.result ?? null);
         setState(data.alreadyDelivered ? 'already' : 'success');
         return true;
       }
 
       if (data.success === false && data.paid === false) {
-        return false; // caller decides whether to retry or show unpaid
+        return false;
       }
 
       setState('error');
@@ -65,7 +85,6 @@ function PaymentSuccessContent() {
     }
   }, [orderId]);
 
-  // On mount: first check, then auto-retry while waiting for webhook.
   useEffect(() => {
     let cancelled = false;
     let timer: ReturnType<typeof setTimeout>;
@@ -74,7 +93,6 @@ function PaymentSuccessContent() {
       const paid = await verify();
       if (paid || cancelled) return;
 
-      // Not paid yet — enter waiting state and schedule retries
       setState('waiting');
       autoCountRef.current = 0;
       setAutoCount(0);
@@ -90,7 +108,6 @@ function PaymentSuccessContent() {
         if (autoCountRef.current < AUTO_RETRY_LIMIT) {
           timer = setTimeout(retry, AUTO_RETRY_INTERVAL);
         } else {
-          // Exhausted retries — show manual button
           setState('unpaid');
         }
       };
@@ -113,8 +130,25 @@ function PaymentSuccessContent() {
     setRetrying(false);
   };
 
+  const handleRequestEmail = async () => {
+    if (!orderId || emailState === 'sending' || emailState === 'sent') return;
+    setEmailState('sending');
+    try {
+      const res = await fetch('/api/payment/request-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orderId }),
+      });
+      setEmailState(res.ok ? 'sent' : 'error');
+    } catch {
+      setEmailState('error');
+    }
+  };
+
+  const isSuccess = state === 'success' || state === 'already';
+
   return (
-    <div className="rounded-[2rem] bg-white border border-slate-100 shadow-xl p-10 text-center space-y-6">
+    <div className="rounded-none sm:rounded-[2rem] bg-white border-0 sm:border border-slate-100 shadow-none sm:shadow-xl p-6 sm:p-10 text-center space-y-6">
 
       {/* Verifying (first load) */}
       {state === 'verifying' && (
@@ -159,35 +193,90 @@ function PaymentSuccessContent() {
       )}
 
       {/* Success / Already delivered */}
-      {(state === 'success' || state === 'already') && (
-        <>
-          <div className="flex justify-center">
-            <div className="flex h-20 w-20 items-center justify-center rounded-full bg-emerald-50 border-2 border-emerald-100">
-              <CheckCircle className="h-10 w-10 text-emerald-500" strokeWidth={1.5} />
+      {isSuccess && (
+        <div className="space-y-0 text-left -m-6 sm:-m-10">
+          {/* Top banner */}
+          <div className="px-4 pt-5 pb-4 sm:px-8 sm:pt-8 sm:pb-6 border-b border-slate-100">
+            <div className="flex items-center gap-3">
+              <div className="flex h-9 w-9 sm:h-10 sm:w-10 shrink-0 items-center justify-center rounded-full bg-emerald-50 border-2 border-emerald-100">
+                <CheckCircle className="h-4 w-4 sm:h-5 sm:w-5 text-emerald-500" strokeWidth={2} />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="font-bold text-slate-900 text-sm sm:text-base">Төлбөр амжилттай!</p>
+                {result && (
+                  <p className="text-xs text-slate-400 truncate">
+                    {SEASON_MN[result.season] ?? result.season} · {result.subType}
+                  </p>
+                )}
+              </div>
+              {result && (() => {
+                const colors = Array.isArray(result.recommendedColors) ? result.recommendedColors : [];
+                return colors.length > 0 ? (
+                  <div className="flex gap-1 shrink-0">
+                    {colors.slice(0, 4).map(color => (
+                      <div key={color} className="h-4 w-4 sm:h-5 sm:w-5 rounded-full border-2 border-white shadow ring-1 ring-black/5" style={{ backgroundColor: color }} />
+                    ))}
+                  </div>
+                ) : null;
+              })()}
             </div>
           </div>
-          <div className="space-y-2">
-            <h1 className="font-serif text-2xl font-bold text-slate-900">Төлбөр амжилттай!</h1>
-            <p className="text-sm text-slate-500 leading-relaxed">
-              {state === 'already'
-                ? 'Таны PDF тайлан урьд нь илгээгдсэн байна.'
-                : 'Таны PDF тайлан имэйл рүү илгээгдэнэ.'}
-            </p>
+
+          {/* PDF iframe */}
+          {pdfUrl ? (
+            <iframe
+              src={`${pdfUrl}#toolbar=0&navpanes=0&scrollbar=1`}
+              className="w-full block"
+              style={{ height: '80vh', minHeight: 480, backgroundColor: '#fff', colorScheme: 'light' }}
+              title="PDF тайлан"
+            />
+          ) : (
+            <div className="flex items-center justify-center h-40 text-sm text-amber-600 bg-amber-50">
+              PDF тайлан удахгүй бэлэн болно.
+            </div>
+          )}
+
+          {/* Bottom action bar */}
+          <div className="px-4 py-3 sm:px-6 sm:py-4 border-t border-slate-100 bg-slate-50/80 flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3">
+            {pdfUrl && (
+              <a
+                href={pdfUrl}
+                download
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={() => {
+                  if (orderId) fetch('/api/payment/track-download', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ orderId }) }).catch(() => {});
+                }}
+                className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-violet-500 via-purple-500 to-pink-500 py-3 sm:py-3 text-sm font-semibold text-white shadow shadow-violet-200/60 active:scale-[0.98] transition-all"
+              >
+                <Download className="h-4 w-4" strokeWidth={2} />
+                Татаж авах
+              </a>
+            )}
+            <button
+              onClick={handleRequestEmail}
+              disabled={emailState === 'sending' || emailState === 'sent'}
+              className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white py-3 text-sm font-semibold text-slate-600 hover:bg-slate-100 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+            >
+              {emailState === 'sending' ? (
+                <><Loader2 className="h-4 w-4 animate-spin" strokeWidth={2} />Илгээж байна...</>
+              ) : emailState === 'sent' ? (
+                <><CheckCircle className="h-4 w-4 text-emerald-500" strokeWidth={2} />Илгээгдлээ!</>
+              ) : emailState === 'error' ? (
+                <><AlertCircle className="h-4 w-4 text-rose-500" strokeWidth={2} />Дахин оролдох</>
+              ) : (
+                <><Mail className="h-4 w-4" strokeWidth={2} />Имэйлээр авах</>
+              )}
+            </button>
+            <Link
+              href="/"
+              className="inline-flex items-center justify-center gap-1 text-xs text-slate-400 hover:text-slate-600 transition-colors py-2 sm:px-2"
+            >
+              Нүүр хуудас
+              <ArrowRight className="h-3.5 w-3.5" strokeWidth={2} />
+            </Link>
           </div>
-          <div className="flex items-center gap-3 rounded-2xl bg-violet-50 border border-violet-100 px-5 py-4">
-            <Mail className="h-5 w-5 shrink-0 text-violet-500" strokeWidth={1.5} />
-            <p className="text-sm text-violet-700 text-left">
-              Имэйлийнхээ <strong>inbox</strong> болон <strong>spam</strong> хавтсыг шалгана уу.
-            </p>
-          </div>
-          <Link
-            href="/"
-            className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-violet-500 via-purple-500 to-pink-500 py-4 text-sm font-semibold text-white shadow-lg shadow-violet-200/60 hover:scale-[1.025] transition-all active:scale-[0.975]"
-          >
-            Нүүр хуудас руу буцах
-            <ArrowRight className="h-4 w-4" strokeWidth={2} />
-          </Link>
-        </>
+        </div>
       )}
 
       {/* Unpaid — manual retry after auto-retries exhausted */}
@@ -201,13 +290,9 @@ function PaymentSuccessContent() {
           <div className="space-y-2">
             <h1 className="font-serif text-2xl font-bold text-slate-900">Төлбөр боловсруулж байна</h1>
             <p className="text-sm text-slate-500 leading-relaxed">
-              Хэрэв та QPay-д төлбөр амжилттай хийсэн бол таны имэйл хаяг руу
-              <strong> PDF тайлан</strong> удахгүй ирнэ.
+              Хэрэв та QPay-д төлбөр амжилттай хийсэн бол таны
+              <strong> PDF тайлан</strong> удахгүй бэлэн болно.
             </p>
-          </div>
-          <div className="rounded-2xl bg-violet-50 border border-violet-100 px-5 py-4 text-sm text-violet-700 text-left space-y-1">
-            <p className="font-semibold">Имэйлдээ шалгана уу:</p>
-            <p className="text-xs text-violet-600">inbox болон spam хавтсыг аль алийг нь шалгаарай.</p>
           </div>
           <button
             onClick={handleRetry}
@@ -266,12 +351,12 @@ function Loading() {
 
 export default function PaymentSuccessPage() {
   return (
-    <main className="min-h-screen bg-pink-50 flex items-center justify-center px-6">
+    <main className="min-h-screen bg-pink-50 flex items-center justify-center px-0 sm:px-6">
       <motion.div
         initial={{ opacity: 0, y: 28 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-        className="w-full max-w-md"
+        className="w-full max-w-2xl"
       >
         <Suspense fallback={<Loading />}>
           <PaymentSuccessContent />

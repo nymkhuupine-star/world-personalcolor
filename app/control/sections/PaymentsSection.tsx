@@ -1,6 +1,6 @@
 'use client';
 
-import { CheckCircle, XCircle, Loader2, CreditCard, ChevronDown } from 'lucide-react';
+import { CheckCircle, XCircle, Loader2, CreditCard, ChevronDown, Mail, Download } from 'lucide-react';
 import type { Order } from '../types';
 import { toUBDate, ubDayLabel, formatDate, today as getToday } from '../utils';
 
@@ -120,7 +120,7 @@ export default function PaymentsSection({
                         {isToday && (
                           <thead>
                             <tr className="border-b border-slate-100 bg-slate-50/50">
-                              {['#', 'Имэйл хаяг', 'Өнгөний төрөл', 'Дүн', 'Статус', 'Огноо', ''].map((h, i) => (
+                              {['#', 'Имэйл хаяг', 'Өнгөний төрөл', 'Дүн', 'Статус', 'Огноо', 'Үйлдэл', ''].map((h, i) => (
                                 <th key={i} className={`px-5 py-2.5 text-left text-[11px] font-semibold text-slate-400 ${i === 3 ? 'text-right' : ''} ${i === 4 ? 'text-center' : ''}`}>{h}</th>
                               ))}
                             </tr>
@@ -145,6 +145,18 @@ export default function PaymentsSection({
                                   : <span className="inline-flex items-center gap-1 rounded-lg bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-500"><XCircle className="h-3 w-3" strokeWidth={2} />Дуусаагүй</span>}
                               </td>
                               <td className="px-5 py-3 text-xs text-slate-400 whitespace-nowrap">{o.paid && o.paid_at ? formatDate(o.paid_at) : formatDate(o.created_at)}</td>
+                              <td className="px-5 py-3">
+                                <div className="flex flex-col gap-1">
+                                  <span className={`inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[11px] font-medium ${o.email_sent_at ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-50 text-slate-300'}`}>
+                                    <Mail className="h-3 w-3" strokeWidth={2} />
+                                    {o.email_sent_at ? formatDate(o.email_sent_at) : 'Имэйл илгээгүй'}
+                                  </span>
+                                  <span className={`inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[11px] font-medium ${o.pdf_downloaded_at ? 'bg-blue-50 text-blue-600' : 'bg-slate-50 text-slate-300'}`}>
+                                    <Download className="h-3 w-3" strokeWidth={2} />
+                                    {o.pdf_downloaded_at ? formatDate(o.pdf_downloaded_at) : 'Татаагүй'}
+                                  </span>
+                                </div>
+                              </td>
                               <td className="px-5 py-3 text-center">
                                 {!o.paid && (confirmedId === o.id
                                   ? <span className="text-xs text-emerald-600 font-semibold">✓ Илгээгдлээ</span>

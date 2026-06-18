@@ -28,7 +28,7 @@ export async function deliverResult(
   email: string,
   seasonName: string,
   imageUrl: string | null,
-  { force = false }: { force?: boolean } = {},
+  { force = false, skipEmail = false }: { force?: boolean; skipEmail?: boolean } = {},
 ): Promise<void> {
   const season            = seasonName as SeasonName;
   const baseSeason        = getBaseSeason(season);
@@ -78,7 +78,7 @@ export async function deliverResult(
   }
 
   // Send email
-  if (!process.env.GMAIL_USER) return;
+  if (skipEmail || !process.env.GMAIL_USER) return;
 
   await sendMail({
     to:      email,

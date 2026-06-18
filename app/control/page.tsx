@@ -22,7 +22,7 @@ export default async function ControlPage() {
   const [ordersRes, analysesRes] = await Promise.all([
     supabase
       .from('analysis_orders')
-      .select('id,email,amount,paid,paid_at,created_at,admin_confirmed,analysis_result->seasonName')
+      .select('id,email,amount,paid,paid_at,created_at,admin_confirmed,email_sent_at,pdf_downloaded_at,analysis_result->seasonName')
       .order('created_at', { ascending: false })
       .limit(300),
     supabase
@@ -41,6 +41,8 @@ export default async function ControlPage() {
     paid_at: o.paid_at as string | null,
     created_at: o.created_at as string,
     admin_confirmed: o.admin_confirmed as boolean | null,
+    email_sent_at: o.email_sent_at as string | null,
+    pdf_downloaded_at: o.pdf_downloaded_at as string | null,
     invoice_id: null,
     transaction_id: null,
     analysis_result: o.seasonName ? { seasonName: o.seasonName as string } : null,

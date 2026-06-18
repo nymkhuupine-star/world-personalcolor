@@ -22,6 +22,11 @@ const nextConfig: NextConfig = {
         source: '/:path*',
         headers: securityHeaders,
       },
+      {
+        // PDF proxy — same-origin iframe-д харагдахын тулд DENY-г SAMEORIGIN-р override хийнэ
+        source: '/api/payment/pdf',
+        headers: [{ key: 'X-Frame-Options', value: 'SAMEORIGIN' }],
+      },
     ];
   },
 };

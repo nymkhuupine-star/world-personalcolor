@@ -5,6 +5,7 @@ import {
   type SeasonName,
   SEASON_PALETTES,
   getBaseSeason,
+  seasonNameToStoragePath,
 } from '@/lib/personal-color/rule-engine';
 import { SEASON_DESCRIPTIONS } from '@/lib/personal-color/season-descriptions';
 
@@ -16,6 +17,15 @@ const supabase = createClient(
 );
 
 type StoredAnalysis = { seasonName: string; imageUrl?: string };
+
+function getPdfUrl(seasonName: string): string | null {
+  try {
+    const { folder, file: subtypeFile } = seasonNameToStoragePath(seasonName as SeasonName);
+    return supabase.storage.from('reports').getPublicUrl(`${folder}/${subtypeFile}.pdf`).data.publicUrl;
+  } catch {
+    return null;
+  }
+}
 
 function buildResult(stored: StoredAnalysis | null) {
   const seasonName        = stored?.seasonName ?? '';
@@ -52,6 +62,7 @@ export async function GET(req: Request) {
         alreadyDelivered: true,
         result:           buildResult(stored),
         imageUrl:         stored?.imageUrl ?? '',
+        pdfUrl:           stored?.seasonName ? getPdfUrl(stored.seasonName) : null,
       });
     }
 
@@ -88,12 +99,13 @@ export async function GET(req: Request) {
         alreadyDelivered: true,
         result:           buildResult(stored),
         imageUrl:         stored?.imageUrl ?? '',
+        pdfUrl:           stored?.seasonName ? getPdfUrl(stored.seasonName) : null,
       });
     }
 
-    // We marked it paid — deliver result
+    // We marked it paid — deliver result (no auto email, user requests it on page)
     if (stored?.seasonName && order.email) {
-      await deliverResult(order.email, stored.seasonName, stored.imageUrl ?? null).catch(
+      await deliverResult(order.email, stored.seasonName, stored.imageUrl ?? null, { skipEmail: true }).catch(
         (err) => console.error('verify: deliverResult error:', err),
       );
     }
@@ -103,6 +115,7 @@ export async function GET(req: Request) {
       paid:     true,
       result:   buildResult(stored),
       imageUrl: stored?.imageUrl ?? '',
+      pdfUrl:   stored?.seasonName ? getPdfUrl(stored.seasonName) : null,
     });
 
   } catch (err) {

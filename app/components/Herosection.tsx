@@ -19,7 +19,7 @@ const fadeUp = {
 
 export default function HeroSection() {
   return (
-    <section className="relative min-h-screen overflow-hidden flex items-center  mt-[-100px] bg-pink-100/100 ">
+    <section className="relative min-h-screen overflow-hidden flex items-center mt-[-100px] bg-pink-100/100 ">
       {/* Soft background glow — radial-gradient, no blur filter */}
       {/* <div className="pointer-events-none absolute inset-0" aria-hidden="true">
         <div className="absolute inset-0"

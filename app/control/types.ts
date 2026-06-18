@@ -20,9 +20,10 @@ export type Order = {
   paid: boolean;
   paid_at: string | null;
   created_at: string;
-  // Only seasonName is fetched — not the full JSON blob
   analysis_result: { seasonName: string } | null;
   admin_confirmed: boolean | null;
+  email_sent_at: string | null;
+  pdf_downloaded_at: string | null;
 };
 
 export type PdfStatuses = Record<string, boolean>;

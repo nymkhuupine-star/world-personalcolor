@@ -3,7 +3,7 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import { useEffect, useRef, useState, type ChangeEvent, type DragEvent } from 'react';
 import Image from 'next/image';
-import { CreditCard, Droplets, Eye, Lock, Sparkles, Sun, Upload, X } from 'lucide-react';
+import { CreditCard, Droplets, Eye, Info, Lock, Sparkles, Sun, Upload, X, Loader2 } from 'lucide-react';
 import supabase from '@/utils/supabase';
 import Questionnaire from './Questionnaire';
 import type { QuestionnaireAnswers } from '@/lib/personal-color/questionnaire';
@@ -279,9 +279,34 @@ export default function Card() {
       transition={{ duration: 0.85, delay: 0.25, ease: [0.22, 1, 0.36, 1] }}
     >
       <div
-        className="flex flex-col gap-5 rounded-[2rem] border border-pink-100 p-8 shadow-[0_24px_64px_-12px_rgba(0,0,0,0.1),0_0_0_1px_rgba(255,255,255,0.6)] backdrop-blur-2xl"
+        className="relative flex flex-col gap-5 rounded-[2rem] border border-pink-100 p-8 shadow-[0_24px_64px_-12px_rgba(0,0,0,0.1),0_0_0_1px_rgba(255,255,255,0.6)] backdrop-blur-2xl"
         style={{ backgroundColor: 'oklch(97% 0.018 18.334)' }}
       >
+        {/* Full-card loading overlay */}
+        <AnimatePresence>
+          {uploading && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-5 rounded-[2rem] bg-white/80 backdrop-blur-sm"
+            >
+              <div className="relative flex h-20 w-20 items-center justify-center">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-violet-300 opacity-30" />
+                <div className="relative flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-violet-500 via-purple-500 to-pink-500 shadow-lg shadow-violet-200">
+                  <Loader2 className="h-7 w-7 animate-spin text-white" strokeWidth={2} />
+                </div>
+              </div>
+              <div className="text-center space-y-1">
+                <p className="text-sm font-bold text-slate-800">
+                  {analyzing ? 'Шинжилж байна...' : checking ? 'Зургийн чанар шалгаж байна...' : 'Зураг оруулж байна...'}
+                </p>
+                <p className="text-xs text-slate-400">Түр хүлээнэ үү</p>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* Upload zone */}
         <div
@@ -314,13 +339,19 @@ export default function Card() {
               )}
             </>
           ) : (
-            <div className="flex h-full flex-col items-center justify-center gap-4 py-14">
+            <div className="flex h-full flex-col items-center justify-center gap-4 py-10">
               <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-slate-100 bg-white shadow-sm transition-all duration-300 group-hover:border-violet-200 group-hover:shadow-md group-hover:shadow-violet-100/60">
                 <Upload className="h-5 w-5 text-slate-500 transition-colors duration-300 group-hover:text-violet-500" strokeWidth={1.5} />
               </div>
               <div className="text-center space-y-1">
-                <p className="text-sm font-semibold text-slate-700">Зургаа оруулахын тулд дарна уу</p>
+                <p className="text-sm font-semibold text-slate-700">Зургаа оруулна уу</p>
                 <p className="text-xs text-slate-500">Нүүр тод харагдах хөрөг зураг</p>
+              </div>
+              <div className="mx-4 rounded-xl px-4 py-3 text-center flex flex-col items-center gap-2" style={{ background: '#FCFBFF', border: '1px solid #E9DDFE' }}>
+                <Info className="h-5 w-5 text-violet-400" strokeWidth={1.8} />
+                <p className="text-xs text-violet-700 leading-relaxed">
+                  Эрэгтэй тайлан удахгүй нэмэгдэх тул түр хүлээгээрэй.
+                </p>
               </div>
             </div>
           )}
