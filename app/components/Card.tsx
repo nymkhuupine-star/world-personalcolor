@@ -244,10 +244,33 @@ export default function Card() {
   };
 
   const requirements = [
-    { icon: Sun,      label: 'Өдрийн гэрэл' },
-    { icon: Droplets, label: 'Будалтгүй' },
-    { icon: Eye,      label: 'Урагш харах' },
+    {
+      icon: Sun,
+      label: 'Өдрийн гэрэл',
+      tips: [
+        { ok: true,  text: 'Өдрийн цагаар, цонх руу харж зогсоод зураг авах — сүүдэр үүсээгүй, жигд гэрэлтэй байх' },
+        { ok: false, text: 'Өрөөний шар/цагаан чийдэнгийн доор авах — арьсны өнгийг гажуудуулдаг' },
+      ],
+    },
+    {
+      icon: Droplets,
+      label: 'Будалтгүй',
+      tips: [
+        { ok: true,  text: 'Сүүн шингэн, өнгөлөгч, сормуусны будаг ч байхгүй — цэвэрлэсэн нүүртэй байх' },
+        { ok: false, text: 'Крем, хацар өнгөлөгч, уруулын будагтай зураг — төрөлхийн өнгийг нуудаг' },
+      ],
+    },
+    {
+      icon: Eye,
+      label: 'Урагш харах',
+      tips: [
+        { ok: true,  text: 'Камер руу шууд харж, нүүр бүтэн харагдах байрлалд зогсох' },
+        { ok: false, text: 'Хажуу тийш эргэсэн эсвэл нүүрийг хэсэгчлэн харуулсан зураг' },
+      ],
+    },
   ];
+
+  const [activeTip, setActiveTip] = useState<number | null>(null);
 
   if (PAUSED) {
     return (
@@ -390,13 +413,39 @@ export default function Card() {
 
         {/* Tips — зураг оруулахаас өмнө л харагдана */}
         {!file && (
-          <div className="grid grid-cols-3 gap-2">
-            {requirements.map(({ icon: Icon, label }) => (
-              <div key={label} className="flex flex-col items-center gap-1.5 rounded-xl border border-slate-100/80 bg-white/60 px-2 py-3">
-                <Icon className="h-3.5 w-3.5 text-slate-500" strokeWidth={1.5} />
-                <span className="text-center text-[11px] font-medium text-slate-600">{label}</span>
-              </div>
-            ))}
+          <div className="space-y-2">
+            <p className="text-center text-[10px] text-slate-400">Дарж дэлгэрэнгүй харах</p>
+            <div className="grid grid-cols-3 gap-2">
+              {requirements.map(({ icon: Icon, label }, i) => (
+                <button
+                  key={label}
+                  type="button"
+                  onClick={() => setActiveTip(activeTip === i ? null : i)}
+                  className={`flex flex-col items-center gap-1.5 rounded-xl border px-2 py-3 transition-colors ${
+                    activeTip === i
+                      ? 'border-violet-300 bg-violet-50'
+                      : 'border-slate-100/80 bg-white/60 hover:border-violet-200 hover:bg-violet-50/40'
+                  }`}
+                >
+                  <Icon className={`h-3.5 w-3.5 ${activeTip === i ? 'text-violet-500' : 'text-slate-500'}`} strokeWidth={1.5} />
+                  <span className={`text-center text-[11px] font-medium ${activeTip === i ? 'text-violet-600' : 'text-slate-600'}`}>{label}</span>
+                </button>
+              ))}
+            </div>
+            <div className={`overflow-hidden transition-all duration-200 ${activeTip !== null ? 'max-h-40 opacity-100' : 'max-h-0 opacity-0'}`}>
+              {activeTip !== null && (
+                <div className="rounded-xl border border-violet-100 bg-violet-50/70 px-4 py-3 space-y-1.5">
+                  {requirements[activeTip].tips.map((t, j) => (
+                    <div key={j} className="flex items-start gap-2 text-[11px] leading-relaxed">
+                      <span className={`mt-0.5 shrink-0 font-bold ${t.ok ? 'text-emerald-500' : 'text-rose-400'}`}>
+                        {t.ok ? '✓' : '✗'}
+                      </span>
+                      <span className="text-slate-600">{t.text}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         )}
 
