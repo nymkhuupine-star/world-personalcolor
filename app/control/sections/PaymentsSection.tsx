@@ -80,12 +80,19 @@ export default function PaymentsSection({
             <input
               value={paySearch}
               onChange={e => setPaySearch(e.target.value)}
-              placeholder="Хайх..."
-              className="w-full rounded-xl border border-slate-200 bg-slate-50 py-2 pl-9 pr-3 text-xs text-slate-700 outline-none focus:border-violet-300 focus:ring-2 focus:ring-violet-100"
+              placeholder="Имэйлээр хайх..."
+              className={`w-full rounded-xl border bg-slate-50 py-2 pl-9 pr-3 text-xs text-slate-700 outline-none focus:ring-2 ${
+                paySearch && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(paySearch)
+                  ? 'border-rose-300 focus:border-rose-300 focus:ring-rose-100'
+                  : 'border-slate-200 focus:border-violet-300 focus:ring-violet-100'
+              }`}
             />
             <svg className="absolute left-3 top-2.5 h-3.5 w-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z" />
             </svg>
+            {paySearch && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(paySearch) && (
+              <p className="absolute left-0 top-full mt-1 text-[10px] text-rose-500">Буруу имэйл формат</p>
+            )}
           </div>
         </div>
 
@@ -97,7 +104,7 @@ export default function PaymentsSection({
           <div>
             {groups.map(({ day, label, items }) => {
               const isToday = day === todayStr;
-              const isOpen = isToday || expandedDays.has(day);
+              const isOpen = isToday || expandedDays.has(day) || !!paySearch;
               const dayRevenue = items.filter(o => o.paid && (o.amount ?? 0) >= 1000).reduce((s, o) => s + (o.amount ?? 0), 0);
               return (
                 <div key={day}>

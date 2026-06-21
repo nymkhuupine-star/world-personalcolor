@@ -262,6 +262,27 @@ function filterIris(pixels: RGB[]): RGB[] {
   return pixels.filter(({ r, g, b }) => (r + g + b) / 3 < 195);
 }
 
+/** Keep only bright eye-region pixels (sclera = white of the eye). */
+function filterSclera(pixels: RGB[]): RGB[] {
+  return pixels.filter(({ r, g, b }) => (r + g + b) / 3 > 200);
+}
+
+/**
+ * Shift skin pixels so that the sclera (which should be near-white)
+ * maps to pure white — corrects for warm/cool ambient lighting.
+ * Scale is capped at 1.5× per channel to avoid amplifying noise.
+ */
+function applyWhiteBalance(pixels: RGB[], scleraRef: RGB): RGB[] {
+  const sr = Math.min(255 / Math.max(scleraRef.r, 1), 1.5);
+  const sg = Math.min(255 / Math.max(scleraRef.g, 1), 1.5);
+  const sb = Math.min(255 / Math.max(scleraRef.b, 1), 1.5);
+  return pixels.map(({ r, g, b }) => ({
+    r: Math.min(255, Math.round(r * sr)),
+    g: Math.min(255, Math.round(g * sg)),
+    b: Math.min(255, Math.round(b * sb)),
+  }));
+}
+
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function clamp(v: number, lo = 0, hi = 100): number {
@@ -447,13 +468,24 @@ export async function analyzeImage(imageFile: File): Promise<ColorMetrics> {
     ...sampleAroundLandmarks(data, width, height, landmarks, LM.RIGHT_CHEEK, 8),
     ...sampleAroundLandmarks(data, width, height, landmarks, LM.FOREHEAD,    6),
   ];
-  const skinPixels = filterSkin(rawSkinPixels);
+  let skinPixels = filterSkin(rawSkinPixels);
 
   if (skinPixels.length < 30) {
     throw new Error(
       'Арьсны өнгийг уншиж чадсангүй. ' +
       'Нүүр бүтэн харагдах, байгалийн гэрэлтэй зураг оруулна уу.',
     );
+  }
+
+  // White balance: sample sclera from eye contour, use as reference white
+  const scleraRaw = [
+    ...sampleAroundLandmarks(data, width, height, landmarks, LM.LEFT_EYE,  4),
+    ...sampleAroundLandmarks(data, width, height, landmarks, LM.RIGHT_EYE, 4),
+  ];
+  const scleraPixels = filterSclera(scleraRaw);
+  const scleraRef = avgRGB(scleraPixels);
+  if (scleraRef && scleraPixels.length >= 10) {
+    skinPixels = applyWhiteBalance(skinPixels, scleraRef);
   }
 
   // Eyes: use iris landmarks if available (refined mode), else eye contour

@@ -9,19 +9,10 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!,
 );
 
-function verifyChecksum(rawBody: string, headerValue: string): boolean {
-  const key = process.env.BONUM_MERCHANT_CHECKSUM_KEY;
-
-  if (!key) {
-    console.warn('webhook: BONUM_MERCHANT_CHECKSUM_KEY not set — skipping signature check');
-    return true;
-  }
-
-  const computed = createHmac('sha256', Buffer.from(key, 'utf8'))
+function computeChecksum(rawBody: string, key: string): string {
+  return createHmac('sha256', Buffer.from(key, 'utf8'))
     .update(rawBody, 'utf8')
     .digest('hex');
-
-  return computed === headerValue;
 }
 
 type BonumWebhookBody = {
@@ -67,9 +58,15 @@ export async function POST(req: Request) {
 
     console.log('webhook | raw body:', rawBody.slice(0, 3000));
 
-    if (checksumHeader && !verifyChecksum(rawBody, checksumHeader)) {
-      console.error('webhook: invalid checksum');
-      return Response.json({ error: 'Invalid checksum' }, { status: 401 });
+    const sigKey = process.env.BONUM_MERCHANT_CHECKSUM_KEY;
+    if (sigKey) {
+      // Key is configured — header must be present AND correct
+      if (!checksumHeader || computeChecksum(rawBody, sigKey) !== checksumHeader) {
+        console.error('webhook: missing or invalid checksum');
+        return Response.json({ error: 'Invalid checksum' }, { status: 401 });
+      }
+    } else {
+      console.warn('webhook: BONUM_MERCHANT_CHECKSUM_KEY not set — skipping signature check');
     }
 
     let payload: BonumWebhook;
