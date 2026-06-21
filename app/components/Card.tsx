@@ -181,9 +181,11 @@ export default function Card() {
           colorMetrics as Parameters<typeof getPrimaryAndSecondarySeason>[0],
         ).primary.season;
       } catch (err) {
+        const rawMsg = err instanceof Error ? err.message : '';
+        const isUserFacing = rawMsg && /[Ѐ-ӿ]/.test(rawMsg);
         setPhotoQualityError({
-          message: err instanceof Error
-            ? err.message
+          message: isUserFacing
+            ? rawMsg
             : 'Нүүр илрүүлж чадсангүй. Нүүрээ бүтэн харагдуулсан зураг оруулна уу.',
           issues: [],
         });
