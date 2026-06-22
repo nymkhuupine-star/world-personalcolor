@@ -41,10 +41,10 @@ export default function HookModal({ onDismiss }: Props) {
 
               <div className="space-y-2">
                 <p className="text-base font-semibold text-slate-800">
-                  Үр дүн имэйлээр илгээгдлээ
+                  Results sent by email
                 </p>
                 <p className="text-sm leading-relaxed text-slate-500">
-                  Өмнөх үр дүнгээ дахин харахыг хүсвэл имэйлээрээ хайж болно.
+                  To view your previous results again, you can search using your email address.
                 </p>
               </div>
 
@@ -52,7 +52,7 @@ export default function HookModal({ onDismiss }: Props) {
                 onClick={onDismiss}
                 className="w-full rounded-2xl bg-gradient-to-r from-violet-500 via-purple-500 to-pink-500 py-3.5 text-sm font-bold text-white shadow-lg shadow-violet-200 transition-all hover:scale-[1.02] hover:shadow-violet-300 active:scale-[0.98]"
               >
-                Хаах
+                Close
               </button>
             </div>
           </div>

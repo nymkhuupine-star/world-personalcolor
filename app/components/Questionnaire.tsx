@@ -12,11 +12,11 @@ interface Props {
 }
 
 const HAIR_COLORS: { value: NaturalHairColor; label: string; swatch: string }[] = [
-  { value: 'black',        label: 'Хар',        swatch: '#1A1008' },
-  { value: 'dark_brown',   label: 'Бараан бор', swatch: '#3B2314' },
-  { value: 'medium_brown', label: 'Бор',        swatch: '#7B4F2E' },
-  { value: 'light_brown',  label: 'Цайвар бор', swatch: '#A07850' },
-  { value: 'blonde',       label: 'Шаргал',     swatch: '#C8A046' },
+  { value: 'black',        label: 'Black',       swatch: '#1A1008' },
+  { value: 'dark_brown',   label: 'Dark Brown',  swatch: '#3B2314' },
+  { value: 'medium_brown', label: 'Brown',       swatch: '#7B4F2E' },
+  { value: 'light_brown',  label: 'Light Brown', swatch: '#A07850' },
+  { value: 'blonde',       label: 'Blonde',      swatch: '#C8A046' },
 ];
 
 function OptionBtn({
@@ -38,12 +38,12 @@ function OptionBtn({
 }
 
 const EYE_COLORS: { value: EyeColor; label: string; swatch: string }[] = [
-  { value: 'black',       label: 'Хар',        swatch: '#1A1008' },
-  { value: 'dark_brown',  label: 'Бараан бор', swatch: '#3B2314' },
-  { value: 'light_brown', label: 'Цайвар бор', swatch: '#8B5E3C' },
-  { value: 'green',       label: 'Ногоон',     swatch: '#4A7C59' },
-  { value: 'grey',        label: 'Саарал',     swatch: '#7A8899' },
-  { value: 'blue',        label: 'Цэнхэр',     swatch: '#4A7AB5' },
+  { value: 'black',       label: 'Black',       swatch: '#1A1008' },
+  { value: 'dark_brown',  label: 'Dark Brown',  swatch: '#3B2314' },
+  { value: 'light_brown', label: 'Light Brown', swatch: '#8B5E3C' },
+  { value: 'green',       label: 'Green',       swatch: '#4A7C59' },
+  { value: 'grey',        label: 'Grey',        swatch: '#7A8899' },
+  { value: 'blue',        label: 'Blue',        swatch: '#4A7AB5' },
 ];
 
 type StepKey = 'gender' | 'vein' | 'hairDyed' | 'naturalHairColor' | 'eyeColor' | 'jewelryPreference';
@@ -96,11 +96,11 @@ export default function Questionnaire({ answers, onChange }: Props) {
       case 'gender':
         return (
           <div className="space-y-2.5">
-            <p className="text-xs font-medium text-slate-600">Та хэн бэ?</p>
+            <p className="text-xs font-medium text-slate-600">Who are you?</p>
             <div className="grid grid-cols-2 gap-1.5">
               {[
-                { value: 'female' as const, label: 'Эмэгтэй', icon: '👩' },
-                { value: 'male'   as const, label: 'Эрэгтэй', icon: '👨' },
+                { value: 'female' as const, label: 'Female', icon: '👩' },
+                { value: 'male'   as const, label: 'Male',   icon: '👨' },
               ].map(o => (
                 <OptionBtn key={o.value} active={answers.gender === o.value}
                   onClick={() => pick({ ...answers, gender: o.value })}>
@@ -118,13 +118,13 @@ export default function Questionnaire({ answers, onChange }: Props) {
         return (
           <div className="space-y-2.5">
             <p className="text-xs font-medium text-slate-600">
-              Гарынхаа дотор талын судсыг ажиглаарай. Ямар өнгөтэй харагдаж байна вэ?
+              Look at the veins on the inside of your wrist. What color do they appear?
             </p>
             <div className="grid grid-cols-3 gap-1.5">
               {[
-                { value: 'blue_green' as const, label: 'Хөх / Ногоон',   swatch: '#6EA8D8' },
-                { value: 'purple_red' as const, label: 'Нил / Улаавтар', swatch: '#9966BB' },
-                { value: 'both'       as const, label: 'Хоёулаа',         swatch: '#8899AA' },
+                { value: 'blue_green' as const, label: 'Blue / Green',    swatch: '#6EA8D8' },
+                { value: 'purple_red' as const, label: 'Purple / Red',    swatch: '#9966BB' },
+                { value: 'both'       as const, label: 'Both',            swatch: '#8899AA' },
               ].map(o => (
                 <OptionBtn key={o.value} active={answers.vein === o.value}
                   onClick={() => pick({ ...answers, vein: o.value })}>
@@ -143,12 +143,12 @@ export default function Questionnaire({ answers, onChange }: Props) {
         return (
           <div className="space-y-2.5">
             <p className="text-xs font-medium text-slate-600">
-              Үсэндээ будаг хийлгэсэн үү?
+              Have you dyed your hair?
             </p>
             <div className="grid grid-cols-2 gap-1.5">
               {[
-                { value: 'yes' as const, label: 'Тийм', icon: '🎨' },
-                { value: 'no'  as const, label: 'Үгүй', icon: '✨' },
+                { value: 'yes' as const, label: 'Yes', icon: '🎨' },
+                { value: 'no'  as const, label: 'No',  icon: '✨' },
               ].map(o => (
                 <OptionBtn key={o.value} active={answers.hairDyed === o.value}
                   onClick={() => {
@@ -170,7 +170,7 @@ export default function Questionnaire({ answers, onChange }: Props) {
         return (
           <div className="space-y-2.5">
             <p className="text-xs font-medium text-slate-600">
-              Будаагүй үедээ үсний байгалийн өнгө ямар байсан бэ?
+              What was your natural hair color before dyeing?
             </p>
             <div className="grid grid-cols-5 gap-1.5">
               {HAIR_COLORS.map(o => (
@@ -191,7 +191,7 @@ export default function Questionnaire({ answers, onChange }: Props) {
         return (
           <div className="space-y-2.5">
             <p className="text-xs font-medium text-slate-600">
-             Таны нүдний өнгө ямар вэ?
+              What is your eye color?
             </p>
             <div className="grid grid-cols-3 gap-1.5">
               {EYE_COLORS.map(o => (
@@ -212,14 +212,14 @@ export default function Questionnaire({ answers, onChange }: Props) {
         return (
           <div className="space-y-2.5">
             <p className="text-xs font-medium text-slate-600">
-              Танд алтлаг эсвэл мөнгөлөг гоёлын аль нь илүү зохидог вэ?
+              Which suits you better — gold or silver jewelry?
             </p>
             <div className="grid grid-cols-2 gap-1.5">
               {[
-                { value: 'gold'   as const, label: 'Алтлаг',     swatch: 'linear-gradient(135deg,#F5C842,#D4A017,#F5C842)' },
-                { value: 'silver' as const, label: 'Мөнгөлөг',   swatch: 'linear-gradient(135deg,#D8D8D8,#A0A0A0,#D8D8D8)' },
-                { value: 'both'   as const, label: 'Аль аль нь', swatch: 'linear-gradient(135deg,#F5C842 0%,#F5C842 50%,#D8D8D8 50%,#D8D8D8 100%)' },
-                { value: 'unsure' as const, label: 'Мэдэхгүй',   swatch: 'linear-gradient(135deg,#E2E8F0,#CBD5E1)' },
+                { value: 'gold'   as const, label: 'Gold',    swatch: 'linear-gradient(135deg,#F5C842,#D4A017,#F5C842)' },
+                { value: 'silver' as const, label: 'Silver',  swatch: 'linear-gradient(135deg,#D8D8D8,#A0A0A0,#D8D8D8)' },
+                { value: 'both'   as const, label: 'Both',    swatch: 'linear-gradient(135deg,#F5C842 0%,#F5C842 50%,#D8D8D8 50%,#D8D8D8 100%)' },
+                { value: 'unsure' as const, label: 'Not sure', swatch: 'linear-gradient(135deg,#E2E8F0,#CBD5E1)' },
               ].map(o => (
                 <OptionBtn key={o.value} active={answers.jewelryPreference === o.value}
                   onClick={() => pick({ ...answers, jewelryPreference: o.value })}>
@@ -247,11 +247,11 @@ export default function Questionnaire({ answers, onChange }: Props) {
           {safeStep > 0 && (
             <button type="button" onClick={goBack}
               className="text-[11px] font-medium text-slate-400 hover:text-slate-600 transition-colors">
-              ← Буцах
+              ← Back
             </button>
           )}
           <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">
-            Нэмэлт мэдээлэл
+            Additional Info
           </p>
         </div>
         <span className="text-[11px] font-semibold text-slate-400">

@@ -6,24 +6,24 @@ import { Plus, Minus } from 'lucide-react';
 
 const faqs = [
   {
-    question: 'Миний зургийг хадгалах уу?',
-    answer: 'Үгүй. Бид таны хувийн нууцлалыг дээд зэргээр эрхэмлэдэг. Таны оруулсан зураг зөвхөн тухайн үеийн оношилгоонд ашиглагдах бөгөөд үр дүн гармагц системээс автоматаар, бүрмөсөн устгагдана.',
+    question: 'Will my photo be saved?',
+    answer: 'No. We place the highest importance on your privacy. Your uploaded photo is only used for the analysis at that moment and is automatically and permanently deleted from our system as soon as the results are ready.',
   },
   {
-    question: 'Гэрэлтүүлэг ямар байх ёстой вэ?',
-    answer: 'Оношилгоог оновчтой болгохын тулд өдрийн цагаар, цонхны дэргэд буюу байгалийн гэрэлд авсан зураг хамгийн тохиромжтой. Хиймэл болон шар гэрэл нь арьсны төрөлхийн туяаг өөрчилж харуулдаг тул ийм гэрэлд авсан зургаас зайлсхийхийг зөвлөж байна.',
+    question: 'What kind of lighting is best?',
+    answer: 'For the most accurate analysis, photos taken during the day near a window or in natural light are ideal. We recommend avoiding photos taken under artificial or warm-toned lighting, as these can alter the appearance of your natural skin tone.',
   },
   {
-    question: 'Нүүр будалттай зураг оруулж болох уу?',
-    answer: 'Арьсны төрөлх туяаг тодорхойлохын тулд нүүр будалтгүй зураг оруулбал шинжилгээ илүү нарийн гарна. Хэрэв будалттай бол маш хөнгөн байхыг зөвлөе.',
+    question: 'Can I upload a photo with makeup on?',
+    answer: 'For the most precise analysis of your natural skin tone, we recommend uploading a makeup-free photo. If you do have makeup on, please keep it as minimal as possible.',
   },
   {
-    question: 'Үр дүн хэр нарийн вэ?',
-    answer: 'Уг үйлчилгээ нь зөвхөн арьс төдийгүй үс, нүдний өнгийг цогцоор нь шинжилдэг тул үр дүн нь өндөр нарийвчлалтай, оновчтой гардаг.',
+    question: 'How accurate are the results?',
+    answer: 'Because this service analyzes not just your skin, but also your hair and eye color together, the results are highly accurate and personalized.',
   },
   {
-    question: 'Төлбөрөө яаж төлөх вэ?',
-    answer: 'Үйлчлүүлэгч оношилгоо дууссаны дараа төлбөрөө гүйцэтгэх бөгөөд төлбөр орсон даруйд тайлан мэйлээр илгээгдэхийг анхаарна уу.',
+    question: 'How do I make a payment?',
+    answer: 'Payment is completed after the analysis is finished. Please note that your report will be sent by email as soon as the payment is confirmed.',
   },
 ];
 
@@ -39,10 +39,10 @@ export default function FAQ() {
           className="text-center mb-16"
         >
           <span className="inline-block mb-4 text-[11px] font-semibold uppercase tracking-[0.18em] text-violet-500">
-            Түгээмэл асуулт
+            Frequently Asked Questions
           </span>
           <h2 className="font-serif text-4xl font-bold text-slate-900">
-         Таны мэдэхийг хүссэн<em className="not-italic bg-gradient-to-r from-violet-500 to-pink-500 bg-clip-text text-transparent"> бүх зүйл</em> 
+            Everything<em className="not-italic bg-gradient-to-r from-violet-500 to-pink-500 bg-clip-text text-transparent"> you want to know</em>
           </h2>
         </motion.div>
 

@@ -1,24 +1,24 @@
 import Header from '../components/Header';
 import Footer from '../components/Footer';
 
-export const metadata = { title: 'Нууцлалын бодлого | Personal Color' };
+export const metadata = { title: 'Privacy Policy | Personal Color' };
 
 const sections = [
   {
-    title: 'Мэдээлэл цуглуулах ба зорилго',
-    body: '"Personal Color Mongolia" платформ нь хэрэглэгчийн оруулсан гэрэл зураг болон цахим шуудангийн хаягийг зөвхөн тухайн үеийн хувийн өнгөний оношилгоог хийх, зөвлөмж бүхий тайланг боловсруулахад ашиглана.',
+    title: 'Data Collection & Purpose',
+    body: 'The "Personal Color Mongolia" platform uses the photo and email address submitted by the user solely for the purpose of conducting a personal color analysis and generating the recommendation report.',
   },
   {
-    title: 'Гуравдагч этгээдэд үл задруулах',
-    body: 'Бид хэрэглэгчийн хувийн мэдээллийг хууль тогтоомжид зааснаас бусад тохиолдолд ямар ч гуравдагч этгээд, байгууллагад худалдахгүй, арилжихгүй, задруулахгүй бөгөөд нууцлалыг бүрэн хангана.',
+    title: 'No Disclosure to Third Parties',
+    body: 'We will not sell, trade, or disclose user personal information to any third party or organization except as required by law, and we fully uphold user privacy.',
   },
   {
-    title: 'Гэрэл зургийн аюулгүй байдал',
-    body: 'Хэрэглэгчийн оруулсан гэрэл зураг нь манай серверийн өгөгдлийн санд хэзээ ч хадгалагдахгүй. Автомат оношилгоо хийгдэж, тайлан бэлэн болсон даруйд системээс хэрэглэгчийн зургийг бүрмөсөн, автоматаар устгана.',
+    title: 'Photo Security',
+    body: 'Photos submitted by the user are never stored in our server database. As soon as the automated analysis is complete and the report is ready, the user\'s photo is permanently and automatically deleted from the system.',
   },
   {
-    title: 'Дата хадгалалт ба аюулгүй байдал',
-    body: 'Оношилгооны үр дүнгийн тайлан болон цахим шуудангийн хаяг зэрэг үндсэн мэдээллүүд нь олон улсын аюулгүй байдлын стандарт хангасан, шифрлэгдсэн хамгаалалттай сервер дээр хадгалагдах бөгөөд зөвшөөрөлгүй хандалтаас найдвартай хамгаалагдсан болно.',
+    title: 'Data Storage & Security',
+    body: 'Core information such as analysis results and email addresses are stored on servers that meet international security standards with encrypted protection, and are reliably safeguarded against unauthorized access.',
   },
 ];
 
@@ -27,7 +27,7 @@ export default function PrivacyPolicyPage() {
     <>
       <Header />
       <main className="mx-auto max-w-3xl px-6 py-16">
-        <h1 className="mb-10 text-2xl font-bold text-slate-900">Нууцлалын бодлого</h1>
+        <h1 className="mb-10 text-2xl font-bold text-slate-900">Privacy Policy</h1>
         <div className="space-y-8">
           {sections.map((s, i) => (
             <div key={i} className="flex gap-4">
@@ -47,15 +47,14 @@ export default function PrivacyPolicyPage() {
               5
             </span>
             <div>
-              <h2 className="mb-2 text-sm font-semibold text-slate-800">Эргэх холбоо</h2>
+              <h2 className="mb-2 text-sm font-semibold text-slate-800">Contact</h2>
               <p className="text-sm text-slate-600 leading-relaxed">
-                Нууцлалын бодлого болон хувийн мэдээллийн аюулгүй байдалтай холбоотой аливаа
-                асуулт, санал гомдлыг{' '}
+                Any questions or complaints regarding this privacy policy and the security of personal information can be directed to{' '}
                 <a href="mailto:personalcolor.web@gmail.com"
                   className="text-violet-600 hover:underline">
                   personalcolor.web@gmail.com
                 </a>{' '}
-                хаягаар хүлээн авч, шуурхай шийдвэрлэнэ.
+                and will be addressed promptly.
               </p>
             </div>
           </div>

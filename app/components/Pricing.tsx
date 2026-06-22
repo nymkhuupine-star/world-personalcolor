@@ -6,30 +6,30 @@ import Link from 'next/link';
 
 const plans = [
   {
-    name: 'Үнэгүй',
+    name: 'Free',
     price: '0',
-    description: 'Өөрийн үндсэн улирлыг мэдэхэд тусална',
+    description: 'Find out your basic seasonal color type',
     features: [
-      'Улирлын ерөнхий оношлогоо',
-      'Вэб дээр үр дүнг харах',
-      'Өнгөний палитр (HEX код)',
+      'General seasonal diagnosis',
+      'View results on the web',
+      'Color palette (HEX codes)',
     ],
-    cta: 'Үнэгүй эхлэх',
+    cta: 'Get Started Free',
     href: '#upload',
     premium: false,
   },
   {
     name: 'Premium',
     price: '8,900',
-    description: 'Танд зориулсан цогц загварын гарын авлага',
+    description: 'A complete personalized style guide just for you',
     features: [
-      'Дэлгэрэнгүй 10 хуудас тайлан',
-      'Мэйлээр PDF тайлан хүлээн авах',
-      'Нүүр будалтын HEX кодууд',
-      'Үсний өнгөний зөвлөгөө',
-      'Хувцаслалтын стиль зөвлөмж',
+      'Detailed 10-page report',
+      'PDF report delivered by email',
+      'Makeup color HEX codes',
+      'Hair color recommendations',
+      'Fashion style advice',
     ],
-    cta: 'Premium авах',
+    cta: 'Get Premium',
     href: '#upload',
     premium: true,
   },
@@ -45,10 +45,10 @@ export default function Pricing() {
           className="text-center mb-16"
         >
           <span className="inline-block mb-4 text-[11px] font-semibold uppercase tracking-[0.18em] text-violet-500">
-            Үнийн санал
+            Pricing
           </span>
           <h2 className="font-serif text-4xl font-bold text-slate-900">
-            Өөрт тохирох <em className="not-italic bg-gradient-to-r from-violet-500 to-pink-500 bg-clip-text text-transparent">багцаа</em> сонгоорой
+            Choose the <em className="not-italic bg-gradient-to-r from-violet-500 to-pink-500 bg-clip-text text-transparent">plan</em> that's right for you
           </h2>
         </motion.div>
 
@@ -69,7 +69,7 @@ export default function Pricing() {
               {plan.premium && (
                 <div className="absolute -top-3.5 left-1/2 -translate-x-1/2">
                   <span className="inline-flex items-center gap-1.5 rounded-full bg-white px-4 py-1.5 text-[11px] font-bold text-violet-600 shadow-md">
-                    <Sparkles className="h-3 w-3" strokeWidth={2} /> Хамгийн эрэлттэй
+                    <Sparkles className="h-3 w-3" strokeWidth={2} /> Most Popular
                   </span>
                 </div>
               )}
@@ -82,7 +82,7 @@ export default function Pricing() {
                   <span className={`font-serif text-5xl font-bold ${plan.premium ? 'text-white' : 'text-slate-900'}`}>
                     {plan.price}₮
                   </span>
-                  <span className={`mb-1.5 text-sm ${plan.premium ? 'text-violet-200' : 'text-slate-400'}`}>/удаа</span>
+                  <span className={`mb-1.5 text-sm ${plan.premium ? 'text-violet-200' : 'text-slate-400'}`}>/one-time</span>
                 </div>
                 <p className={`mt-2 text-sm ${plan.premium ? 'text-violet-100' : 'text-slate-500'}`}>
                   {plan.description}

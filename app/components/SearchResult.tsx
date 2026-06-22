@@ -14,7 +14,7 @@ type Analysis = {
 };
 
 const SEASON_MN: Record<string, string> = {
-  Spring: 'Хавар', Summer: 'Зун', Autumn: 'Намар', Winter: 'Өвөл',
+  Spring: 'Spring', Summer: 'Summer', Autumn: 'Autumn', Winter: 'Winter',
 };
 
 const SEASON_STYLE: Record<string, { gradient: string; bg: string; text: string }> = {
@@ -96,11 +96,11 @@ export default function SearchResult() {
         body: JSON.stringify({ email }),
       });
       const data = await res.json() as { error?: string };
-      if (!res.ok) { setError(data.error ?? 'Алдаа гарлаа.'); return; }
+      if (!res.ok) { setError(data.error ?? 'An error occurred.'); return; }
       setStep('code');
       setCountdown(60);
     } catch {
-      setError('Алдаа гарлаа. Дахин оролдоно уу.');
+      setError('An error occurred. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -119,7 +119,7 @@ export default function SearchResult() {
         body: JSON.stringify({ email, code }),
       });
       const data = await res.json() as { error?: string; token?: string; analyses?: Analysis[] };
-      if (!res.ok) { setError(data.error ?? 'Код буруу байна.'); return; }
+      if (!res.ok) { setError(data.error ?? 'Incorrect code.'); return; }
       if (data.token) localStorage.setItem(SESSION_KEY, JSON.stringify({ token: data.token }));
       setAnalyses(data.analyses ?? []);
       setStep('results');
@@ -188,13 +188,13 @@ export default function SearchResult() {
       <div className="mx-auto max-w-lg">
         <div className="text-center mb-10">
           <span className="inline-block mb-4 text-[11px] font-semibold uppercase tracking-[0.18em] text-violet-500">
-            Өмнөх үр дүн
+            Previous Results
           </span>
           <h2 className="font-serif text-4xl font-bold text-slate-900 mb-2">
-            Өмнөх <em className="not-italic bg-gradient-to-r from-violet-500 to-pink-500 bg-clip-text text-transparent">үр дүн</em> хайх
+            Find your <em className="not-italic bg-gradient-to-r from-violet-500 to-pink-500 bg-clip-text text-transparent">previous results</em>
           </h2>
           <p className="text-slate-500 text-sm">
-            Шинжилгээ хийхдээ ашигласан имэйлээрээ үр дүнгээ хайна уу
+            Search for your results using the email you used for your analysis
           </p>
         </div>
 
@@ -216,8 +216,8 @@ export default function SearchResult() {
                   </div>
                 </div>
                 <p className="text-center text-sm text-slate-500 mb-6">
-                  Таны имэйл рүү <span className="font-semibold text-slate-700">6 оронтой нэг удаагийн код</span> илгээгдэнэ.
-                  Код зөв бол өмнөх үр дүн нь гарч ирнэ.
+                  A <span className="font-semibold text-slate-700">6-digit one-time code</span> will be sent to your email.
+                  If the code is correct, your previous results will appear.
                 </p>
                 <div className="space-y-4">
                   <input
@@ -234,7 +234,7 @@ export default function SearchResult() {
                     disabled={loading}
                     className="w-full rounded-2xl bg-gradient-to-r from-violet-500 via-purple-500 to-pink-500 py-3.5 text-sm font-bold text-white shadow-lg shadow-violet-200 flex items-center justify-center gap-2 hover:scale-[1.02] transition-all active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed"
                   >
-                    {loading ? 'Илгээж байна…' : <><span>Баталгаажуулах код илгээх</span><ArrowRight className="h-4 w-4" /></>}
+                    {loading ? 'Sending…' : <><span>Send verification code</span><ArrowRight className="h-4 w-4" /></>}
                   </button>
                 </div>
               </form>
@@ -258,7 +258,7 @@ export default function SearchResult() {
                 </div>
                 <p className="text-center text-sm font-medium text-slate-700 mb-1">{email}</p>
                 <p className="text-center text-xs text-slate-400 mb-7">
-                  руу илгээсэн 6 оронтой кодыг оруулна уу
+                  Enter the 6-digit code sent to
                 </p>
 
                 <div className="flex gap-2 justify-center mb-6" onPaste={handlePaste}>
@@ -284,14 +284,14 @@ export default function SearchResult() {
                   disabled={loading || digits.some(d => !d)}
                   className="w-full rounded-2xl bg-gradient-to-r from-violet-500 via-purple-500 to-pink-500 py-3.5 text-sm font-bold text-white shadow-lg shadow-violet-200 flex items-center justify-center gap-2 hover:scale-[1.02] transition-all active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed"
                 >
-                  {loading ? 'Шалгаж байна…' : 'Баталгаажуулах'}
+                  {loading ? 'Verifying…' : 'Verify'}
                 </button>
 
                 <div className="mt-4 text-center">
                   {countdown > 0 ? (
                     <p className="text-xs text-slate-400">
-                      Дахин илгээх:{' '}
-                      <span className="font-semibold text-slate-600">{countdown}с</span>
+                      Resend in:{' '}
+                      <span className="font-semibold text-slate-600">{countdown}s</span>
                     </p>
                   ) : (
                     <button
@@ -301,7 +301,7 @@ export default function SearchResult() {
                       className="text-xs text-violet-500 hover:text-violet-700 font-medium flex items-center gap-1 mx-auto transition"
                     >
                       <RefreshCw className="h-3 w-3" />
-                      Код дахин илгээх
+                      Resend code
                     </button>
                   )}
                 </div>
@@ -311,7 +311,7 @@ export default function SearchResult() {
                   onClick={reset}
                   className="mt-3 w-full text-xs text-slate-400 hover:text-slate-600 transition"
                 >
-                  ← Өөр имэйл ашиглах
+                  ← Use a different email
                 </button>
               </form>
             </motion.div>
@@ -331,28 +331,28 @@ export default function SearchResult() {
                   <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-50 mx-auto mb-4">
                     <Sparkles className="h-6 w-6 text-slate-300" strokeWidth={1.5} />
                   </div>
-                  <p className="text-slate-700 font-semibold">Үр дүн олдсонгүй</p>
+                  <p className="text-slate-700 font-semibold">No results found</p>
                   <p className="text-slate-400 text-sm mt-1">
-                    {email} имэйлтэй холбоотой шинжилгээ байхгүй байна
+                    No analysis linked to {email}
                   </p>
                   <button
                     onClick={reset}
                     className="mt-5 rounded-full border border-violet-200 text-violet-500 hover:bg-violet-50 px-5 py-2 text-sm font-medium transition"
                   >
-                    Өөр имэйлээр хайх
+                    Search with another email
                   </button>
                 </div>
               ) : (
                 <div className="space-y-4">
                   <div className="flex items-center justify-between mb-1 px-1">
                     <p className="text-sm text-slate-500">
-                      <span className="font-semibold text-slate-700">{analyses.length}</span> үр дүн олдлоо
+                      <span className="font-semibold text-slate-700">{analyses.length}</span> results found
                     </p>
                     <button
                       onClick={reset}
                       className="text-xs text-violet-500 hover:text-violet-700 font-medium transition"
                     >
-                      Өөр имэйл
+                      Different email
                     </button>
                   </div>
 
@@ -405,7 +405,7 @@ export default function SearchResult() {
                               </div>
                               <span className="ml-auto flex items-center gap-1 text-xs text-emerald-500 font-medium">
                                 <CheckCircle className="h-3.5 w-3.5" strokeWidth={2} />
-                                Баталгаажсан
+                                Confirmed
                               </span>
                             </div>
                           )}
@@ -420,11 +420,11 @@ export default function SearchResult() {
                               disabled:opacity-60 disabled:cursor-not-allowed`}
                           >
                             {sentId === a.id ? (
-                              <><CheckCircle className="h-4 w-4" strokeWidth={2} />Имэйл илгээгдлээ</>
+                              <><CheckCircle className="h-4 w-4" strokeWidth={2} />Email sent</>
                             ) : sendingId === a.id ? (
-                              <><span className="h-4 w-4 rounded-full border-2 border-violet-400 border-t-transparent animate-spin" />Илгээж байна…</>
+                              <><span className="h-4 w-4 rounded-full border-2 border-violet-400 border-t-transparent animate-spin" />Sending…</>
                             ) : (
-                              <><Send className="h-4 w-4" strokeWidth={1.5} />Имэйлээр авах</>
+                              <><Send className="h-4 w-4" strokeWidth={1.5} />Receive by email</>
                             )}
                           </button>
                         </div>

@@ -42,7 +42,7 @@ export default function HeroSection() {
           >
             <Sparkles className="h-3.5 w-3.5 text-violet-500" strokeWidth={1.7} />
             <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-violet-500">
-              Хувийн өнгөө тодорхойлох
+              Discover Your Personal Color
             </span>
           </motion.div>
 
@@ -53,9 +53,9 @@ export default function HeroSection() {
             variants={fadeUp}
             className="font-serif text-3xl font-bold leading-tight text-slate-900 lg:text-4xl xl:text-5xl"
           >
-            Таны төрөлхийн гоо үзэсгэлэнг тодотгох{' '}
+            Reveal your natural beauty with your{' '}
             <em className="not-italic bg-gradient-to-r from-violet-500 to-pink-500 bg-clip-text text-transparent">
-              хувийн өнгө
+              personal color
             </em>
 
           </motion.h1>
@@ -75,7 +75,7 @@ export default function HeroSection() {
             variants={fadeUp}
             className="max-w-sm text-[17px] font-medium leading-8 text-slate-700"
           >
-            Таны гэрэл зурагт дүн шинжилгээ хийж, арьс, үс, нүдний өнгөнд тань хамгийн төгс зохицох хувийн өнгийг тодорхойлно.
+            We analyze your photo to determine the personal colors that perfectly complement your skin, hair, and eye tone.
           </motion.p>
 
           <motion.div
@@ -102,8 +102,8 @@ export default function HeroSection() {
             </div>
 
             <div>
-              <p className="text-sm font-bold text-slate-800">1,000+ хэрэглэгч</p>
-              <p className="text-xs font-medium text-slate-600">өөртөө зохих өнгөө олсон</p>
+              <p className="text-sm font-bold text-slate-800">1,000+ users</p>
+              <p className="text-xs font-medium text-slate-600">found their perfect colors</p>
             </div>
           </motion.div>
         </div>

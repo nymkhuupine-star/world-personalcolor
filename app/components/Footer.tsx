@@ -2,10 +2,10 @@ import Link from 'next/link';
 import Image from 'next/image';
 
 const policyLinks = [
-  { label: 'Үйлчилгээний нөхцөл', href: '/terms' },
-  { label: 'Төлбөрийн нөхцөл', href: '/payment-policy' },
-  { label: 'Буцаалтын нөхцөл', href: '/refund-policy' },
-  { label: 'Нууцлалын бодлого', href: '/privacy-policy' },
+  { label: 'Terms of Service', href: '/terms' },
+  { label: 'Payment Policy', href: '/payment-policy' },
+  { label: 'Refund Policy', href: '/refund-policy' },
+  { label: 'Privacy Policy', href: '/privacy-policy' },
 ];
 
 export default function Footer() {

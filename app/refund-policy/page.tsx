@@ -1,20 +1,20 @@
 import Header from '../components/Header';
 import Footer from '../components/Footer';
 
-export const metadata = { title: 'Буцаалтын нөхцөл | Personal Color' };
+export const metadata = { title: 'Refund Policy | Personal Color' };
 
 const sections = [
   {
-    title: 'Дижитал бүтээгдэхүүний онцлог',
-    body: 'Платформын үйлчилгээ нь цахим (дижитал) бүтээгдэхүүн бөгөөд автомат оношилгооны үр дүн, зөвлөмж бүхий тайлан хэрэглэгчид нэгэнт хүргэгдсэн эсвэл харах боломжтой болсон тохиолдолд төлбөрийг буцаан олгох хууль эрх зүйн боломжгүй.',
+    title: 'Nature of Digital Products',
+    body: 'The platform\'s service is a digital product. Once the automated analysis results and recommendation report have been delivered to the user or made available for viewing, it is not legally possible to issue a refund.',
   },
   {
-    title: 'Системийн алдаа дутагдал',
-    body: 'Платформын техникийн болон системийн алдаанаас шалтгаалан төлбөр хасагдсан боловч үйлчилгээ үзүүлэгдээгүй, автомат шинжилгээ хийгдээгүй тохиолдолд хэрэглэгчийн хүсэлтийг үндэслэн төлбөрийг бүрэн буцаан олгоно.',
+    title: 'System Errors & Failures',
+    body: 'If a payment was charged due to a technical or system error on the platform, but the service was not provided and the automated analysis was not performed, a full refund will be issued upon the user\'s request.',
   },
   {
-    title: 'Давхар төлөлт',
-    body: 'Системийн болон банкны гүйлгээний саатлаас шалтгаалан нэг үйлчилгээнд давхар төлөлт хийгдсэн нь банкны хуулгаар нотлогдвол илүү төлөгдсөн дүнг хэрэглэгчид бүрэн буцаана.',
+    title: 'Duplicate Payments',
+    body: 'If a duplicate payment was made for a single service due to a system or bank transaction delay, and this is confirmed by a bank statement, the excess amount charged will be fully refunded to the user.',
   },
 ];
 
@@ -23,7 +23,7 @@ export default function RefundPolicyPage() {
     <>
       <Header />
       <main className="mx-auto max-w-3xl px-6 py-16">
-        <h1 className="mb-10 text-2xl font-bold text-slate-900">Буцаалтын нөхцөл</h1>
+        <h1 className="mb-10 text-2xl font-bold text-slate-900">Refund Policy</h1>
         <div className="space-y-8">
           {sections.map((s, i) => (
             <div key={i} className="flex gap-4">
@@ -43,16 +43,14 @@ export default function RefundPolicyPage() {
               4
             </span>
             <div>
-              <h2 className="mb-2 text-sm font-semibold text-slate-800">Хүсэлт гаргах хугацаа ба суваг</h2>
+              <h2 className="mb-2 text-sm font-semibold text-slate-800">Timeframe & Channel for Requests</h2>
               <p className="text-sm text-slate-600 leading-relaxed">
-                Төлбөр буцаахтай холбоотой гомдол, хүсэлтийг гүйлгээ хийгдсэнээс хойш ажлын
-                3 өдрийн дотор гүйлгээний баримтын хамт{' '}
+                Refund complaints and requests must be submitted within 3 business days of the transaction, along with proof of payment, to{' '}
                 <a href="mailto:personalcolor.web@gmail.com"
                   className="text-violet-600 hover:underline">
                   personalcolor.web@gmail.com
                 </a>{' '}
-                цахим хаягаар ирүүлнэ. Хүсэлтийг ажлын 2–5 өдөрт багтаан шийдвэрлэх бөгөөд
-                буцаалт хийхэд банк хоорондын гүйлгээний шимтгэл суутгагдаж болно.
+                Requests will be resolved within 2–5 business days, and interbank transaction fees may be deducted from the refund.
               </p>
             </div>
           </div>

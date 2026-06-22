@@ -1,32 +1,32 @@
 import Header from '../components/Header';
 import Footer from '../components/Footer';
 
-export const metadata = { title: 'Үйлчилгээний нөхцөл | Personal Color' };
+export const metadata = { title: 'Terms of Service | Personal Color' };
 
 const sections = [
   {
-    title: 'Ерөнхий заалт',
-    body: '"Personal Color Mongolia" (цаашид "Платформ" гэх) нь хэрэглэгчийн оруулсан зурагт үндэслэн хувийн өнгөний шинжилгээ хийж, зөвлөмж бүхий тайланг цахимаар хүргэдэг автоматжуулсан үйлчилгээ юм. Хэрэглэгч тус платформыг ашигласнаар дараах үйлчилгээний нөхцөлийг хүлээн зөвшөөрсөнд тооцно.',
+    title: 'General Provisions',
+    body: '"Personal Color Mongolia" (hereinafter "Platform") is an automated service that performs personal color analysis based on user-submitted photos and delivers recommendation reports digitally. By using this platform, the user is deemed to have accepted the following terms of service.',
   },
   {
-    title: 'Хэрэглэгчийн үүрэг',
-    body: 'Хэрэглэгч оношилгооны үр дүнг үнэн зөв гаргахын тулд платформын зааврын дагуу шаардлага хангасан, бодит зураг болон мэдээллийг оруулах үүрэгтэй. Түүнчлэн, бусдын зургийг зөвшөөрөлгүй ашиглахыг хориглоно.',
+    title: 'User Responsibilities',
+    body: 'To ensure accurate analysis results, the user is responsible for submitting photos and information that meet the platform\'s requirements and guidelines. Additionally, using another person\'s photo without their consent is strictly prohibited.',
   },
   {
-    title: 'Үйлчилгээний шинж чанар',
-    body: 'Шинжилгээний үр дүн болон тайлан нь зөвхөн гоо зүй, хувцаслалтын зөвлөмжийн шинж чанартай бөгөөд эмнэлгийн болон эрүүл мэндийн оношилгоо биш болно.',
+    title: 'Nature of Service',
+    body: 'The analysis results and reports are intended solely for aesthetic and styling recommendations and do not constitute medical or health diagnoses.',
   },
   {
-    title: 'Нууцлал ба мэдээллийн аюулгүй байдал',
-    body: 'Хэрэглэгчийн оруулсан зураг болон хувийн мэдээллийг зөвхөн өнгөний шинжилгээ хийх зорилгоор ашиглах бөгөөд гуравдагч этгээдэд задруулахгүй. Шинжилгээ дууссаны дараа хэрэглэгчийн зургийг системээс бүрмөсөн устгана.',
+    title: 'Privacy & Data Security',
+    body: 'User-submitted photos and personal information will be used exclusively for color analysis purposes and will not be disclosed to third parties. After the analysis is complete, the user\'s photo will be permanently deleted from the system.',
   },
   {
-    title: 'Төлбөр ба буцаалт',
-    body: 'Үйлчилгээний төлбөр бүрэн төлөгдсөний дараа шинжилгээний процесс автоматаар эхэлнэ. Автомат шинжилгээ хийгдэж тайлан бэлэн болсон тул үйлчилгээний төлбөрийг буцаан олгох боломжгүй.',
+    title: 'Payment & Refunds',
+    body: 'The analysis process begins automatically once the service fee has been paid in full. Since the automated analysis has been carried out and the report is ready, refunds for the service fee cannot be issued.',
   },
   {
-    title: 'Нөхцөлийг шинэчлэх',
-    body: '"Personal Color Mongolia" нь зах зээлийн нөхцөл байдал болон хууль тогтоомжийн өөрчлөлттэй холбогдуулан үйлчилгээний нөхцөлийг шаардлагатай үед шинэчлэх, өөрчлөх эрхтэй. Өөрчлөлтийг вэбсайт дээр нийтэлсэн үеэс хүчин төгөлдөрт тооцно.',
+    title: 'Updates to Terms',
+    body: '"Personal Color Mongolia" reserves the right to update or modify these terms of service at any time in response to market conditions or changes in legislation. Any changes take effect from the date they are published on the website.',
   },
 ];
 
@@ -35,7 +35,7 @@ export default function TermsPage() {
     <>
       <Header />
       <main className="mx-auto max-w-3xl px-6 py-16">
-        <h1 className="mb-10 text-2xl font-bold text-slate-900">Үйлчилгээний нөхцөл</h1>
+        <h1 className="mb-10 text-2xl font-bold text-slate-900">Terms of Service</h1>
         <div className="space-y-8">
           {sections.map((s, i) => (
             <div key={i} className="flex gap-4">

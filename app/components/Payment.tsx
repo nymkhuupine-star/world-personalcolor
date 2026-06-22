@@ -7,23 +7,23 @@ import Link from 'next/link';
 const perks = [
   {
     icon: RefreshCw,
-    title: 'Нэг удаа төлж, дахин харах',
-    desc: 'Нэг удаа төлсний дараа үр дүнгээ хэдэн ч удаа бүртгэлдээ нэвтэрч дахин харах боломжтой.',
+    title: 'Pay Once, View Anytime',
+    desc: 'After a single payment, you can log back in and view your results as many times as you like.',
   },
   {
     icon: Gift,
-    title: 'Шинэ өнгөний мэдээлэл үнэгүй',
-    desc: 'Цаашид нэмэгдэх улирлын шинэ өнгөний зөвлөмж, палитруудыг нэмэлт төлбөргүй үзэх эрхтэй.',
+    title: 'New Color Updates — Free',
+    desc: 'Enjoy free access to future seasonal color recommendations and palettes as they are added.',
   },
   {
     icon: Zap,
-    title: 'Хурдан үр дүн',
-    desc: 'Таны арьс, нүд, үсний өнгийг нарийн шинжилж улирлын төрлийг хурдан тодорхойлно.',
+    title: 'Fast Results',
+    desc: 'We precisely analyze your skin, eyes, and hair to quickly determine your seasonal color type.',
   },
   {
     icon: Sparkles,
-    title: 'Дэлгэрэнгүй PDF тайлан',
-    desc: 'Хувийн өнгө, хувцаслалт, будалтын зөвлөмж бүхий PDF тайланг имэйлээр хүлээн авна.',
+    title: 'Detailed PDF Report',
+    desc: 'Receive a comprehensive PDF report by email with your personal color, styling, and makeup recommendations.',
   },
 ];
 
@@ -44,10 +44,10 @@ export default function Payment() {
           className="text-center mb-16"
         >
           <span className="inline-block mb-4 text-[11px] font-semibold uppercase tracking-[0.18em] text-violet-500">
-             Үнийн мэдээлэл
+             Pricing
           </span>
           <h2 className="font-serif text-4xl font-bold text-slate-900">
-             Нэг удаа төлж, <em className="not-italic bg-gradient-to-r from-violet-500 to-pink-500 bg-clip-text text-transparent"> бүх боломжийг </em> эдэл
+             Pay once, <em className="not-italic bg-gradient-to-r from-violet-500 to-pink-500 bg-clip-text text-transparent"> unlock everything </em>
           </h2>
         </motion.div>
 
@@ -70,7 +70,7 @@ export default function Payment() {
 
                 <div className="relative">
                   <p className="text-[11px] font-bold uppercase tracking-widest text-violet-500">
-                    Стандарт багц
+                    Standard Plan
                   </p>
                   <div className="mt-3 flex items-end gap-1.5">
                     <span className=" text-[4.5rem] font-bold leading-none tracking-tight text-slate-900">
@@ -78,15 +78,15 @@ export default function Payment() {
                     </span>
                     <span className="mb-2 text-2xl font-semibold text-slate-400">₮</span>
                   </div>
-                  <p className="mt-1.5 text-sm text-slate-400">нэг удаагийн төлбөр · давтагдахгүй</p>
+                  <p className="mt-1.5 text-sm text-slate-400">one-time payment · no recurring charges</p>
                 </div>
 
                 <ul className="relative space-y-3">
                   {[
-                    'Улирлын өнгөний шинжилгээ',
-                    'PDF тайлан имэйлээр',
-                    'Үр дүнгээ дахин харах эрх',
-                    'Шинэ өнгөний мэдээлэл үнэгүй',
+                    'Seasonal color analysis',
+                    'PDF report by email',
+                    'Access to view results again',
+                    'Free new color updates',
                   ].map((item) => (
                     <li key={item} className="flex items-center gap-3">
                       <span className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-violet-100 to-pink-100">
@@ -102,11 +102,11 @@ export default function Payment() {
                   className="relative mt-1 inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-violet-500 via-purple-500 to-pink-500 py-4 text-sm font-semibold text-white shadow-lg shadow-violet-200/60 transition-all hover:scale-[1.025] hover:shadow-violet-300/60 active:scale-[0.975]"
                 >
                   <Sparkles className="h-4 w-4" strokeWidth={1.75} />
-                  Шинжилгээ эхлүүлэх
+                  Start Analysis
                 </Link>
 
                 <p className="relative -mt-3 text-center text-[11px] text-slate-400">
-                  QPay · Карт · Интернет банк
+                  QPay · Card · Internet Banking
                 </p>
               </div>
             </div>

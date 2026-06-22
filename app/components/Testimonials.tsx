@@ -5,39 +5,39 @@ import { Star, Quote } from 'lucide-react';
 
 const testimonials = [
   {
-    name: 'А. Сарнай',
-    role: 'Маркетер',
-    content: 'Өмнө нь өөртөө огт зохихгүй өнгөөр нүүрээ буддаг байснаа мэдээд маш их гайхсан. Оношилгоо хийлгэснээс хойш гоо сайхны бүтээгдэхүүн, хувцас сонгоход үнэхээр амархан, урамтай болсон!',
+    name: 'A. Sarnai',
+    role: 'Marketer',
+    content: 'I was shocked to realize I had been wearing makeup colors that didn\'t suit me at all. Since getting my analysis, choosing beauty products and clothes has become so much easier and more exciting!',
     stars: 5,
-    season: 'Хавар',
+    season: 'Spring',
     gradient: 'from-rose-400 to-pink-400',
-    initials: 'АС',
+    initials: 'AS',
   },
   {
-    name: 'Б. Тулга',
-    role: 'Оюутан',
-    content: "Шинжилгээ нь маш нарийн, оновчтой гардаг юм байна. Миний хувийн өнгө төрхийг яг таг тодорхойлж, маш ойлгомжтой зөвлөмж тайлан ирүүлсэнд баярлалаа!",
+    name: 'B. Tulga',
+    role: 'Student',
+    content: 'The analysis is incredibly precise and accurate. It pinpointed my personal coloring exactly and delivered such a clear, helpful report. Thank you so much!',
     stars: 5,
-    season: 'Өвөл',
+    season: 'Winter',
     gradient: 'from-sky-400 to-blue-500',
-    initials: 'БТ',
+    initials: 'BT',
   },
   {
-    name: 'Д. Номин',
-    role: 'Дизайнер',
-    content: "Хувийн өнгөө тодорхойлох ийм хялбархан бөгөөд хурдан байдаг гэж бодсонгүй. Вэбсайтын дизайн маш гоё, хэрэглэхэд туйлын эвтэйхэн үйлчилгээ байна.",
+    name: 'D. Nomin',
+    role: 'Designer',
+    content: 'I never thought discovering my personal color could be this easy and fast. The website design is beautiful and the service is incredibly user-friendly.',
     stars: 5,
-    season: 'Зун',
+    season: 'Summer',
     gradient: 'from-violet-400 to-purple-500',
-    initials: 'ДН',
+    initials: 'DN',
   },
 ];
 
 const SEASON_COLOR: Record<string, string> = {
-  'Хавар': 'bg-rose-50 text-rose-600',
-  'Зун': 'bg-violet-50 text-violet-600',
-  'Намар': 'bg-amber-50 text-amber-600',
-  'Өвөл': 'bg-sky-50 text-sky-600',
+  'Spring': 'bg-rose-50 text-rose-600',
+  'Summer': 'bg-violet-50 text-violet-600',
+  'Autumn': 'bg-amber-50 text-amber-600',
+  'Winter': 'bg-sky-50 text-sky-600',
 };
 
 const container = {
@@ -71,10 +71,10 @@ export default function Testimonials() {
           className="text-center mb-16"
         >
           <span className="inline-block mb-4 text-[11px] font-semibold uppercase tracking-[0.18em] text-violet-500">
-            Хэрэглэгчдийн туршлага
+            Customer Stories
           </span>
           <h2 className="font-serif text-4xl font-bold text-slate-900">
-            Бодит <em className="not-italic bg-gradient-to-r from-violet-500 to-pink-500 bg-clip-text text-transparent">үр дүн</em>
+            Real <em className="not-italic bg-gradient-to-r from-violet-500 to-pink-500 bg-clip-text text-transparent">results</em>
           </h2>
         </motion.div>
 
@@ -129,9 +129,9 @@ export default function Testimonials() {
           className="mt-14 grid grid-cols-3 gap-4 rounded-3xl border border-slate-100 bg-white p-8 shadow-sm"
         >
           {[
-            { value: '1,000+', label: 'Шинжилгээ хийгдсэн' },
-            { value: '98%', label: 'Сэтгэл ханамж' },
-            { value: '4.9★', label: 'Дундаж үнэлгээ' },
+            { value: '1,000+', label: 'Analyses Completed' },
+            { value: '98%', label: 'Satisfaction Rate' },
+            { value: '4.9★', label: 'Average Rating' },
           ].map(({ value, label }) => (
             <div key={label} className="text-center">
               <p className="font-serif text-3xl font-bold bg-gradient-to-r from-violet-600 to-pink-500 bg-clip-text text-transparent">{value}</p>

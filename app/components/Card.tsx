@@ -86,11 +86,11 @@ export default function Card() {
 
   const handleFileSelect = (selectedFile: File) => {
     if (!selectedFile.type.startsWith('image/')) {
-      setSubmitError('Зөвхөн зураг файл оруулна уу.');
+      setSubmitError('Please upload an image file only.');
       return;
     }
     if (selectedFile.size > 10 * 1024 * 1024) {
-      setSubmitError('Зургийн хэмжээ 10MB-с бага байх шаардлагатай.');
+      setSubmitError('Image size must be less than 10MB.');
       return;
     }
     setFile(selectedFile);
@@ -114,12 +114,12 @@ export default function Card() {
 
     const trimmedEmail = email.trim();
     if (!trimmedEmail) {
-      setEmailError('Имэйл хаягаа оруулна уу.');
+      setEmailError('Please enter your email address.');
       emailRef.current?.focus();
       return;
     }
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) {
-      setEmailError('Зөв имэйл хаяг оруулна уу.');
+      setEmailError('Please enter a valid email address.');
       emailRef.current?.focus();
       return;
     }
@@ -143,12 +143,12 @@ export default function Card() {
         .upload(filePath, compressed, { contentType: 'image/jpeg', upsert: false });
 
       if (uploadError) {
-        setSubmitError('Зураг оруулахад алдаа гарлаа. Дахин оролдоно уу.');
+        setSubmitError('An error occurred while uploading the photo. Please try again.');
         return;
       }
 
       const imgUrl = supabase.storage.from('portraits').getPublicUrl(filePath).data.publicUrl;
-      if (!imgUrl) { setSubmitError('Зургийн URL авахад алдаа гарлаа.'); return; }
+      if (!imgUrl) { setSubmitError('An error occurred while retrieving the image URL.'); return; }
 
       setChecking(true);
 
@@ -157,7 +157,7 @@ export default function Card() {
         const { checkImageQuality } = await import('@/lib/personal-color/image-analysis');
         const quality = await checkImageQuality(compressed);
         if (!quality.ok) {
-          setPhotoQualityError({ message: 'Зургийн чанар шаардлага хангаагүй байна.', issues: quality.issues });
+          setPhotoQualityError({ message: 'The photo does not meet the required quality standards.', issues: quality.issues });
           return;
         }
       } catch {
@@ -186,7 +186,7 @@ export default function Card() {
         setPhotoQualityError({
           message: isUserFacing
             ? rawMsg
-            : 'Нүүр илрүүлж чадсангүй. Нүүрээ бүтэн харагдуулсан зураг оруулна уу.',
+            : 'Could not detect a face. Please upload a photo where your face is fully visible.',
           issues: [],
         });
         return;
@@ -226,7 +226,7 @@ export default function Card() {
       const data = await res.json().catch(() => ({} as { followUpLink?: string; orderId?: string; error?: string }));
 
       if (!res.ok || !data.followUpLink) {
-        setSubmitError(data.error ?? 'Төлбөр үүсгэхэд алдаа гарлаа. Дахин оролдоно уу.');
+        setSubmitError(data.error ?? 'An error occurred while creating the payment. Please try again.');
         return;
       }
 
@@ -237,7 +237,7 @@ export default function Card() {
       window.location.href = data.followUpLink;
     } catch (err) {
       console.error('handlePay error:', err);
-      setSubmitError(err instanceof Error ? err.message : 'Алдаа гарлаа. Дахин оролдоно уу.');
+      setSubmitError(err instanceof Error ? err.message : 'An error occurred. Please try again.');
     } finally {
       setPaying(false);
     }
@@ -246,26 +246,26 @@ export default function Card() {
   const requirements = [
     {
       icon: Sun,
-      label: 'Өдрийн гэрэл',
+      label: 'Natural Light',
       tips: [
-        { ok: true,  text: 'Өдрийн цагаар, цонх руу харж зогсоод зураг авах — сүүдэр үүсээгүй, жигд гэрэлтэй байх' },
-        { ok: false, text: 'Өрөөний шар/цагаан чийдэнгийн доор авах — арьсны өнгийг гажуудуулдаг' },
+        { ok: true,  text: 'Stand facing a window during the day — even, shadow-free lighting' },
+        { ok: false, text: 'Under indoor yellow/white bulbs — distorts natural skin tone' },
       ],
     },
     {
       icon: Droplets,
-      label: 'Будалтгүй',
+      label: 'No Makeup',
       tips: [
-        { ok: true,  text: 'Сүүн шингэн, өнгөлөгч, сормуусны будаг ч байхгүй — цэвэрлэсэн нүүртэй байх' },
-        { ok: false, text: 'Крем, хацар өнгөлөгч, уруулын будагтай зураг — төрөлхийн өнгийг нуудаг' },
+        { ok: true,  text: 'No foundation, toner, or mascara — a clean, bare face' },
+        { ok: false, text: 'Photos with cream, blush, or lipstick — hides your natural complexion' },
       ],
     },
     {
       icon: Eye,
-      label: 'Урагш харах',
+      label: 'Face Forward',
       tips: [
-        { ok: true,  text: 'Камер руу шууд харж, нүүр бүтэн харагдах байрлалд зогсох' },
-        { ok: false, text: 'Хажуу тийш эргэсэн эсвэл нүүрийг хэсэгчлэн харуулсан зураг' },
+        { ok: true,  text: 'Look directly at the camera with your full face visible' },
+        { ok: false, text: 'Turned to the side or partially visible face' },
       ],
     },
   ];
@@ -287,9 +287,9 @@ export default function Card() {
             <Sparkles className="h-8 w-8 text-violet-500" strokeWidth={1.5} />
           </div>
           <div className="space-y-2">
-            <p className="text-lg font-bold text-slate-800">Удахгүй нээгдэнэ!</p>
+            <p className="text-lg font-bold text-slate-800">Coming Soon!</p>
             <p className="text-sm leading-relaxed text-slate-500">
-              Та маргааш дахин орж өөрийн хувийн өнгөө тодорхойлуулаарай.
+              Please check back tomorrow to discover your personal color.
             </p>
           </div>
         </div>
@@ -325,9 +325,9 @@ export default function Card() {
               </div>
               <div className="text-center space-y-1">
                 <p className="text-sm font-bold text-slate-800">
-                  {analyzing ? 'Шинжилж байна...' : checking ? 'Зургийн чанар шалгаж байна...' : 'Зураг оруулж байна...'}
+                  {analyzing ? 'Analyzing...' : checking ? 'Checking photo quality...' : 'Uploading photo...'}
                 </p>
-                <p className="text-xs text-slate-400">Түр хүлээнэ үү</p>
+                <p className="text-xs text-slate-400">Please wait</p>
               </div>
             </motion.div>
           )}
@@ -343,7 +343,7 @@ export default function Card() {
         >
           {previewUrl ? (
             <>
-              <Image src={previewUrl} alt="Оруулсан зураг" fill unoptimized className="object-cover"
+              <Image src={previewUrl} alt="Uploaded photo" fill unoptimized className="object-cover"
                 sizes="(min-width: 1024px) 50vw, 100vw" />
               {!readyToPay && (
                 <button
@@ -357,7 +357,7 @@ export default function Card() {
                     setQuestionnaireAnswers({});
                   }}
                   className="absolute right-2 top-2 z-10 flex h-7 w-7 items-center justify-center rounded-full bg-black/50 text-white backdrop-blur-sm transition-colors hover:bg-black/70"
-                  aria-label="Зураг устгах"
+                  aria-label="Remove photo"
                 >
                   <X className="h-3.5 w-3.5" strokeWidth={2.5} />
                 </button>
@@ -369,8 +369,8 @@ export default function Card() {
                 <Upload className="h-5 w-5 text-slate-500 transition-colors duration-300 group-hover:text-violet-500" strokeWidth={1.5} />
               </div>
               <div className="text-center space-y-1">
-                <p className="text-sm font-semibold text-slate-700">Зургаа оруулна уу</p>
-                <p className="text-xs text-slate-500">Нүүр тод харагдах хөрөг зураг</p>
+                <p className="text-sm font-semibold text-slate-700">Upload your photo</p>
+                <p className="text-xs text-slate-500">A close-up portrait with your face clearly visible</p>
               </div>
 
             </div>
@@ -388,7 +388,7 @@ export default function Card() {
                       <span className="relative inline-flex h-2 w-2 rounded-full bg-violet-500" />
                     </span>
                     <span className="text-xs font-semibold tracking-wide text-slate-600">
-                      {analyzing ? 'Шинжилж байна...' : checking ? 'Зургийн чанар шалгаж байна...' : 'Зураг оруулж байна...'}
+                      {analyzing ? 'Analyzing...' : checking ? 'Checking photo quality...' : 'Uploading photo...'}
                     </span>
                   </div>
                 </div>
@@ -414,7 +414,7 @@ export default function Card() {
         {/* Tips — зураг оруулахаас өмнө л харагдана */}
         {!file && (
           <div className="space-y-2">
-            <p className="text-center text-[10px] text-slate-400">Дарж дэлгэрэнгүй харах</p>
+            <p className="text-center text-[10px] text-slate-400">Tap to see details</p>
             <div className="grid grid-cols-3 gap-2">
               {requirements.map(({ icon: Icon, label }, i) => (
                 <button
@@ -456,7 +456,7 @@ export default function Card() {
               className="rounded-2xl border px-5 py-4 flex items-start gap-3" style={{ background: '#FCFBFF', border: '1px solid #E9DDFE' }}>
               <Info className="h-4 w-4 shrink-0 text-violet-400 mt-0.5" strokeWidth={1.8} />
               <p className="text-xs text-violet-700 leading-relaxed">
-                Эрэгтэй тайлан удахгүй нэмэгдэх тул түр хүлээгээрэй.
+                A male report will be added soon — please check back later.
               </p>
             </motion.div>
           )}
@@ -466,7 +466,7 @@ export default function Card() {
         {(!file || isQuestionnaireComplete(questionnaireAnswers)) && !readyToPay && questionnaireAnswers.gender !== 'male' && (
           <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} className="space-y-2">
             <label htmlFor="email" className="block text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-600">
-              Имэйл хаяг
+              Email Address
             </label>
             <input
               id="email"
@@ -490,7 +490,7 @@ export default function Card() {
           {photoQualityError && (
             <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
               className="rounded-2xl border border-amber-200 bg-amber-50/80 px-5 py-4 space-y-2">
-              <p className="text-sm font-semibold text-amber-800">Зургийн чанар хангалтгүй</p>
+              <p className="text-sm font-semibold text-amber-800">Photo quality insufficient</p>
               <p className="text-xs leading-relaxed text-amber-700">{photoQualityError.message}</p>
               {photoQualityError.issues.length > 0 && (
                 <ul className="text-xs text-amber-600 space-y-0.5 list-disc list-inside">
@@ -520,10 +520,10 @@ export default function Card() {
           >
             <span className="relative z-10">
               {uploading
-                ? analyzing ? 'Шинжилж байна...'
-                  : checking ? 'Зургийн чанар шалгаж байна...'
-                  : 'Зураг оруулж байна...'
-                : file ? 'Миний өнгийг шинжлэх' : 'Зураг оруулах'}
+                ? analyzing ? 'Analyzing...'
+                  : checking ? 'Checking photo quality...'
+                  : 'Uploading photo...'
+                : file ? 'Analyze My Colors' : 'Upload Photo'}
             </span>
             <div className="absolute inset-0 bg-gradient-to-r from-violet-600 via-purple-600 to-pink-600 opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
           </button>
@@ -545,9 +545,9 @@ export default function Card() {
                   <Sparkles className="h-5 w-5 text-violet-600" strokeWidth={1.5} />
                 </div>
                 <div>
-                  <p className="text-sm font-bold text-slate-800">Таны шинжилгээ бэлэн боллоо!</p>
+                  <p className="text-sm font-bold text-slate-800">Your analysis is ready!</p>
                   <p className="text-xs text-slate-500 mt-0.5">
-                    Бүрэн PDF тайлангаа авахын тулд төлбөр төлнө үү
+                    Pay to receive your full PDF report
                   </p>
                 </div>
               </div>
@@ -556,7 +556,7 @@ export default function Card() {
               <div className="flex items-center justify-between rounded-xl border border-violet-100 bg-white px-4 py-3">
                 <div className="flex items-center gap-2 text-xs text-slate-500">
                   <Lock className="h-3.5 w-3.5" strokeWidth={1.5} />
-                  Дэлгэрэнгүй үр дүн + PDF тайлан
+                  Detailed results + PDF report
                 </div>
                 <span className="text-base font-bold text-slate-800">8,900₮</span>
               </div>
@@ -571,12 +571,12 @@ export default function Card() {
                   {paying ? (
                     <>
                       <span className="h-4 w-4 rounded-full border-2 border-white/60 border-t-white animate-spin" />
-                      QPay руу шилжиж байна...
+                      Redirecting to QPay...
                     </>
                   ) : (
                     <>
                       <CreditCard className="h-4 w-4" strokeWidth={1.75} />
-                      PDF тайлан авах — 8,900₮
+                      Get PDF Report — 8,900₮
                     </>
                   )}
                 </span>
@@ -589,7 +589,7 @@ export default function Card() {
                 onClick={resetCard}
                 className="w-full text-xs text-slate-400 hover:text-slate-600 transition-colors text-center"
               >
-                ← Дахин шинжилгээ хийх
+                ← Run a new analysis
               </button>
             </motion.div>
           )}

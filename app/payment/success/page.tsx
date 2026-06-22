@@ -32,7 +32,7 @@ type VerifyResponse = {
 };
 
 const SEASON_MN: Record<string, string> = {
-  Spring: 'Хавар', Summer: 'Зун', Autumn: 'Намар', Winter: 'Өвөл',
+  Spring: 'Spring', Summer: 'Summer', Autumn: 'Autumn', Winter: 'Winter',
 };
 
 const SEASON_STYLE: Record<string, { gradient: string; bg: string; text: string; ring: string }> = {
@@ -59,7 +59,7 @@ function PaymentSuccessContent() {
   const verify = useCallback(async (): Promise<boolean> => {
     if (!orderId) {
       setState('error');
-      setErrorMsg('Захиалгын дугаар байхгүй байна.');
+      setErrorMsg('Order number is missing.');
       return false;
     }
     try {
@@ -79,11 +79,11 @@ function PaymentSuccessContent() {
       }
 
       setState('error');
-      setErrorMsg(data.error ?? 'Баталгаажуулахад алдаа гарлаа.');
+      setErrorMsg(data.error ?? 'An error occurred during verification.');
       return false;
     } catch {
       setState('error');
-      setErrorMsg('Сүлжээний алдаа гарлаа.');
+      setErrorMsg('A network error occurred.');
       return false;
     }
   }, [orderId]);
@@ -161,9 +161,9 @@ function PaymentSuccessContent() {
           </div>
           <div className="space-y-2">
             <h1 className="font-serif text-2xl font-bold text-slate-900">
-              Төлбөр баталгаажиж байна...
+              Verifying payment...
             </h1>
-            <p className="text-sm text-slate-500">Түр хүлээнэ үү.</p>
+            <p className="text-sm text-slate-500">Please wait.</p>
           </div>
         </>
       )}
@@ -176,10 +176,10 @@ function PaymentSuccessContent() {
           </div>
           <div className="space-y-2">
             <h1 className="font-serif text-2xl font-bold text-slate-900">
-              Баталгаажилтыг хүлээж байна...
+              Waiting for confirmation...
             </h1>
             <p className="text-sm text-slate-500 leading-relaxed">
-              Төлбөрийг шалгаж байна. Энэ хэдэн секунд болно.
+              Checking payment. This will only take a few seconds.
             </p>
           </div>
           <div className="flex items-center justify-center gap-2">
@@ -205,7 +205,7 @@ function PaymentSuccessContent() {
                 <CheckCircle className="h-4 w-4 sm:h-5 sm:w-5 text-emerald-500" strokeWidth={2} />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="font-bold text-slate-900 text-sm sm:text-base">Төлбөр амжилттай!</p>
+                <p className="font-bold text-slate-900 text-sm sm:text-base">Payment successful!</p>
                 {result && (
                   <p className="text-xs text-slate-400 truncate">
                     {SEASON_MN[result.season] ?? result.season} · {result.subType}
@@ -226,7 +226,7 @@ function PaymentSuccessContent() {
             {autoEmailSent && (
               <div className="mt-3 flex items-center gap-2 rounded-xl bg-emerald-50 border border-emerald-100 px-3 py-2">
                 <Mail className="h-4 w-4 shrink-0 text-emerald-500" strokeWidth={2} />
-                <p className="text-xs text-emerald-700">Тайлан таны имэйл хаяг руу илгээгдлээ.</p>
+                <p className="text-xs text-emerald-700">Your report has been sent to your email address.</p>
               </div>
             )}
           </div>
@@ -237,11 +237,11 @@ function PaymentSuccessContent() {
               src={`${pdfUrl}#toolbar=0&navpanes=0&scrollbar=1`}
               className="w-full block"
               style={{ height: '80vh', minHeight: 480, backgroundColor: '#fff', colorScheme: 'light' }}
-              title="PDF тайлан"
+              title="PDF Report"
             />
           ) : (
             <div className="flex items-center justify-center h-40 text-sm text-amber-600 bg-amber-50">
-              PDF тайлан удахгүй бэлэн болно.
+              Your PDF report will be ready shortly.
             </div>
           )}
 
@@ -259,7 +259,7 @@ function PaymentSuccessContent() {
                 className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-violet-500 via-purple-500 to-pink-500 py-3 sm:py-3 text-sm font-semibold text-white shadow shadow-violet-200/60 active:scale-[0.98] transition-all"
               >
                 <Download className="h-4 w-4" strokeWidth={2} />
-                Татаж авах
+                Download
               </a>
             )}
             <button
@@ -268,20 +268,20 @@ function PaymentSuccessContent() {
               className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white py-3 text-sm font-semibold text-slate-600 hover:bg-slate-100 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
             >
               {emailState === 'sending' ? (
-                <><Loader2 className="h-4 w-4 animate-spin" strokeWidth={2} />Илгээж байна...</>
+                <><Loader2 className="h-4 w-4 animate-spin" strokeWidth={2} />Sending...</>
               ) : emailState === 'sent' ? (
-                <><CheckCircle className="h-4 w-4 text-emerald-500" strokeWidth={2} />Илгээгдлээ!</>
+                <><CheckCircle className="h-4 w-4 text-emerald-500" strokeWidth={2} />Sent!</>
               ) : emailState === 'error' ? (
-                <><AlertCircle className="h-4 w-4 text-rose-500" strokeWidth={2} />Дахин оролдох</>
+                <><AlertCircle className="h-4 w-4 text-rose-500" strokeWidth={2} />Try again</>
               ) : (
-                <><Mail className="h-4 w-4" strokeWidth={2} />Имэйлээр авах</>
+                <><Mail className="h-4 w-4" strokeWidth={2} />Receive by email</>
               )}
             </button>
             <Link
               href="/"
               className="inline-flex items-center justify-center gap-1 text-xs text-slate-400 hover:text-slate-600 transition-colors py-2 sm:px-2"
             >
-              Нүүр хуудас
+              Home
               <ArrowRight className="h-3.5 w-3.5" strokeWidth={2} />
             </Link>
           </div>
@@ -297,10 +297,10 @@ function PaymentSuccessContent() {
             </div>
           </div>
           <div className="space-y-2">
-            <h1 className="font-serif text-2xl font-bold text-slate-900">Төлбөр боловсруулж байна</h1>
+            <h1 className="font-serif text-2xl font-bold text-slate-900">Payment is being processed</h1>
             <p className="text-sm text-slate-500 leading-relaxed">
-              Хэрэв та QPay-д төлбөр амжилттай хийсэн бол таны
-              <strong> PDF тайлан</strong> удахгүй бэлэн болно.
+              If you successfully completed the payment through QPay, your
+              <strong> PDF report</strong> will be ready shortly.
             </p>
           </div>
           <button
@@ -309,10 +309,10 @@ function PaymentSuccessContent() {
             className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-violet-500 via-purple-500 to-pink-500 py-4 text-sm font-semibold text-white shadow-lg shadow-violet-200/60 hover:scale-[1.025] transition-all active:scale-[0.975] disabled:opacity-60 disabled:cursor-not-allowed"
           >
             <RefreshCw className={`h-4 w-4 ${retrying ? 'animate-spin' : ''}`} strokeWidth={2} />
-            Дахин шалгах
+            Check again
           </button>
           <Link href="/" className="block text-xs text-slate-400 hover:text-slate-600 transition-colors">
-            Нүүр хуудас руу буцах
+            Return to home page
           </Link>
         </>
       )}
@@ -326,7 +326,7 @@ function PaymentSuccessContent() {
             </div>
           </div>
           <div className="space-y-2">
-            <h1 className="font-serif text-2xl font-bold text-slate-900">Алдаа гарлаа</h1>
+            <h1 className="font-serif text-2xl font-bold text-slate-900">An error occurred</h1>
             <p className="text-sm text-slate-500">{errorMsg}</p>
           </div>
           <button
@@ -335,10 +335,10 @@ function PaymentSuccessContent() {
             className="inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-slate-200 py-4 text-sm font-semibold text-slate-700 hover:bg-slate-50 transition-all disabled:opacity-60"
           >
             <RefreshCw className={`h-4 w-4 ${retrying ? 'animate-spin' : ''}`} strokeWidth={2} />
-            Дахин оролдох
+            Try again
           </button>
           <Link href="/" className="block text-xs text-slate-400 hover:text-slate-600 transition-colors">
-            Нүүр хуудас руу буцах
+            Return to home page
           </Link>
         </>
       )}
@@ -353,7 +353,7 @@ function Loading() {
       <div className="flex justify-center">
         <Loader2 className="h-16 w-16 text-violet-400 animate-spin" strokeWidth={1.5} />
       </div>
-      <p className="text-sm text-slate-500">Уншиж байна...</p>
+      <p className="text-sm text-slate-500">Loading...</p>
     </div>
   );
 }

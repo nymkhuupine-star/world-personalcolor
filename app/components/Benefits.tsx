@@ -6,24 +6,24 @@ import { ShoppingBag, Sparkles, Wallet } from 'lucide-react';
 const benefits = [
   {
     icon: Sparkles,
-    title: 'Өөртөө итгэлтэй',
-    description: 'Өөртөө төгс зохицох өнгөөр хувцасласнаар таны царай улам гэрэлтэж, алхам тутамдаа өөртөө итгэлтэй, дур булаам төрхийг бүтээнэ.',
+    title: 'Boost Your Confidence',
+    description: 'When you dress in colors that truly suit you, your complexion glows and you radiate confidence and charm with every step.',
     gradient: 'from-violet-500 to-pink-500',
     bg: 'bg-violet-50',
     text: 'text-violet-600',
   },
   {
     icon: ShoppingBag,
-    title: 'Цаг хэмнэнэ',
-    description: 'Дэлгүүр хэсэж, өөрт зохихгүй хувцас сонгож цаг алдахаа болино. Арьс, үс, нүдний өнгийг цогцоор нь шинжилж, таныд тохирох өнгийг хэдхэн секундэд тодорхойлно.',
+    title: 'Save Time',
+    description: 'Stop wasting time shopping and picking clothes that don\'t work for you. By analyzing your skin, hair, and eye color together, we identify your ideal colors in seconds.',
     gradient: 'from-rose-400 to-orange-400',
     bg: 'bg-rose-50',
     text: 'text-rose-600',
   },
   {
     icon: Wallet,
-    title: 'Мөнгөө хэмнэнэ',
-    description: 'Та зохихгүй хувцас, гоо сайхны бүтээгдэхүүн худалдан авч санхүүгийн алдагдал хүлээхээ болино. Танд хамгийн сайн зохих өнгөнүүдийг сонгосноор илүүдэл зардал гаргахгүй, ухаалаг худалдан авалт хийхэд тусална.',
+    title: 'Save Money',
+    description: 'No more buying clothes and beauty products that don\'t suit you. Choosing colors that work best for you helps you shop smarter and avoid unnecessary spending.',
     gradient: 'from-amber-400 to-yellow-400',
     bg: 'bg-amber-50',
     text: 'text-amber-600',
@@ -66,11 +66,11 @@ export default function Benefits() {
           className="mx-auto max-w-2xl text-center mb-16"
         >
           <span className="inline-block mb-4 text-[11px] font-semibold uppercase tracking-[0.18em] text-violet-500">
-            Яагаад хэрэгтэй вэ
+            Why You Need This
           </span>
           <h2 className="font-serif text-4xl font-bold text-slate-900 leading-tight">
-            Энэхүү оношилгоо таны амьдралыг хэрхэн
-            <em className="not-italic bg-gradient-to-r from-violet-500 to-pink-500 bg-clip-text text-transparent"> өөрчлөх </em>вэ?
+            How will this analysis
+            <em className="not-italic bg-gradient-to-r from-violet-500 to-pink-500 bg-clip-text text-transparent"> transform </em>your life?
           </h2>
         </motion.div>
 

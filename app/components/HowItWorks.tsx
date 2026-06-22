@@ -6,8 +6,8 @@ import { Upload, ScanLine, CreditCard, Mail } from 'lucide-react';
 const steps = [
   {
     icon: Upload,
-    title: 'Зургаа оруулах',
-    description: 'Байгалийн гэрэлд авсан, нүүр будалтгүй, хөрөг зураг болон имэйл хаягаа оруулна.',
+    title: 'Upload Your Photo',
+    description: 'Upload a close-up portrait taken in natural light, without makeup, along with your email address.',
     color: 'from-violet-500 to-purple-500',
     bg: 'bg-violet-50',
     ring: 'ring-violet-100',
@@ -16,8 +16,8 @@ const steps = [
   },
   {
     icon: CreditCard,
-    title: 'Төлбөр төлөх',
-    description: 'QPay болон бусад цахим төлбөрийн хэрэгслээр үйлчилгээний төлбөрөө найдвартай төлнө.',
+    title: 'Make Payment',
+    description: 'Securely pay for the service using QPay or other digital payment methods.',
     color: 'from-fuchsia-500 to-pink-500',
     bg: 'bg-fuchsia-50',
     ring: 'ring-fuchsia-100',
@@ -26,8 +26,8 @@ const steps = [
   },
   {
     icon: ScanLine,
-    title: 'Сканнердах ба оношлох',
-    description: 'Манай систем таны арьсны туяа, үс, нүдний өнгөний пигментийг нарийвчлан шинжилнэ.',
+    title: 'Scan & Analyze',
+    description: 'Our system precisely analyzes your skin tone, hair, and eye color pigments.',
     color: 'from-sky-500 to-blue-500',
     bg: 'bg-sky-50',
     ring: 'ring-sky-100',
@@ -36,8 +36,8 @@ const steps = [
   },
   {
     icon: Mail,
-    title: 'Тайлангаа имэйлээр авах',
-    description: 'Өнгөний палитр, хувцаслалтын дэлгэрэнгүй зөвлөмжийг таны имэйл рүү хэдхэн секундэд илгээнэ.',
+    title: 'Receive Your Report by Email',
+    description: 'Your color palette and detailed styling recommendations will be sent to your email within seconds.',
     color: 'from-rose-500 to-orange-400',
     bg: 'bg-rose-50',
     ring: 'ring-rose-100',
@@ -68,10 +68,10 @@ export default function HowItWorks() {
           className="mb-20 text-center"
         >
           <span className="inline-block mb-4 text-[11px] font-semibold uppercase tracking-[0.18em] text-violet-500">
-            Хэрхэн ажилладаг вэ
+            How It Works
           </span>
           <h2 className="font-serif text-4xl font-bold text-slate-900">
-            Хувийн өнгөө тодорхойлох <em className="not-italic bg-gradient-to-r from-violet-500 to-pink-500 bg-clip-text text-transparent">4 хялбар алхам</em>
+            Discover your personal color in <em className="not-italic bg-gradient-to-r from-violet-500 to-pink-500 bg-clip-text text-transparent">4 simple steps</em>
           </h2>
         </motion.div>
 

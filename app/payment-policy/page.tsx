@@ -1,24 +1,24 @@
 import Header from '../components/Header';
 import Footer from '../components/Footer';
 
-export const metadata = { title: 'Төлбөрийн нөхцөл | Personal Color' };
+export const metadata = { title: 'Payment Policy | Personal Color' };
 
 const sections = [
   {
-    title: 'Төлбөрийн хэрэгсэл',
-    body: 'Үйлчилгээний төлбөрийг Bonum Pay, QPay, дотоодын банкны картууд, цахим хэтэвч болон платформд нэгдсэн бусад цахим төлбөрийн системүүдийг ашиглан төлөх боломжтой.',
+    title: 'Payment Methods',
+    body: 'Service fees can be paid using Bonum Pay, QPay, domestic bank cards, digital wallets, and other digital payment systems integrated with the platform.',
   },
   {
-    title: 'Үйлчилгээ идэвхжих',
-    body: 'Төлбөр дамжуулах системээр дамжин гүйлгээ амжилттай баталгаажсан даруйд үйлчилгээ болон автомат шинжилгээний эрх шууд идэвхжинэ.',
+    title: 'Service Activation',
+    body: 'The service and automated analysis access are activated immediately upon successful confirmation of the transaction through the payment gateway.',
   },
   {
-    title: 'Валютын зохицуулалт',
-    body: 'Платформ дээрх бүх үйлчилгээний үнэ, тариф нь Монгол төгрөгөөр (MNT) илэрхийлэгдсэн бөгөөд нэмэлт өөрчлөлтийг тухай бүрд нь вэбсайт дээр шинэчилнэ.',
+    title: 'Currency',
+    body: 'All service prices and rates on the platform are expressed in Mongolian Tugrug (MNT), and any changes will be updated on the website promptly.',
   },
   {
-    title: 'Нууцлал ба аюулгүй байдал',
-    body: 'Хэрэглэгчийн төлбөрийн мэдээлэл (картны дугаар, нууц код гэх мэт) нь "Personal Color Mongolia"-ийн серверт хадгалагдахгүй. Бүх гүйлгээ нь олон улсын аюулгүй байдлын стандарт хангасан, шифрлэгдсэн хамгаалалттай төлбөрийн системээр (Gateways) нууцлагдан боловсруулагдана.',
+    title: 'Privacy & Security',
+    body: 'User payment information (such as card numbers and security codes) is not stored on "Personal Color Mongolia" servers. All transactions are processed securely and confidentially through payment gateways that meet international security standards with encrypted protection.',
   },
 ];
 
@@ -27,7 +27,7 @@ export default function PaymentPolicyPage() {
     <>
       <Header />
       <main className="mx-auto max-w-3xl px-6 py-16">
-        <h1 className="mb-10 text-2xl font-bold text-slate-900">Төлбөрийн нөхцөл</h1>
+        <h1 className="mb-10 text-2xl font-bold text-slate-900">Payment Policy</h1>
         <div className="space-y-8">
           {sections.map((s, i) => (
             <div key={i} className="flex gap-4">
@@ -47,16 +47,14 @@ export default function PaymentPolicyPage() {
               5
             </span>
             <div>
-              <h2 className="mb-2 text-sm font-semibold text-slate-800">Эргэх холбоо</h2>
+              <h2 className="mb-2 text-sm font-semibold text-slate-800">Contact</h2>
               <p className="text-sm text-slate-600 leading-relaxed">
-                Төлбөрийн гүйлгээ хийгдсэн боловч үйлчилгээ идэвхжээгүй, эсвэл төлбөртэй
-                холбоотой ямар нэгэн алдаа, асуудал гарсан тохиолдолд хэрэглэгч гүйлгээний
-                баримтаа хавсарган{' '}
+                If a payment transaction has been completed but the service has not been activated, or if any error or issue related to payment arises, the user may attach their transaction receipt and contact us at{' '}
                 <a href="mailto:personalcolor.web@gmail.com"
                   className="text-violet-600 hover:underline">
                   personalcolor.web@gmail.com
                 </a>{' '}
-                цахим хаягаар болон Инстаграм хаягаар шууд холбогдон шийдвэрлүүлэх боломжтой.
+                or via our Instagram page to have the issue resolved.
               </p>
             </div>
           </div>

@@ -12,8 +12,8 @@ type NavItem = {
 };
 
 const NAV_ITEMS: NavItem[] = [
-  { href: '#how-it-works', label: 'Хэрхэн ажилладаг вэ' },
-  { href: '#faq', label: 'Түгээмэл асуулт' },
+  { href: '#how-it-works', label: 'How It Works' },
+  { href: '#faq', label: 'FAQ' },
 ];
 
 export default function Header() {
@@ -73,7 +73,7 @@ export default function Header() {
             onClick={() => handleNav('#search-result')}
             className="px-4 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-400/60"
           >
-            Өмнөх үр дүн хайх
+            Find Previous Results
           </button>
         </nav>
 
@@ -82,7 +82,7 @@ export default function Header() {
             onClick={() => handleNav('#upload')}
             className="rounded-full bg-gradient-to-r from-violet-500 via-purple-500 to-pink-500 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-violet-200 transition-all hover:scale-[1.04] hover:shadow-violet-300 focus:outline-none active:scale-[0.97]"
           >
-            Шинжилгээ эхлүүлэх
+            Start Analysis
           </button>
         </div>
 
@@ -90,7 +90,7 @@ export default function Header() {
           type="button"
           onClick={() => setOpen(true)}
           className="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white/70 p-2.5 text-slate-700 shadow-sm shadow-slate-200/60 backdrop-blur-sm transition-colors hover:bg-white lg:hidden"
-          aria-label="Цэс нээх"
+          aria-label="Open menu"
         >
           <Menu className="h-5 w-5" />
         </button>
@@ -118,7 +118,7 @@ export default function Header() {
                   type="button"
                   onClick={() => setOpen(false)}
                   className="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white/70 p-2.5 text-slate-700 shadow-sm shadow-slate-200/60 backdrop-blur-sm transition-colors hover:bg-white"
-                  aria-label="Цэс хаах"
+                  aria-label="Close menu"
                 >
                   <X className="h-5 w-5" />
                 </button>
@@ -139,7 +139,7 @@ export default function Header() {
                   onClick={() => { setOpen(false); handleNav('#search-result'); }}
                   className="flex w-full items-center justify-between rounded-xl px-4 py-3 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-100"
                 >
-                  <span>Өмнөх үр дүн хайх</span>
+                  <span>Find Previous Results</span>
                   <span className="text-slate-400">→</span>
                 </button>
                 <div className="mt-3 px-1">
@@ -147,7 +147,7 @@ export default function Header() {
                     onClick={() => { setOpen(false); handleNav('#upload'); }}
                     className="inline-flex w-full items-center justify-center text-center rounded-xl bg-gradient-to-r from-violet-500 via-purple-500 to-pink-500 px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-violet-200 transition-all hover:scale-[1.03] active:scale-[0.97]"
                   >
-                    Шинжилгээ эхлүүлэх
+                    Start Analysis
                   </button>
                 </div>
               </div>
