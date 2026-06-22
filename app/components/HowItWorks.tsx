@@ -17,7 +17,7 @@ const steps = [
   {
     icon: CreditCard,
     title: 'Make Payment',
-    description: 'Securely pay for the service using QPay or other digital payment methods.',
+    description: 'Securely pay for the service using Stripe, PayPal, or any major credit card.',
     color: 'from-fuchsia-500 to-pink-500',
     bg: 'bg-fuchsia-50',
     ring: 'ring-fuchsia-100',
@@ -37,7 +37,7 @@ const steps = [
   {
     icon: Mail,
     title: 'Receive Your Report by Email',
-    description: 'Your color palette and detailed styling recommendations will be sent to your email within seconds.',
+    description: 'Your personalized color palette and detailed style guide will be sent to your email within 24 hours.',
     color: 'from-rose-500 to-orange-400',
     bg: 'bg-rose-50',
     ring: 'ring-rose-100',
@@ -71,7 +71,9 @@ export default function HowItWorks() {
             How It Works
           </span>
           <h2 className="font-serif text-4xl font-bold text-slate-900">
-            Discover your personal color in <em className="not-italic bg-gradient-to-r from-violet-500 to-pink-500 bg-clip-text text-transparent">4 simple steps</em>
+            Discover your personal color in{' '}
+            <em className="italic text-violet-600">4</em>{' '}
+            <em className="not-italic bg-gradient-to-r from-violet-500 to-pink-500 bg-clip-text text-transparent">simple steps</em>
           </h2>
         </motion.div>
 

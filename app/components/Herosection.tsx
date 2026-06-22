@@ -2,6 +2,7 @@
 
 import { motion } from 'framer-motion';
 import { Sparkles } from 'lucide-react';
+import Image from 'next/image';
 import Card from './Card';
 
 const fadeUp = {
@@ -19,7 +20,9 @@ const fadeUp = {
 
 export default function HeroSection() {
   return (
-    <section className="relative min-h-screen overflow-hidden flex items-center mt-[-100px] bg-pink-100/100 ">
+    <section className="relative min-h-screen overflow-hidden flex items-center mt-[-100px]"
+      style={{ background: 'linear-gradient(135deg, #ffffff 0%, #fdf4f0 40%, #fce8e2 70%, #fad4cc 100%)' }}
+    >
       {/* Soft background glow — radial-gradient, no blur filter */}
       {/* <div className="pointer-events-none absolute inset-0" aria-hidden="true">
         <div className="absolute inset-0"
@@ -51,7 +54,8 @@ export default function HeroSection() {
             initial="hidden"
             animate="visible"
             variants={fadeUp}
-            className="font-serif text-3xl font-bold leading-tight text-slate-900 lg:text-4xl xl:text-5xl"
+            style={{ fontFamily: 'var(--font-playfair), Georgia, serif' }}
+            className="text-3xl font-bold leading-tight text-slate-900 lg:text-4xl xl:text-5xl"
           >
             Reveal your natural beauty with your{' '}
             <em className="not-italic bg-gradient-to-r from-violet-500 to-pink-500 bg-clip-text text-transparent">
@@ -87,21 +91,25 @@ export default function HeroSection() {
           >
             <div className="flex -space-x-3">
               {[
-                { letter: 'S', bg: 'bg-rose-400' },
-                { letter: 'M', bg: 'bg-violet-400' },
-                { letter: 'A', bg: 'bg-sky-400' },
-                { letter: 'J', bg: 'bg-amber-400' },
-              ].map(({ letter, bg }, i) => (
-                <div
-                  key={i}
-                  className={`flex h-9 w-9 items-center justify-center rounded-full border-2 border-white text-xs font-bold text-white shadow-sm ${bg}`}
-                >
-                  {letter}
+                'https://randomuser.me/api/portraits/women/44.jpg',
+                'https://randomuser.me/api/portraits/women/68.jpg',
+                'https://randomuser.me/api/portraits/men/32.jpg',
+                'https://randomuser.me/api/portraits/women/12.jpg',
+              ].map((src, i) => (
+                <div key={i} className="h-9 w-9 rounded-full border-2 border-white shadow-sm overflow-hidden">
+                  <Image src={src} alt="user" width={36} height={36} className="object-cover" />
                 </div>
               ))}
             </div>
 
             <div>
+              <div className="flex items-center gap-1 mb-0.5">
+                {[...Array(5)].map((_, i) => (
+                  <svg key={i} className="h-3.5 w-3.5 fill-amber-400" viewBox="0 0 20 20">
+                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                  </svg>
+                ))}
+              </div>
               <p className="text-sm font-bold text-slate-800">1,000+ users</p>
               <p className="text-xs font-medium text-slate-600">found their perfect colors</p>
             </div>

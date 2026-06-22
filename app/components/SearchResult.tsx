@@ -188,13 +188,13 @@ export default function SearchResult() {
       <div className="mx-auto max-w-lg">
         <div className="text-center mb-10">
           <span className="inline-block mb-4 text-[11px] font-semibold uppercase tracking-[0.18em] text-violet-500">
-            Previous Results
+            Your Style Portal
           </span>
           <h2 className="font-serif text-4xl font-bold text-slate-900 mb-2">
-            Find your <em className="not-italic bg-gradient-to-r from-violet-500 to-pink-500 bg-clip-text text-transparent">previous results</em>
+            Track your <em className="not-italic bg-gradient-to-r from-violet-500 to-pink-500 bg-clip-text text-transparent">order</em>
           </h2>
           <p className="text-slate-500 text-sm">
-            Search for your results using the email you used for your analysis
+            Enter the email address you used during purchase to instantly access your style guide.
           </p>
         </div>
 
@@ -209,30 +209,30 @@ export default function SearchResult() {
               exit={{ opacity: 0, y: -16 }}
               transition={{ duration: 0.3 }}
             >
-              <form onSubmit={sendCode} className="bg-white rounded-3xl border border-slate-100 shadow-sm p-8">
-                <div className="flex items-center justify-center mb-6">
+              <form onSubmit={sendCode} className="bg-white rounded-3xl border border-slate-100 shadow-sm p-10">
+                <div className="flex items-center justify-center mb-7">
                   <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-violet-50 border border-violet-100">
                     <Mail className="h-6 w-6 text-violet-500" strokeWidth={1.5} />
                   </div>
                 </div>
-                <p className="text-center text-sm text-slate-500 mb-6">
+                <p className="text-center text-sm text-slate-500 mb-7">
                   A <span className="font-semibold text-slate-700">6-digit one-time code</span> will be sent to your email.
-                  If the code is correct, your previous results will appear.
+                  If the code is correct, your order details will appear.
                 </p>
-                <div className="space-y-4">
+                <div className="space-y-6">
                   <input
                     type="email"
                     value={email}
                     onChange={e => { setEmail(e.target.value); setError(''); }}
                     placeholder="example@email.com"
                     required
-                    className="w-full rounded-2xl border border-slate-200 px-4 py-3.5 text-sm text-slate-700 placeholder-slate-300 outline-none focus:border-violet-300 focus:ring-2 focus:ring-violet-100 transition"
+                    className="w-full rounded-xl border border-slate-200 px-4 py-3.5 text-sm text-slate-700 placeholder-slate-300 outline-none focus:border-violet-300 focus:ring-2 focus:ring-violet-100 transition"
                   />
                   {error && <p className="text-xs text-red-500">{error}</p>}
                   <button
                     type="submit"
                     disabled={loading}
-                    className="w-full rounded-2xl bg-gradient-to-r from-violet-500 via-purple-500 to-pink-500 py-3.5 text-sm font-bold text-white shadow-lg shadow-violet-200 flex items-center justify-center gap-2 hover:scale-[1.02] transition-all active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed"
+                    className="w-full rounded-xl bg-gradient-to-r from-violet-500 via-purple-500 to-pink-500 py-3.5 text-sm font-bold text-white shadow-lg shadow-violet-200 flex items-center justify-center gap-2 hover:scale-[1.02] transition-all active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed"
                   >
                     {loading ? 'Sending…' : <><span>Send verification code</span><ArrowRight className="h-4 w-4" /></>}
                   </button>

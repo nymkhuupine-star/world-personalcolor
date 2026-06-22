@@ -7,23 +7,23 @@ import { Plus, Minus } from 'lucide-react';
 const faqs = [
   {
     question: 'Will my photo be saved?',
-    answer: 'No. We place the highest importance on your privacy. Your uploaded photo is only used for the analysis at that moment and is automatically and permanently deleted from our system as soon as the results are ready.',
+    answer: 'Your privacy is our top priority. Your photos are securely stored in our encrypted database solely for the analysis and are never shared with third parties. You can request to permanently delete your data at any time.',
   },
   {
     question: 'What kind of lighting is best?',
-    answer: 'For the most accurate analysis, photos taken during the day near a window or in natural light are ideal. We recommend avoiding photos taken under artificial or warm-toned lighting, as these can alter the appearance of your natural skin tone.',
+    answer: 'Natural daylight is best! Please take your photo indoors facing a window during the day. Avoid direct sunlight, harsh overhead indoor lights, or using a flash, as they can distort your natural skin undertones.',
   },
   {
     question: 'Can I upload a photo with makeup on?',
-    answer: 'For the most precise analysis of your natural skin tone, we recommend uploading a makeup-free photo. If you do have makeup on, please keep it as minimal as possible.',
+    answer: 'For the most accurate results, we highly recommend uploading a completely makeup-free photo. Even light foundation or tinted moisturizer can mask your skin\'s natural pigment and alter your color season analysis.',
   },
   {
     question: 'How accurate are the results?',
-    answer: 'Because this service analyzes not just your skin, but also your hair and eye color together, the results are highly accurate and personalized.',
+    answer: 'Our analysis is highly accurate. Each photo is carefully reviewed by trained color specialists who assess your skin\'s reaction to digital drapes, rather than relying on fully automated, unpredictable AI filters.',
   },
   {
-    question: 'How do I make a payment?',
-    answer: 'Payment is completed after the analysis is finished. Please note that your report will be sent by email as soon as the payment is confirmed.',
+    question: 'Is my payment secure?',
+    answer: 'Yes, 100%. We use industry-standard encryption protocols. Your payment is securely processed through Stripe and PayPal, and we never store your credit card information on our servers.',
   },
 ];
 

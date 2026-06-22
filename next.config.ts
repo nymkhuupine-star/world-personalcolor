@@ -16,6 +16,11 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
+  images: {
+    remotePatterns: [
+      { protocol: 'https', hostname: 'randomuser.me' },
+    ],
+  },
   async headers() {
     return [
       {

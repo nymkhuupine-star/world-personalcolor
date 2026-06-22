@@ -6,27 +6,31 @@ export const metadata = { title: 'Terms of Service | Personal Color' };
 const sections = [
   {
     title: 'General Provisions',
-    body: '"Personal Color Mongolia" (hereinafter "Platform") is an automated service that performs personal color analysis based on user-submitted photos and delivers recommendation reports digitally. By using this platform, the user is deemed to have accepted the following terms of service.',
+    body: '"Personal Color" (hereinafter referred to as the "Platform") provides professional, digital personal color analysis services based on user-submitted photographs. The Platform delivers customized styling and recommendation reports digitally to the user. By accessing or using our website and services, you agree to be bound by these Terms of Service.',
   },
   {
     title: 'User Responsibilities',
-    body: 'To ensure accurate analysis results, the user is responsible for submitting photos and information that meet the platform\'s requirements and guidelines. Additionally, using another person\'s photo without their consent is strictly prohibited.',
+    body: "To ensure the highest accuracy of the analysis results, the user is responsible for submitting photographs that strictly follow the Platform's lighting and quality guidelines. Submitting or using another individual's photograph without their explicit, documented consent is strictly prohibited and violates our community standards.",
   },
   {
     title: 'Nature of Service',
-    body: 'The analysis results and reports are intended solely for aesthetic and styling recommendations and do not constitute medical or health diagnoses.',
+    body: 'The analysis results, color palettes, and digital style guides provided by the Platform are intended solely for aesthetic, wardrobe, and styling recommendations. These materials do not constitute medical, dermatological, or health-related diagnoses.',
+  },
+  {
+    title: 'Service Delivery (24-Hour Review)',
+    body: 'Unlike fully automated filters, each submission is carefully evaluated by our trained color specialists to ensure premium quality. Your personalized 15-page Digital Style Guide will be processed and delivered to your designated email address within 24 hours from the time of successful payment and photo submission.',
   },
   {
     title: 'Privacy & Data Security',
-    body: 'User-submitted photos and personal information will be used exclusively for color analysis purposes and will not be disclosed to third parties. After the analysis is complete, the user\'s photo will be permanently deleted from the system.',
+    body: 'Your privacy is our utmost priority. All user-submitted photographs and personal information are encrypted and used exclusively for the color analysis process. Your photos are securely stored in our system solely for the duration of the analysis and will never be shared with or disclosed to third parties.',
   },
   {
     title: 'Payment & Refunds',
-    body: 'The analysis process begins automatically once the service fee has been paid in full. Since the automated analysis has been carried out and the report is ready, refunds for the service fee cannot be issued.',
+    body: 'The custom analysis process begins immediately once the service fee is paid in full via our secured payment gateways (Stripe / PayPal). Because each digital report is custom-tailored, uniquely prepared, and delivered upon your specific request, all sales are final, and we cannot issue refunds once the styling report has been generated.',
   },
   {
     title: 'Updates to Terms',
-    body: '"Personal Color Mongolia" reserves the right to update or modify these terms of service at any time in response to market conditions or changes in legislation. Any changes take effect from the date they are published on the website.',
+    body: 'The Platform reserves the right to update, modify, or replace any part of these Terms of Service at any time to reflect changes in our services, market conditions, or international legal requirements. Any modifications will take effect immediately upon being published on the website.',
   },
 ];
 

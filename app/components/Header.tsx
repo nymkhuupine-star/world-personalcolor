@@ -75,7 +75,7 @@ export default function Header() {
             onClick={() => handleNav('#search-result')}
             className="px-4 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-400/60"
           >
-            Find Previous Results
+            Track Order
           </button>
         </nav>
 
@@ -159,7 +159,7 @@ export default function Header() {
                   onClick={() => { setOpen(false); handleNav('#search-result'); }}
                   className="flex w-full items-center justify-between rounded-xl px-4 py-3 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-100"
                 >
-                  <span>Find Previous Results</span>
+                  <span>Track Order</span>
                   <span className="text-slate-400">→</span>
                 </button>
                 <div className="mt-3 px-1 space-y-2">

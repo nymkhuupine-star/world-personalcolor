@@ -2,34 +2,32 @@
 
 import { motion } from 'framer-motion';
 import { Star, Quote } from 'lucide-react';
+import Image from 'next/image';
 
 const testimonials = [
   {
-    name: 'A. Sarnai',
-    role: 'Marketer',
+    name: 'Sarah M.',
+    role: 'Content Creator',
     content: 'I was shocked to realize I had been wearing makeup colors that didn\'t suit me at all. Since getting my analysis, choosing beauty products and clothes has become so much easier and more exciting!',
     stars: 5,
     season: 'Spring',
-    gradient: 'from-rose-400 to-pink-400',
-    initials: 'AS',
+    avatar: 'https://randomuser.me/api/portraits/women/44.jpg',
   },
   {
-    name: 'B. Tulga',
-    role: 'Student',
+    name: 'Brandon T.',
+    role: 'Digital Marketer',
     content: 'The analysis is incredibly precise and accurate. It pinpointed my personal coloring exactly and delivered such a clear, helpful report. Thank you so much!',
     stars: 5,
     season: 'Winter',
-    gradient: 'from-sky-400 to-blue-500',
-    initials: 'BT',
+    avatar: 'https://randomuser.me/api/portraits/men/32.jpg',
   },
   {
-    name: 'D. Nomin',
-    role: 'Designer',
+    name: 'Diana K.',
+    role: 'Fashion Stylist',
     content: 'I never thought discovering my personal color could be this easy and fast. The website design is beautiful and the service is incredibly user-friendly.',
     stars: 5,
     season: 'Summer',
-    gradient: 'from-violet-400 to-purple-500',
-    initials: 'DN',
+    avatar: 'https://randomuser.me/api/portraits/women/68.jpg',
   },
 ];
 
@@ -89,8 +87,8 @@ export default function Testimonials() {
             <motion.div
               key={i}
               variants={cardVariant}
-              whileHover={{ scale: 1.03, transition: { duration: 0.35, ease: [0.22, 1, 0.36, 1] } }}
-              className="flex flex-col rounded-3xl border border-slate-100 bg-white p-7 shadow-sm hover:shadow-md"
+              className="flex flex-col rounded-2xl border border-slate-100/80 bg-white p-7 transition-all duration-300 ease-out hover:-translate-y-2 hover:shadow-[0_20px_50px_rgba(0,0,0,0.06)]"
+              style={{ boxShadow: '0 8px 30px rgba(0,0,0,0.04)' }}
             >
               <Quote className="h-6 w-6 text-slate-200 mb-4" strokeWidth={1.5} />
 
@@ -105,8 +103,8 @@ export default function Testimonials() {
               </p>
 
               <div className="flex items-center gap-3 pt-4 border-t border-slate-100">
-                <div className={`flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br ${t.gradient} text-white text-xs font-bold shadow-sm`}>
-                  {t.initials}
+                <div className="h-10 w-10 rounded-full overflow-hidden shadow-sm flex-shrink-0">
+                  <Image src={t.avatar} alt={t.name} width={40} height={40} className="object-cover" />
                 </div>
                 <div className="flex-1">
                   <p className="text-sm font-bold text-slate-900">{t.name}</p>
@@ -126,7 +124,7 @@ export default function Testimonials() {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, amount: 0.2 }}
           transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
-          className="mt-14 grid grid-cols-3 gap-4 rounded-3xl border border-slate-100 bg-white p-8 shadow-sm"
+          className="mt-14 grid grid-cols-3 gap-4 rounded-3xl border border-slate-100 bg-white p-10 shadow-sm"
         >
           {[
             { value: '1,000+', label: 'Analyses Completed' },
@@ -134,8 +132,8 @@ export default function Testimonials() {
             { value: '4.9★', label: 'Average Rating' },
           ].map(({ value, label }) => (
             <div key={label} className="text-center">
-              <p className="font-serif text-3xl font-bold bg-gradient-to-r from-violet-600 to-pink-500 bg-clip-text text-transparent">{value}</p>
-              <p className="mt-1 text-xs text-slate-400">{label}</p>
+              <p className="font-serif text-5xl font-bold text-violet-600">{value}</p>
+              <p className="mt-2 text-sm font-medium text-slate-400">{label}</p>
             </div>
           ))}
         </motion.div>

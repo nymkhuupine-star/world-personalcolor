@@ -516,7 +516,7 @@ export default function Card() {
           <button
             onClick={handleUpload}
             disabled={uploading}
-            className="group relative w-full overflow-hidden rounded-2xl bg-gradient-to-r from-violet-500 via-purple-500 to-pink-500 py-4 text-sm font-semibold text-white shadow-lg shadow-violet-200/70 transition-all duration-300 hover:scale-[1.025] hover:shadow-xl hover:shadow-violet-300/50 active:scale-[0.975] disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:scale-100"
+            className="group relative w-full overflow-hidden rounded-lg bg-gradient-to-r from-violet-500 via-purple-500 to-pink-500 py-4 text-sm font-semibold text-white shadow-lg shadow-violet-200/70 transition-all duration-300 hover:scale-[1.025] hover:shadow-xl hover:shadow-violet-300/50 active:scale-[0.975] disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:scale-100"
           >
             <span className="relative z-10">
               {uploading

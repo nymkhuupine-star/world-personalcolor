@@ -68,9 +68,11 @@ export default function Benefits() {
           <span className="inline-block mb-4 text-[11px] font-semibold uppercase tracking-[0.18em] text-violet-500">
             Why You Need This
           </span>
-          <h2 className="font-serif text-4xl font-bold text-slate-900 leading-tight">
-            How will this analysis
-            <em className="not-italic bg-gradient-to-r from-violet-500 to-pink-500 bg-clip-text text-transparent"> transform </em>your life?
+          <h2 className="text-4xl font-bold text-slate-900 leading-tight"
+            style={{ fontFamily: 'var(--font-playfair), Georgia, serif' }}>
+            How will this analysis{' '}
+            <em className="italic bg-gradient-to-r from-violet-500 to-pink-500 bg-clip-text text-transparent">transform</em>{' '}
+            your life?
           </h2>
         </motion.div>
 
@@ -85,10 +87,10 @@ export default function Benefits() {
             <motion.div
               key={i}
               variants={cardVariant}
-              whileHover={{ scale: 1.03, transition: { duration: 0.35, ease: [0.22, 1, 0.36, 1] } }}
-              className="group relative rounded-3xl border border-slate-100 bg-white p-8 shadow-sm hover:shadow-lg"
+              className="group relative rounded-2xl border border-slate-100/80 bg-white p-8 transition-all duration-300 ease-out hover:-translate-y-2 hover:shadow-[0_20px_50px_rgba(0,0,0,0.06)]"
+              style={{ boxShadow: '0 8px 30px rgba(0,0,0,0.04)' }}
             >
-              <div className={`absolute inset-x-0 top-0 h-0.5 rounded-t-3xl bg-gradient-to-r ${item.gradient} opacity-0 group-hover:opacity-100 transition-opacity duration-300`} />
+              <div className={`absolute inset-x-0 top-0 h-0.5 rounded-t-2xl bg-gradient-to-r ${item.gradient} opacity-0 group-hover:opacity-100 transition-opacity duration-300`} />
               <div className={`mt-4 mb-6 inline-flex h-12 w-12 items-center justify-center rounded-2xl ${item.bg}`}>
                 <item.icon className={`h-5 w-5 ${item.text}`} strokeWidth={1.5} />
               </div>
