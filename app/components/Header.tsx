@@ -5,6 +5,7 @@ import Image from 'next/image';
 import { useRouter, usePathname } from 'next/navigation';
 import { Menu, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { useUser, UserButton } from '@clerk/nextjs';
 
 type NavItem = {
   href: string;
@@ -20,6 +21,7 @@ export default function Header() {
   const [open, setOpen] = useState(false);
   const router = useRouter();
   const pathname = usePathname();
+  const { isSignedIn } = useUser();
 
   const handleLogo = () => {
     if (pathname === '/') {
@@ -77,7 +79,25 @@ export default function Header() {
           </button>
         </nav>
 
-        <div className="hidden items-center gap-2 lg:flex">
+        <div className="hidden items-center gap-3 lg:flex">
+          {isSignedIn ? (
+            <>
+              <Link
+                href="/dashboard"
+                className="px-4 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900 rounded-xl"
+              >
+                My Dashboard
+              </Link>
+              <UserButton />
+            </>
+          ) : (
+            <Link
+              href="/sign-in"
+              className="px-4 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900 rounded-xl"
+            >
+              Sign In
+            </Link>
+          )}
           <button
             onClick={() => handleNav('#upload')}
             className="rounded-full bg-gradient-to-r from-violet-500 via-purple-500 to-pink-500 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-violet-200 transition-all hover:scale-[1.04] hover:shadow-violet-300 focus:outline-none active:scale-[0.97]"
@@ -142,7 +162,26 @@ export default function Header() {
                   <span>Find Previous Results</span>
                   <span className="text-slate-400">→</span>
                 </button>
-                <div className="mt-3 px-1">
+                <div className="mt-3 px-1 space-y-2">
+                  {isSignedIn ? (
+                    <Link
+                      href="/dashboard"
+                      onClick={() => setOpen(false)}
+                      className="flex w-full items-center justify-between rounded-xl px-4 py-3 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-100"
+                    >
+                      <span>My Dashboard</span>
+                      <span className="text-slate-400">→</span>
+                    </Link>
+                  ) : (
+                    <Link
+                      href="/sign-in"
+                      onClick={() => setOpen(false)}
+                      className="flex w-full items-center justify-between rounded-xl px-4 py-3 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-100"
+                    >
+                      <span>Sign In</span>
+                      <span className="text-slate-400">→</span>
+                    </Link>
+                  )}
                   <button
                     onClick={() => { setOpen(false); handleNav('#upload'); }}
                     className="inline-flex w-full items-center justify-center text-center rounded-xl bg-gradient-to-r from-violet-500 via-purple-500 to-pink-500 px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-violet-200 transition-all hover:scale-[1.03] active:scale-[0.97]"
