@@ -60,7 +60,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <ClerkProvider>
+    <ClerkProvider afterSignOutUrl="/">
+
       <html
         lang="mn"
         className={`${inter.variable} ${playfair.variable} h-full antialiased`}

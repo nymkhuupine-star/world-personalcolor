@@ -91,7 +91,7 @@ export default function DashboardPage() {
             >
               New Analysis
             </Link>
-            <UserButton afterSignOutUrl="/" />
+            <UserButton />
           </div>
         </div>
       </header>
@@ -350,7 +350,7 @@ export default function DashboardPage() {
             </div>
           </div>
           <div className="flex items-center gap-2 pt-1">
-            <UserButton afterSignOutUrl="/" />
+            <UserButton />
             <span className="text-sm text-slate-400">Manage account or sign out</span>
           </div>
         </section>
