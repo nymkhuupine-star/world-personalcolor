@@ -18,6 +18,68 @@ const fadeUp = {
   }),
 };
 
+const archColors = [
+  { color: '#F2C4CE', label: 'Spring' },
+  { color: '#F4A7B9', label: 'Spring' },
+  { color: '#E8735A', label: 'Autumn' },
+  { color: '#F5C842', label: 'Autumn' },
+  { color: '#C8E6C9', label: 'Spring' },
+  { color: '#A8D5A2', label: 'Spring' },
+  { color: '#7EC8E3', label: 'Summer' },
+  { color: '#B5A4D8', label: 'Winter' },
+  { color: '#D4A5A5', label: 'Summer' },
+  { color: '#C4956A', label: 'Autumn' },
+  { color: '#8B4513', label: 'Autumn' },
+  { color: '#2C4770', label: 'Winter' },
+  { color: '#8B2252', label: 'Winter' },
+];
+
+function ColorArch() {
+  const n = archColors.length;
+  const R = 155;
+  const cx = 200;
+  const cy = 200;
+  const dotSize = 22;
+
+  return (
+    <svg
+      viewBox="0 0 400 210"
+      width="400"
+      height="210"
+      className="absolute top-0 left-1/2 -translate-x-1/2"
+      aria-hidden="true"
+    >
+      {archColors.map((item, i) => {
+        const angle = Math.PI - (i / (n - 1)) * Math.PI;
+        const x = cx + R * Math.cos(angle);
+        const y = cy - R * Math.sin(angle);
+        return (
+          <motion.g
+            key={i}
+            initial={{ opacity: 0, scale: 0 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: 0.4 + i * 0.07, duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
+          >
+            <circle
+              cx={x}
+              cy={y}
+              r={dotSize / 2 + 2}
+              fill="white"
+              opacity={0.7}
+            />
+            <circle
+              cx={x}
+              cy={y}
+              r={dotSize / 2}
+              fill={item.color}
+            />
+          </motion.g>
+        );
+      })}
+    </svg>
+  );
+}
+
 export default function HeroSection() {
   return (
     <section className="relative min-h-screen overflow-hidden flex items-center mt-[-100px]"

@@ -8,12 +8,14 @@ import Testimonials from './components/Testimonials';
 import Footer from './components/Footer';
 import PendingPaymentChecker from './components/PendingPaymentChecker';
 
+
 export default function Home() {
   return (
     <>
       <PendingPaymentChecker />
       <Header />
       <HeroSection />
+      {/* <ColorShowcase /> */}
       <Benefits />
       <Testimonials />
       <HowItWorks />
