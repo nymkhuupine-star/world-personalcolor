@@ -1,26 +1,23 @@
 import { auth } from '@clerk/nextjs/server';
-import { createClient } from '@supabase/supabase-js';
 import { getBaseSeason, SEASON_PALETTES, seasonNameToStoragePath } from '@/lib/personal-color/rule-engine';
 import type { SeasonName } from '@/lib/personal-color/rule-engine';
 import { SEASON_DESCRIPTIONS_EN } from '@/lib/personal-color/style-guide';
+import { getSupabaseAdmin } from '@/lib/supabase-admin';
 
 export const runtime = 'nodejs';
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
-);
-
 function getPdfUrl(seasonName: string): string | null {
   try {
+    const sb = getSupabaseAdmin();
     const { folder, file } = seasonNameToStoragePath(seasonName as SeasonName);
-    return supabase.storage.from('reports').getPublicUrl(`${folder}/${file}.pdf`).data.publicUrl;
+    return sb.storage.from('reports').getPublicUrl(`${folder}/${file}.pdf`).data.publicUrl;
   } catch {
     return null;
   }
 }
 
 export async function GET() {
+  const supabase = getSupabaseAdmin();
   const { userId } = await auth();
   if (!userId) return Response.json({ error: 'Unauthorized' }, { status: 401 });
 

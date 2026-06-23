@@ -1,4 +1,3 @@
-import { createClient } from '@supabase/supabase-js';
 import { getBonumInvoiceStatus } from '@/lib/bonum';
 import { deliverResult } from '@/lib/deliverResult';
 import {
@@ -8,20 +7,17 @@ import {
   seasonNameToStoragePath,
 } from '@/lib/personal-color/rule-engine';
 import { SEASON_DESCRIPTIONS } from '@/lib/personal-color/season-descriptions';
+import { getSupabaseAdmin } from '@/lib/supabase-admin';
 
 export const runtime = 'nodejs';
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
-);
 
 type StoredAnalysis = { seasonName: string; imageUrl?: string };
 
 function getPdfUrl(seasonName: string): string | null {
   try {
+    const sb = getSupabaseAdmin();
     const { folder, file: subtypeFile } = seasonNameToStoragePath(seasonName as SeasonName);
-    return supabase.storage.from('reports').getPublicUrl(`${folder}/${subtypeFile}.pdf`).data.publicUrl;
+    return sb.storage.from('reports').getPublicUrl(`${folder}/${subtypeFile}.pdf`).data.publicUrl;
   } catch {
     return null;
   }
@@ -37,6 +33,7 @@ function buildResult(stored: StoredAnalysis | null) {
 }
 
 export async function GET(req: Request) {
+  const supabase = getSupabaseAdmin();
   try {
     const { searchParams } = new URL(req.url);
     const orderId = searchParams.get('orderId');

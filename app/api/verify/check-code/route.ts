@@ -1,4 +1,3 @@
-import { createClient } from '@supabase/supabase-js';
 import { randomUUID } from 'crypto';
 import {
   type SeasonName,
@@ -6,13 +5,9 @@ import {
   getBaseSeason,
 } from '@/lib/personal-color/rule-engine';
 import { SEASON_DESCRIPTIONS } from '@/lib/personal-color/season-descriptions';
+import { getSupabaseAdmin } from '@/lib/supabase-admin';
 
 export const runtime = 'nodejs';
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
 
 function isEmail(v: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
@@ -30,6 +25,7 @@ type AnalysisRow = {
 };
 
 export async function POST(req: Request) {
+  const supabase = getSupabaseAdmin();
   try {
     const body = await req.json().catch(() => ({})) as { email?: unknown; code?: unknown };
     const { email, code } = body;

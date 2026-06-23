@@ -1,13 +1,8 @@
 import { cookies } from 'next/headers';
-import { createClient } from '@supabase/supabase-js';
 import { deliverResult } from '@/lib/deliverResult';
+import { getSupabaseAdmin } from '@/lib/supabase-admin';
 
 export const runtime = 'nodejs';
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
-);
 
 type StoredAnalysis = { seasonName: string; imageUrl?: string };
 
@@ -18,6 +13,7 @@ async function requireAdmin(): Promise<boolean> {
 }
 
 export async function POST(req: Request) {
+  const supabase = getSupabaseAdmin();
   if (!await requireAdmin())
     return Response.json({ error: 'Unauthorized' }, { status: 401 });
 

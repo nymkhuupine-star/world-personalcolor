@@ -1,13 +1,8 @@
-import { createClient } from '@supabase/supabase-js';
 import { createHmac } from 'crypto';
 import { deliverResult } from '@/lib/deliverResult';
+import { getSupabaseAdmin } from '@/lib/supabase-admin';
 
 export const runtime = 'nodejs';
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
-);
 
 function computeChecksum(rawBody: string, key: string): string {
   return createHmac('sha256', Buffer.from(key, 'utf8'))
@@ -52,6 +47,7 @@ function getBaseSeasonFromSeasonName(seasonName: string) {
 }
 
 export async function POST(req: Request) {
+  const supabase = getSupabaseAdmin();
   try {
     const rawBody = await req.text().catch(() => '');
     const checksumHeader = req.headers.get('x-checksum-v2');

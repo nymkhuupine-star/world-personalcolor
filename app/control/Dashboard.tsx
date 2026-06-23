@@ -54,6 +54,7 @@ export default function Dashboard({
   const [loading, setLoading] = useState(false);
   const [regSearch, setRegSearch] = useState('');
   const [paySearch, setPaySearch] = useState('');
+  const [payDate, setPayDate] = useState('');
   const [pdfStatuses, setPdfStatuses] = useState<PdfStatuses>({});
   const [pdfUploading, setPdfUploading] = useState<string | null>(null);
   const [pdfDeleting, setPdfDeleting] = useState<string | null>(null);
@@ -392,6 +393,8 @@ export default function Dashboard({
               loading={loading}
               paySearch={paySearch}
               setPaySearch={setPaySearch}
+              payDate={payDate}
+              setPayDate={setPayDate}
               expandedDays={expandedDays}
               setExpandedDays={setExpandedDays}
               handleConfirmOrder={handleConfirmOrder}

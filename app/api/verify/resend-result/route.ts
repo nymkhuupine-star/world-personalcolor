@@ -1,19 +1,15 @@
-import { createClient } from '@supabase/supabase-js';
 import { sendMail } from '@/lib/mailer';
 import { seasonNameToStoragePath, getBaseSeason, type SeasonName } from '@/lib/personal-color/rule-engine';
+import { getSupabaseAdmin } from '@/lib/supabase-admin';
 
 export const runtime = 'nodejs';
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
 
 const SEASON_MN: Record<string, string> = {
   Spring: 'Хавар', Summer: 'Зун', Autumn: 'Намар', Winter: 'Өвөл',
 };
 
 export async function POST(req: Request) {
+  const supabase = getSupabaseAdmin();
   try {
     const body = await req.json().catch(() => ({})) as { email?: unknown; analysisId?: unknown };
     const { email, analysisId } = body;

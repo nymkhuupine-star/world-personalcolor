@@ -9,6 +9,8 @@ type Props = {
   loading: boolean;
   paySearch: string;
   setPaySearch: (v: string) => void;
+  payDate: string;
+  setPayDate: (v: string) => void;
   expandedDays: Set<string>;
   setExpandedDays: React.Dispatch<React.SetStateAction<Set<string>>>;
   handleConfirmOrder: (id: string) => Promise<void>;
@@ -18,6 +20,7 @@ type Props = {
 
 export default function PaymentsSection({
   orders, loading, paySearch, setPaySearch,
+  payDate, setPayDate,
   expandedDays, setExpandedDays,
   handleConfirmOrder, confirmingId, confirmedId,
 }: Props) {
@@ -28,11 +31,23 @@ export default function PaymentsSection({
 
   const dateKey = (o: Order) => toUBDate((o.paid && o.paid_at) ? o.paid_at : o.created_at);
 
-  const filtered = orders.filter(o =>
-    !paySearch ||
-    o.email.toLowerCase().includes(paySearch.toLowerCase()) ||
-    (o.analysis_result?.seasonName ?? '').toLowerCase().includes(paySearch.toLowerCase())
-  );
+  // Build sorted list of unique dates that have PAID orders
+  const availablePaidDates = Array.from(
+    new Set(paidOrders.map(o => toUBDate(o.paid_at!)))
+  ).sort((a, b) => b.localeCompare(a));
+
+  const filtered = orders.filter(o => {
+    if (payDate) {
+      // Filter only paid orders by their paid_at date
+      if (!o.paid || !o.paid_at) return false;
+      if (toUBDate(o.paid_at) !== payDate) return false;
+    }
+    if (!paySearch) return true;
+    return (
+      o.email.toLowerCase().includes(paySearch.toLowerCase()) ||
+      (o.analysis_result?.seasonName ?? '').toLowerCase().includes(paySearch.toLowerCase())
+    );
+  });
 
   const groups: { day: string; label: string; items: Order[] }[] = [];
   filtered.forEach(o => {
@@ -76,23 +91,46 @@ export default function PaymentsSection({
             <h2 className="text-sm font-bold text-slate-900">Захиалгын бүртгэл</h2>
             <span className="rounded-full bg-violet-50 px-2.5 py-0.5 text-xs font-semibold text-violet-600">{orders.length}</span>
           </div>
-          <div className="relative w-full sm:w-56">
-            <input
-              value={paySearch}
-              onChange={e => setPaySearch(e.target.value)}
-              placeholder="Имэйлээр хайх..."
-              className={`w-full rounded-xl border bg-slate-50 py-2 pl-9 pr-3 text-xs text-slate-700 outline-none focus:ring-2 ${
-                paySearch && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(paySearch)
-                  ? 'border-rose-300 focus:border-rose-300 focus:ring-rose-100'
-                  : 'border-slate-200 focus:border-violet-300 focus:ring-violet-100'
-              }`}
-            />
-            <svg className="absolute left-3 top-2.5 h-3.5 w-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z" />
-            </svg>
-            {paySearch && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(paySearch) && (
-              <p className="absolute left-0 top-full mt-1 text-[10px] text-rose-500">Буруу имэйл формат</p>
-            )}
+          <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+            <div className="relative w-full sm:w-56">
+              <input
+                value={paySearch}
+                onChange={e => setPaySearch(e.target.value)}
+                placeholder="Имэйлээр хайх..."
+                className={`w-full rounded-xl border bg-slate-50 py-2 pl-9 pr-3 text-xs text-slate-700 outline-none focus:ring-2 ${
+                  paySearch && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(paySearch)
+                    ? 'border-rose-300 focus:border-rose-300 focus:ring-rose-100'
+                    : 'border-slate-200 focus:border-violet-300 focus:ring-violet-100'
+                }`}
+              />
+              <svg className="absolute left-3 top-2.5 h-3.5 w-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z" />
+              </svg>
+              {paySearch && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(paySearch) && (
+                <p className="absolute left-0 top-full mt-1 text-[10px] text-rose-500">Буруу имэйл формат</p>
+              )}
+            </div>
+            <div className="flex items-center gap-1.5">
+              <select
+                value={payDate}
+                onChange={e => setPayDate(e.target.value)}
+                className="rounded-xl border border-slate-200 bg-slate-50 py-2 px-3 text-xs text-slate-700 outline-none focus:border-violet-300 focus:ring-2 focus:ring-violet-100"
+              >
+                <option value="">Бүх өдрүүд</option>
+                {availablePaidDates.map(d => {
+                  const [, m, day] = d.split('-');
+                  return (
+                    <option key={d} value={d}>{m}/{day}</option>
+                  );
+                })}
+              </select>
+              {payDate && (
+                <button
+                  onClick={() => setPayDate('')}
+                  className="rounded-lg bg-slate-100 px-2 py-2 text-xs text-slate-400 hover:bg-slate-200 transition-colors"
+                >✕</button>
+              )}
+            </div>
           </div>
         </div>
 
@@ -104,7 +142,7 @@ export default function PaymentsSection({
           <div>
             {groups.map(({ day, label, items }) => {
               const isToday = day === todayStr;
-              const isOpen = isToday || expandedDays.has(day) || !!paySearch;
+              const isOpen = isToday || expandedDays.has(day) || !!paySearch || !!payDate;
               const dayRevenue = items.filter(o => o.paid && (o.amount ?? 0) >= 1000).reduce((s, o) => s + (o.amount ?? 0), 0);
               return (
                 <div key={day}>

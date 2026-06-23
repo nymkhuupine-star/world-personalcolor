@@ -1,12 +1,7 @@
 import { cookies } from 'next/headers';
-import { createClient } from '@supabase/supabase-js';
+import { getSupabaseAdmin } from '@/lib/supabase-admin';
 
 export const runtime = 'nodejs';
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
-);
 
 async function requireAdmin(): Promise<boolean> {
   const cookieStore = await cookies();
@@ -15,6 +10,7 @@ async function requireAdmin(): Promise<boolean> {
 }
 
 export async function GET() {
+  const supabase = getSupabaseAdmin();
   if (!await requireAdmin())
     return Response.json({ error: 'Unauthorized' }, { status: 401 });
 
