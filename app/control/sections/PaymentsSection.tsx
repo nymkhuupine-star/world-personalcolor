@@ -32,15 +32,15 @@ export default function PaymentsSection({
   const dateKey = (o: Order) => toUBDate((o.paid && o.paid_at) ? o.paid_at : o.created_at);
 
   // Build sorted list of unique dates that have PAID orders
+  const paidDateKey = (o: Order) => toUBDate(o.paid_at ?? o.created_at);
   const availablePaidDates = Array.from(
-    new Set(paidOrders.map(o => toUBDate(o.paid_at!)))
+    new Set(paidOrders.map(paidDateKey))
   ).sort((a, b) => b.localeCompare(a));
 
   const filtered = orders.filter(o => {
     if (payDate) {
-      // Filter only paid orders by their paid_at date
-      if (!o.paid || !o.paid_at) return false;
-      if (toUBDate(o.paid_at) !== payDate) return false;
+      if (!o.paid) return false;
+      if (paidDateKey(o) !== payDate) return false;
     }
     if (!paySearch) return true;
     return (
