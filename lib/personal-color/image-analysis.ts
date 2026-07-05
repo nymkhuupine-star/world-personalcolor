@@ -12,7 +12,7 @@ import type { ColorMetrics } from './rule-engine';
 // ── Internal types ────────────────────────────────────────────────────────────
 
 type RGB = { r: number; g: number; b: number };
-type LAB = { L: number; a: number; b: number };
+export type LAB = { L: number; a: number; b: number };
 type Point = { x: number; y: number };
 
 /** Normalized landmark (0-1 range) returned by MediaPipe FaceMesh */
@@ -296,8 +296,44 @@ function clampRound(v: number): number {
 // ── ColorMetrics calculators ─────────────────────────────────────────────────
 
 /**
- * Undertone from skin LAB (b* axis = yellow↑ / blue↓).
- * Hair LAB gives a secondary signal (weighted 20%).
+ * Individual Typology Angle — classifies skin depth from LAB, independent
+ * of undertone. ITA = atan2(L* - 50, b*) * 180/π (Chardon et al.).
+ */
+function calcITA(L: number, b: number): number {
+  return Math.atan2(L - 50, b) * (180 / Math.PI);
+}
+
+type SkinDepthCategory = 'very_light' | 'light' | 'intermediate' | 'tan' | 'brown' | 'dark';
+
+function classifyDepth(ita: number): SkinDepthCategory {
+  if (ita > 55) return 'very_light';
+  if (ita > 41) return 'light';
+  if (ita > 28) return 'intermediate';
+  if (ita > 10) return 'tan';
+  if (ita > -30) return 'brown';
+  return 'dark';
+}
+
+/**
+ * b* neutral-point (mid) and half-range per skin depth category.
+ * Melanin lifts baseline b* (more yellow) as skin gets deeper, regardless of
+ * true undertone — a single fixed cutoff (e.g. b*=12) reads deep/dark skin
+ * as warm by default. Sliding the midpoint with ITA° keeps the warm/cool
+ * split relative to what's normal for that depth instead of absolute.
+ */
+const UNDERTONE_MATRIX: Record<SkinDepthCategory, { mid: number; halfRange: number }> = {
+  very_light:   { mid: 10, halfRange: 9 },
+  light:        { mid: 11, halfRange: 9 },
+  intermediate: { mid: 13, halfRange: 10 },
+  tan:          { mid: 16, halfRange: 10 },
+  brown:        { mid: 19, halfRange: 11 },
+  dark:         { mid: 22, halfRange: 12 },
+};
+
+/**
+ * Undertone from skin LAB (b* axis = yellow↑ / blue↓), thresholded relative
+ * to the skin's own depth (see UNDERTONE_MATRIX). Hair LAB gives a
+ * secondary signal (weighted 20%).
  */
 function calcUndertone(
   skinLab: LAB,
@@ -308,11 +344,15 @@ function calcUndertone(
     ? skinLab.b * 0.80 + hairLab.b * 0.20
     : skinLab.b;
 
-  // Neutral midpoint b*=12 (typical East-Asian skin). Symmetric ±10 range.
-  // warm: b* 2 → 0, b* 22 → 100
-  const warm = clampRound((effB - 2) / 20 * 100);
-  // cool: b* 22 → 0, b* 2 → 100
-  const cool = clampRound((22 - effB) / 20 * 100);
+  const depth = classifyDepth(calcITA(skinLab.L, skinLab.b));
+  const { mid, halfRange } = UNDERTONE_MATRIX[depth];
+  const lo = mid - halfRange;
+  const hi = mid + halfRange;
+
+  // warm: b* = lo → 0, b* = hi → 100
+  const warm = clampRound((effB - lo) / (hi - lo) * 100);
+  // cool: b* = hi → 0, b* = lo → 100
+  const cool = clampRound((hi - effB) / (hi - lo) * 100);
   // neutral peaks when warm ≈ cool
   const neutral = clampRound(100 - Math.abs(warm - cool) * 0.85);
 
@@ -433,13 +473,20 @@ export async function checkImageQuality(imageFile: File): Promise<QualityResult>
 
 // ── Main export ───────────────────────────────────────────────────────────────
 
+/** Pipeline stages reported via onStage — used to show real (not simulated) progress. */
+export type AnalysisStage = 'landmarks' | 'sampling' | 'color';
+
 /**
  * Analyze an image file and return ColorMetrics for the Rule Engine.
  *
  * Must be called in a browser context (uses Canvas API + MediaPipe WASM).
  * Throws a user-readable Mongolian error if no face is detected.
  */
-export async function analyzeImage(imageFile: File): Promise<ColorMetrics> {
+export async function analyzeImage(
+  imageFile: File,
+  hairOverrideLab?: LAB | null,
+  onStage?: (stage: AnalysisStage) => void,
+): Promise<ColorMetrics> {
   if (typeof window === 'undefined') {
     throw new Error('analyzeImage() must be called in a browser context.');
   }
@@ -459,6 +506,8 @@ export async function analyzeImage(imageFile: File): Promise<ColorMetrics> {
   if (faceWidthRatio < 0.12) {
     throw new Error('Нүүр хэт жижиг байна. Нүүрийгээ илүү ойртуулсан зураг оруулна уу.');
   }
+
+  onStage?.('landmarks');
 
   // ── 3. Extract region pixels ──────────────────────────────────────────────
 
@@ -498,18 +547,31 @@ export async function analyzeImage(imageFile: File): Promise<ColorMetrics> {
     ...sampleAroundLandmarks(data, width, height, landmarks, rightEyeIndices, hasIris ? 5 : 4),
   ]);
 
-  // Hair: rectangle above the forehead landmark
-  const faceTop   = landmarks[LM.FACE_TOP];
-  const faceLeft  = landmarks[LM.FACE_LEFT];
-  const faceRight = landmarks[LM.FACE_RIGHT];
+  // Hair: rectangle above the forehead landmark.
+  // Skipped when hairOverrideLab is given — a dyed color read from the photo
+  // is not the person's true undertone/contrast signal, so the questionnaire's
+  // natural hair color LAB is used instead (see analyzeImage callers).
+  let hairLab: LAB | null;
+  if (hairOverrideLab) {
+    hairLab = hairOverrideLab;
+  } else {
+    const faceTop   = landmarks[LM.FACE_TOP];
+    const faceLeft  = landmarks[LM.FACE_LEFT];
+    const faceRight = landmarks[LM.FACE_RIGHT];
 
-  const hairX0 = Math.round((faceLeft.x  - 0.04) * width);
-  const hairX1 = Math.round((faceRight.x + 0.04) * width);
-  const hairY1 = Math.max(0, Math.round(faceTop.y * height) - 8); // just above forehead
+    const hairX0 = Math.round((faceLeft.x  - 0.04) * width);
+    const hairX1 = Math.round((faceRight.x + 0.04) * width);
+    const hairY1 = Math.max(0, Math.round(faceTop.y * height) - 8); // just above forehead
 
-  const hairPixels = hairY1 > 15
-    ? sampleRect(data, width, hairX0, 0, hairX1, hairY1)
-    : [];
+    const hairPixels = hairY1 > 15
+      ? sampleRect(data, width, hairX0, 0, hairX1, hairY1)
+      : [];
+
+    const hairRGB = avgRGB(hairPixels.length >= 30 ? hairPixels : []);
+    hairLab = hairRGB ? rgbToLab(hairRGB) : null;
+  }
+
+  onStage?.('sampling');
 
   // ── 4. Convert to LAB ─────────────────────────────────────────────────────
 
@@ -519,8 +581,7 @@ export async function analyzeImage(imageFile: File): Promise<ColorMetrics> {
   const eyeRGB = avgRGB(eyePixels.length >= 5 ? eyePixels : skinPixels);
   const eyeLab = eyeRGB ? rgbToLab(eyeRGB) : null;
 
-  const hairRGB = avgRGB(hairPixels.length >= 30 ? hairPixels : []);
-  const hairLab = hairRGB ? rgbToLab(hairRGB) : null;
+  onStage?.('color');
 
   // ── 5. Calculate ColorMetrics ─────────────────────────────────────────────
 

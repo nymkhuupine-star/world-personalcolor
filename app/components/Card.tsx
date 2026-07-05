@@ -8,6 +8,16 @@ import supabase from '@/utils/supabase';
 import Questionnaire from './Questionnaire';
 import type { QuestionnaireAnswers } from '@/lib/personal-color/questionnaire';
 import { isQuestionnaireComplete } from '@/lib/personal-color/questionnaire';
+import type { AnalysisStage } from '@/lib/personal-color/image-analysis';
+
+// Real pipeline stage labels — reported live from analyzeImage(), not simulated.
+const STAGE_LABELS: Record<AnalysisStage | 'model' | 'scoring', string> = {
+  model:     'Loading face detection model...',
+  landmarks: 'Detecting 468 facial points...',
+  sampling:  'Measuring skin, hair & eye pixels...',
+  color:     'Converting to CIE L*a*b* color space...',
+  scoring:   'Scoring all 12 seasons...',
+};
 
 const MAX_SIZE = 1024;
 const JPEG_QUALITY = 0.85;
@@ -53,6 +63,7 @@ export default function Card() {
   const [analyzing, setAnalyzing] = useState(false);
   const [photoQualityError, setPhotoQualityError] = useState<{ message: string; issues: string[] } | null>(null);
   const [questionnaireAnswers, setQuestionnaireAnswers] = useState<Partial<QuestionnaireAnswers>>({});
+  const [stageLabel, setStageLabel] = useState<string | null>(null);
 
   // Payment gate — set after successful analysis, never exposes season/colors to UI
   const [readyToPay, setReadyToPay] = useState(false);
@@ -78,6 +89,7 @@ export default function Card() {
     setSubmitError(null);
     setPhotoQualityError(null);
     setQuestionnaireAnswers({});
+    setStageLabel(null);
     setReadyToPay(false);
     setPaying(false);
     pendingSeason.current   = null;
@@ -165,14 +177,29 @@ export default function Card() {
       }
 
       // 3. MediaPipe face detection + Rule Engine → seasonName (client-side, result NOT shown to user)
+      setChecking(false);
+      setAnalyzing(true);
+      setStageLabel(STAGE_LABELS.model);
+
       let seasonName: string;
       try {
         const { analyzeImage }              = await import('@/lib/personal-color/image-analysis');
         const { getPrimaryAndSecondarySeason } = await import('@/lib/personal-color/rule-engine');
-        const { questionnaireToMetrics, mergeMetrics, isQuestionnaireComplete: isComplete }
+        const { questionnaireToMetrics, mergeMetrics, isQuestionnaireComplete: isComplete, HAIR_LAB }
           = await import('@/lib/personal-color/questionnaire');
 
-        const imageMetrics  = await analyzeImage(compressed);
+        // Dyed hair reads the dye color from the photo, not the true undertone
+        // signal — override with the questionnaire's natural hair color LAB.
+        const hairOverrideLab =
+          questionnaireAnswers.hairDyed === 'yes' && questionnaireAnswers.naturalHairColor
+            ? HAIR_LAB[questionnaireAnswers.naturalHairColor]
+            : null;
+
+        const imageMetrics  = await analyzeImage(compressed, hairOverrideLab, (stage) => {
+          setStageLabel(STAGE_LABELS[stage]);
+        });
+        setStageLabel(STAGE_LABELS.scoring);
+
         const colorMetrics  = isComplete(questionnaireAnswers)
           ? mergeMetrics(imageMetrics, questionnaireToMetrics(questionnaireAnswers as QuestionnaireAnswers))
           : imageMetrics;
@@ -197,12 +224,14 @@ export default function Card() {
       pendingImageUrl.current = imgUrl;
       setChecking(false);
       setAnalyzing(false);
+      setStageLabel(null);
       setReadyToPay(true);
 
     } finally {
       isProcessing.current = false;
       setChecking(false);
       setAnalyzing(false);
+      setStageLabel(null);
       setUploading(false);
     }
   };
@@ -323,11 +352,22 @@ export default function Card() {
                   <Loader2 className="h-7 w-7 animate-spin text-white" strokeWidth={2} />
                 </div>
               </div>
-              <div className="text-center space-y-1">
-                <p className="text-sm font-bold text-slate-800">
-                  {analyzing ? 'Analyzing...' : checking ? 'Checking photo quality...' : 'Uploading photo...'}
+              <div className="text-center space-y-1 px-6">
+                <AnimatePresence mode="wait">
+                  <motion.p
+                    key={analyzing ? stageLabel : checking ? 'checking' : 'uploading'}
+                    initial={{ opacity: 0, y: 4 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -4 }}
+                    transition={{ duration: 0.2 }}
+                    className="text-sm font-bold text-slate-800"
+                  >
+                    {analyzing ? (stageLabel ?? 'Analyzing...') : checking ? 'Checking photo quality...' : 'Uploading photo...'}
+                  </motion.p>
+                </AnimatePresence>
+                <p className="text-xs text-slate-400">
+                  {analyzing ? 'No AI guessing — deterministic pixel math only' : 'Please wait'}
                 </p>
-                <p className="text-xs text-slate-400">Please wait</p>
               </div>
             </motion.div>
           )}
@@ -388,7 +428,7 @@ export default function Card() {
                       <span className="relative inline-flex h-2 w-2 rounded-full bg-violet-500" />
                     </span>
                     <span className="text-xs font-semibold tracking-wide text-slate-600">
-                      {analyzing ? 'Analyzing...' : checking ? 'Checking photo quality...' : 'Uploading photo...'}
+                      {analyzing ? (stageLabel ?? 'Analyzing...') : checking ? 'Checking photo quality...' : 'Uploading photo...'}
                     </span>
                   </div>
                 </div>
@@ -520,7 +560,7 @@ export default function Card() {
           >
             <span className="relative z-10">
               {uploading
-                ? analyzing ? 'Analyzing...'
+                ? analyzing ? (stageLabel ?? 'Analyzing...')
                   : checking ? 'Checking photo quality...'
                   : 'Uploading photo...'
                 : file ? 'Analyze My Colors' : 'Upload Photo'}

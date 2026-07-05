@@ -31,6 +31,18 @@ export function isQuestionnaireComplete(a: Partial<QuestionnaireAnswers>): boole
   return true;
 }
 
+// Төрөлхийн үсний өнгө тус бүрийн жишиг LAB утга.
+// Зурагнаас будсан үсний өнгө биш, эдгээрийг image-analysis.ts-ийн
+// analyzeImage()-д hairOverrideLab болгон дамжуулж, будсан үсний дохиог
+// сольж undertone/contrast тооцооллыг залруулна (Card.tsx-д ашиглагдана).
+export const HAIR_LAB: Record<NaturalHairColor, { L: number; a: number; b: number }> = {
+  black:        { L: 15, a: 2,  b: 4  },
+  dark_brown:   { L: 25, a: 8,  b: 12 },
+  medium_brown: { L: 35, a: 10, b: 18 },
+  light_brown:  { L: 45, a: 10, b: 22 },
+  blonde:       { L: 65, a: 4,  b: 28 },
+};
+
 // Үсний өнгө → value + undertone нэмэлт жин
 const HAIR_METRICS: Record<NaturalHairColor, { light: number; medium: number; deep: number; warm: number; cool: number }> = {
   black:        { light:  0, medium: 10, deep: 45, warm:  0, cool:  5 },
