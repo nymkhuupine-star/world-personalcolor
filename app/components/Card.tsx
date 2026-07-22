@@ -3,7 +3,7 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import { useEffect, useRef, useState, type ChangeEvent, type DragEvent } from 'react';
 import Image from 'next/image';
-import { CreditCard, Droplets, Eye, Info, Lock, Sparkles, Sun, Upload, X, Loader2 } from 'lucide-react';
+import { Camera, CreditCard, Droplets, Eye, Info, Lock, Sparkles, Sun, Upload, X, Loader2 } from 'lucide-react';
 import supabase from '@/utils/supabase';
 import Questionnaire from './Questionnaire';
 import type { QuestionnaireAnswers } from '@/lib/personal-color/questionnaire';
@@ -25,6 +25,11 @@ const PRICE = 8900; // ₮ — үнийн дүнг зөвхөн энд өөрч�
 
 // Түр зогсоох тугшлага — true байхад форм хаагдаж мессеж харагдана
 const PAUSED = false;
+
+// 2Checkout зөвшөөрөл авах хүлээгдэж байгаа тул төлбөрийг түр алгасаж,
+// шинжилгээний дараа season-ыг шууд харуулна. Зөвшөөрөл авсны дараа
+// false болгож, доорх payment gate урсгалыг сэргээ.
+const SKIP_PAYMENT = true;
 
 function compressImage(file: File): Promise<File> {
   return new Promise((resolve) => {
@@ -71,14 +76,67 @@ export default function Card() {
   const pendingSeason   = useRef<string | null>(null);
   const pendingImageUrl = useRef<string | null>(null);
 
+  // SKIP_PAYMENT mode — season name shown directly, no payment gate
+  const [resultSeason, setResultSeason] = useState<string | null>(null);
+
   const fileRef = useRef<HTMLInputElement | null>(null);
   const emailRef = useRef<HTMLInputElement | null>(null);
   const isProcessing = useRef(false);
+
+  // Camera capture
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const [showCamera, setShowCamera] = useState(false);
+  const [cameraError, setCameraError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!previewUrl) return;
     return () => URL.revokeObjectURL(previewUrl);
   }, [previewUrl]);
+
+  useEffect(() => {
+    if (showCamera && videoRef.current && streamRef.current) {
+      videoRef.current.srcObject = streamRef.current;
+    }
+  }, [showCamera]);
+
+  // Stop the camera stream if the component unmounts while it's open
+  useEffect(() => {
+    return () => { streamRef.current?.getTracks().forEach((t) => t.stop()); };
+  }, []);
+
+  const closeCamera = () => {
+    streamRef.current?.getTracks().forEach((t) => t.stop());
+    streamRef.current = null;
+    setShowCamera(false);
+  };
+
+  const openCamera = async () => {
+    setCameraError(null);
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' }, audio: false });
+      streamRef.current = stream;
+      setShowCamera(true);
+    } catch {
+      setCameraError('Could not access the camera. Please check your camera permissions or upload a photo instead.');
+    }
+  };
+
+  const capturePhoto = () => {
+    const video = videoRef.current;
+    if (!video || !video.videoWidth) return;
+    const canvas = document.createElement('canvas');
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    canvas.toBlob((blob) => {
+      if (!blob) return;
+      handleFileSelect(new File([blob], `capture-${Date.now()}.jpg`, { type: 'image/jpeg' }));
+      closeCamera();
+    }, 'image/jpeg', JPEG_QUALITY);
+  };
 
   const resetCard = () => {
     if (previewUrl) URL.revokeObjectURL(previewUrl);
@@ -92,6 +150,7 @@ export default function Card() {
     setStageLabel(null);
     setReadyToPay(false);
     setPaying(false);
+    setResultSeason(null);
     pendingSeason.current   = null;
     pendingImageUrl.current = null;
   };
@@ -122,7 +181,7 @@ export default function Card() {
   // Step 1 — upload photo, run client-side analysis, show payment gate
   const handleUpload = async () => {
     if (isProcessing.current) return;
-    if (!file) { fileRef.current?.click(); return; }
+    if (!file) { openCamera(); return; }
 
     const trimmedEmail = email.trim();
     if (!trimmedEmail) {
@@ -225,7 +284,11 @@ export default function Card() {
       setChecking(false);
       setAnalyzing(false);
       setStageLabel(null);
-      setReadyToPay(true);
+      if (SKIP_PAYMENT) {
+        setResultSeason(seasonName);
+      } else {
+        setReadyToPay(true);
+      }
 
     } finally {
       isProcessing.current = false;
@@ -377,15 +440,53 @@ export default function Card() {
         <div
           className="group relative cursor-pointer overflow-hidden rounded-2xl border border-dashed border-slate-200 bg-white/60 transition-all duration-300 hover:border-violet-300/70 hover:bg-violet-50/30"
           style={{ minHeight: '240px' }}
-          onClick={() => !readyToPay && fileRef.current?.click()}
+          onClick={() => !readyToPay && !resultSeason && openCamera()}
           onDrop={handleDrop}
           onDragOver={(e) => e.preventDefault()}
         >
+          {/* Live camera capture overlay */}
+          <AnimatePresence>
+            {showCamera && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="absolute inset-0 z-30 flex flex-col items-center justify-center gap-4 bg-black"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <video
+                  ref={videoRef}
+                  autoPlay
+                  playsInline
+                  muted
+                  className="absolute inset-0 h-full w-full object-cover"
+                  style={{ transform: 'scaleX(-1)' }}
+                />
+                <button
+                  type="button"
+                  onClick={closeCamera}
+                  className="absolute right-2 top-2 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-black/50 text-white backdrop-blur-sm transition-colors hover:bg-black/70"
+                  aria-label="Close camera"
+                >
+                  <X className="h-4 w-4" strokeWidth={2.5} />
+                </button>
+                <button
+                  type="button"
+                  onClick={capturePhoto}
+                  className="absolute bottom-5 z-10 flex h-16 w-16 items-center justify-center rounded-full border-4 border-white bg-white/20 backdrop-blur-sm transition-transform active:scale-90"
+                  aria-label="Take photo"
+                >
+                  <div className="h-12 w-12 rounded-full bg-white" />
+                </button>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
           {previewUrl ? (
             <>
               <Image src={previewUrl} alt="Uploaded photo" fill unoptimized className="object-cover"
                 sizes="(min-width: 1024px) 50vw, 100vw" />
-              {!readyToPay && (
+              {!readyToPay && !resultSeason && (
                 <button
                   type="button"
                   onClick={(e) => {
@@ -406,13 +507,25 @@ export default function Card() {
           ) : (
             <div className="flex h-full flex-col items-center justify-center gap-4 py-10">
               <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-slate-100 bg-white shadow-sm transition-all duration-300 group-hover:border-violet-200 group-hover:shadow-md group-hover:shadow-violet-100/60">
-                <Upload className="h-5 w-5 text-slate-500 transition-colors duration-300 group-hover:text-violet-500" strokeWidth={1.5} />
+                <Camera className="h-5 w-5 text-slate-500 transition-colors duration-300 group-hover:text-violet-500" strokeWidth={1.5} />
               </div>
               <div className="text-center space-y-1">
-                <p className="text-sm font-semibold text-slate-700">Upload your photo</p>
+                <p className="text-sm font-semibold text-slate-700">Take a photo</p>
                 <p className="text-xs text-slate-500">A close-up portrait with your face clearly visible</p>
               </div>
-
+              {cameraError && (
+                <div className="px-6 text-center">
+                  <p className="text-xs text-rose-400 mb-1.5">{cameraError}</p>
+                  <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); fileRef.current?.click(); }}
+                    className="inline-flex items-center gap-1.5 text-xs font-semibold text-violet-500 hover:text-violet-600"
+                  >
+                    <Upload className="h-3 w-3" strokeWidth={2} />
+                    Upload from gallery instead
+                  </button>
+                </div>
+              )}
             </div>
           )}
 
@@ -446,7 +559,7 @@ export default function Card() {
 
         {/* Questionnaire — зураг сонгосон, payment gate харагдаагүй үед */}
         <AnimatePresence>
-          {file && !readyToPay && (
+          {file && !readyToPay && !resultSeason && (
             <Questionnaire answers={questionnaireAnswers} onChange={setQuestionnaireAnswers} />
           )}
         </AnimatePresence>
@@ -503,7 +616,7 @@ export default function Card() {
         </AnimatePresence>
 
         {/* Email input — payment gate харагдахаас өмнө л харагдана */}
-        {(!file || isQuestionnaireComplete(questionnaireAnswers)) && !readyToPay && questionnaireAnswers.gender !== 'male' && (
+        {(!file || isQuestionnaireComplete(questionnaireAnswers)) && !readyToPay && !resultSeason && questionnaireAnswers.gender !== 'male' && (
           <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} className="space-y-2">
             <label htmlFor="email" className="block text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-600">
               Email Address
@@ -552,7 +665,7 @@ export default function Card() {
         </AnimatePresence>
 
         {/* CTA — зураг оруулаагүй эсвэл асуулт дуусаагүй, payment gate харагдахгүй үед */}
-        {(!file || isQuestionnaireComplete(questionnaireAnswers)) && !readyToPay && questionnaireAnswers.gender !== 'male' && (
+        {(!file || isQuestionnaireComplete(questionnaireAnswers)) && !readyToPay && !resultSeason && questionnaireAnswers.gender !== 'male' && (
           <button
             onClick={handleUpload}
             disabled={uploading}
@@ -563,7 +676,7 @@ export default function Card() {
                 ? analyzing ? (stageLabel ?? 'Analyzing...')
                   : checking ? 'Checking photo quality...'
                   : 'Uploading photo...'
-                : file ? 'Analyze My Colors' : 'Upload Photo'}
+                : file ? 'Analyze My Colors' : 'Take a Photo'}
             </span>
             <div className="absolute inset-0 bg-gradient-to-r from-violet-600 via-purple-600 to-pink-600 opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
           </button>
@@ -624,6 +737,40 @@ export default function Card() {
               </button>
 
               {/* Reset link */}
+              <button
+                type="button"
+                onClick={resetCard}
+                className="w-full text-xs text-slate-400 hover:text-slate-600 transition-colors text-center"
+              >
+                ← Run a new analysis
+              </button>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* SKIP_PAYMENT result — 2Checkout зөвшөөрөл хүлээгдэж байгаа тул season-ыг шууд харуулна */}
+        <AnimatePresence>
+          {resultSeason && (
+            <motion.div
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+              className="rounded-2xl border border-violet-100 bg-violet-50/60 px-6 py-5 space-y-4 text-center"
+            >
+              <div className="flex flex-col items-center gap-3">
+                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-violet-100">
+                  <Sparkles className="h-6 w-6 text-violet-600" strokeWidth={1.5} />
+                </div>
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.14em] text-violet-500">Your Personal Color</p>
+                  <p className="mt-1 text-2xl font-bold bg-gradient-to-r from-violet-500 to-pink-500 bg-clip-text text-transparent"
+                    style={{ fontFamily: 'var(--font-playfair), Georgia, serif' }}>
+                    {resultSeason}
+                  </p>
+                </div>
+              </div>
+
               <button
                 type="button"
                 onClick={resetCard}
