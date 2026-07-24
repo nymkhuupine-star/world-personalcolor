@@ -9,13 +9,13 @@ import {
   Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis,
 } from 'recharts';
 import {
-  LayoutDashboard, Users, CreditCard, FileText,
+  LayoutDashboard, Users, CreditCard, FileText, Images,
   TrendingUp, Clock, RefreshCw, ShieldCheck,
   CheckCircle, Loader2, ChevronRight,
 } from 'lucide-react';
-import { reportId, type SeasonKey } from '@/utils/reportPdfs';
+import { REPORT_GROUPS, reportId, type SeasonKey } from '@/utils/reportPdfs';
 import { toUBDate, formatDate, UB_TZ } from './utils';
-import type { Section, Order, Analysis, PdfStatuses } from './types';
+import type { Section, Order, Analysis, PdfStatuses, ImageStatuses, GalleryStatuses } from './types';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -32,11 +32,15 @@ const PaymentsSection = dynamic(() => import('./sections/PaymentsSection'), {
 const PdfsSection = dynamic(() => import('./sections/PdfsSection'), {
   loading: () => <div className="flex items-center justify-center gap-2 py-20 text-slate-400 text-sm"><Loader2 className="h-4 w-4 animate-spin" /> Уншиж байна...</div>,
 });
+const GallerySection = dynamic(() => import('./sections/GallerySection'), {
+  loading: () => <div className="flex items-center justify-center gap-2 py-20 text-slate-400 text-sm"><Loader2 className="h-4 w-4 animate-spin" /> Уншиж байна...</div>,
+});
 
 const NAV = [
   { key: 'overview' as Section, label: 'Тойм', icon: LayoutDashboard },
   { key: 'registrations' as Section, label: 'Бүртгэл', icon: Users },
   { key: 'payments' as Section, label: 'Төлбөр', icon: CreditCard },
+  { key: 'gallery' as Section, label: 'Зураг', icon: Images },
   { key: 'pdfs' as Section, label: 'PDF файлууд', icon: FileText },
 ];
 
@@ -60,6 +64,15 @@ export default function Dashboard({
   const [pdfDeleting, setPdfDeleting] = useState<string | null>(null);
   const [pdfSuccess, setPdfSuccess] = useState<string | null>(null);
   const [pdfError, setPdfError] = useState<string | null>(null);
+  const [imageStatuses, setImageStatuses] = useState<ImageStatuses>({});
+  const [imageUploading, setImageUploading] = useState<string | null>(null);
+  const [imageDeleting, setImageDeleting] = useState<string | null>(null);
+  const [imageSuccess, setImageSuccess] = useState<string | null>(null);
+  const [imageError, setImageError] = useState<string | null>(null);
+  const [galleryStatuses, setGalleryStatuses] = useState<GalleryStatuses>({});
+  const [galleryUploading, setGalleryUploading] = useState<string | null>(null);
+  const [galleryDeleting, setGalleryDeleting] = useState<string | null>(null);
+  const [galleryError, setGalleryError] = useState<string | null>(null);
   const [expandedSeason, setExpandedSeason] = useState<string | null>(null);
   const [confirmingId, setConfirmingId] = useState<string | null>(null);
   const [confirmedId, setConfirmedId] = useState<string | null>(null);
@@ -90,6 +103,23 @@ export default function Dashboard({
   const fetchPdfStatuses = useCallback(async () => {
     const res = await fetch('/api/admin/pdf');
     if (res.ok) setPdfStatuses(await res.json());
+  }, []);
+
+  const fetchImageStatuses = useCallback(async () => {
+    const res = await fetch('/api/admin/image');
+    if (res.ok) setImageStatuses(await res.json());
+  }, []);
+
+  const fetchGalleryStatuses = useCallback(async () => {
+    const entries = await Promise.all(
+      REPORT_GROUPS.flatMap((group) => group.subtypes.map(async (s) => {
+        const id = reportId(group.key, s.key);
+        const res = await fetch(`/api/admin/gallery?season=${group.key}&subtype=${s.key}`);
+        const data = res.ok ? await res.json() as { images: GalleryStatuses[string] } : { images: [] };
+        return [id, data.images] as const;
+      }))
+    );
+    setGalleryStatuses(Object.fromEntries(entries));
   }, []);
 
   const handleConfirmOrder = async (orderId: string) => {
@@ -168,14 +198,130 @@ export default function Dashboard({
     setPdfUploading(null);
   };
 
+  const handleImageDelete = async (season: SeasonKey, subtype: string) => {
+    const id = reportId(season, subtype);
+    if (!confirm(`"${subtype}" улирлын зургийг устгах уу?`)) return;
+    setImageDeleting(id);
+    setImageSuccess(null);
+    setImageError(null);
+    try {
+      const res = await fetch('/api/admin/image', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ season, subtype }),
+      });
+      if (res.ok) {
+        await fetchImageStatuses();
+      } else {
+        const data = (await res.json()) as { error?: string };
+        setImageError(data.error ?? `Алдаа гарлаа (${res.status}).`);
+      }
+    } catch {
+      setImageError('Сервертэй холбогдож чадсангүй.');
+    }
+    setImageDeleting(null);
+  };
+
+  const handleImageUpload = async (season: SeasonKey, subtype: string, file: File) => {
+    const id = reportId(season, subtype);
+    setImageUploading(id);
+    setImageSuccess(null);
+    setImageError(null);
+    try {
+      const signRes = await fetch('/api/admin/image', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ season, subtype, mimeType: file.type }),
+      });
+      if (!signRes.ok) {
+        const data = await signRes.json().catch(() => ({})) as { error?: string };
+        setImageError(data.error ?? `Алдаа гарлаа (${signRes.status}).`);
+        setImageUploading(null);
+        return;
+      }
+      const { token, path } = await signRes.json() as { signedUrl: string; token: string; path: string; ext: string };
+      const { error: uploadError } = await supabase.storage
+        .from('reports')
+        .uploadToSignedUrl(path, token, file, { contentType: file.type });
+      if (uploadError) {
+        setImageError(uploadError.message ?? 'Upload амжилтгүй боллоо.');
+      } else {
+        setImageSuccess(id);
+        await fetchImageStatuses();
+        setTimeout(() => setImageSuccess(null), 3000);
+      }
+    } catch {
+      setImageError('Сервертэй холбогдож чадсангүй.');
+    }
+    setImageUploading(null);
+  };
+
+  const handleGalleryDelete = async (season: SeasonKey, subtype: string, name: string) => {
+    const id = reportId(season, subtype);
+    const deletingKey = `${id}/${name}`;
+    if (!confirm('Энэ зургийг устгах уу?')) return;
+    setGalleryDeleting(deletingKey);
+    setGalleryError(null);
+    try {
+      const res = await fetch('/api/admin/gallery', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ season, subtype, name }),
+      });
+      if (res.ok) {
+        setGalleryStatuses((prev) => ({ ...prev, [id]: (prev[id] ?? []).filter((img) => img.name !== name) }));
+      } else {
+        const data = (await res.json()) as { error?: string };
+        setGalleryError(data.error ?? `Алдаа гарлаа (${res.status}).`);
+      }
+    } catch {
+      setGalleryError('Сервертэй холбогдож чадсангүй.');
+    }
+    setGalleryDeleting(null);
+  };
+
+  const handleGalleryUpload = async (season: SeasonKey, subtype: string, file: File) => {
+    const id = reportId(season, subtype);
+    setGalleryUploading(id);
+    setGalleryError(null);
+    try {
+      const signRes = await fetch('/api/admin/gallery', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ season, subtype, mimeType: file.type }),
+      });
+      if (!signRes.ok) {
+        const data = await signRes.json().catch(() => ({})) as { error?: string };
+        setGalleryError(data.error ?? `Алдаа гарлаа (${signRes.status}).`);
+        setGalleryUploading(null);
+        return;
+      }
+      const { token, path } = await signRes.json() as { signedUrl: string; token: string; path: string };
+      const { error: uploadError } = await supabase.storage
+        .from('reports')
+        .uploadToSignedUrl(path, token, file, { contentType: file.type });
+      if (uploadError) {
+        setGalleryError(uploadError.message ?? 'Upload амжилтгүй боллоо.');
+      } else {
+        const name = path.split('/').pop()!;
+        const url = supabase.storage.from('reports').getPublicUrl(path).data.publicUrl;
+        setGalleryStatuses((prev) => ({ ...prev, [id]: [...(prev[id] ?? []), { name, url }] }));
+      }
+    } catch {
+      setGalleryError('Сервертэй холбогдож чадсангүй.');
+    }
+    setGalleryUploading(null);
+  };
+
   // Load data only when section is first visited
   useEffect(() => {
     if (loadedSections.current.has(section)) return;
     loadedSections.current.add(section);
     if (section === 'overview' || section === 'payments') void fetchOrders();
     if (section === 'registrations') void fetchAnalyses();
-    if (section === 'pdfs') void fetchPdfStatuses();
-  }, [section, fetchOrders, fetchAnalyses, fetchPdfStatuses]);
+    if (section === 'pdfs') { void fetchPdfStatuses(); void fetchImageStatuses(); }
+    if (section === 'gallery') void fetchGalleryStatuses();
+  }, [section, fetchOrders, fetchAnalyses, fetchPdfStatuses, fetchImageStatuses, fetchGalleryStatuses]);
 
   // Fetch orders on mount only if server didn't preload
   useEffect(() => {
@@ -221,7 +367,8 @@ export default function Dashboard({
   const handleRefresh = () => {
     if (section === 'overview' || section === 'payments') void fetchOrders();
     if (section === 'registrations') void fetchAnalyses();
-    if (section === 'pdfs') void fetchPdfStatuses();
+    if (section === 'pdfs') { void fetchPdfStatuses(); void fetchImageStatuses(); }
+    if (section === 'gallery') void fetchGalleryStatuses();
   };
 
   return (
@@ -403,6 +550,20 @@ export default function Dashboard({
             />
           )}
 
+          {/* ── Gallery ── */}
+          {section === 'gallery' && (
+            <GallerySection
+              galleryStatuses={galleryStatuses}
+              galleryError={galleryError}
+              galleryUploading={galleryUploading}
+              galleryDeleting={galleryDeleting}
+              expandedSeason={expandedSeason}
+              setExpandedSeason={setExpandedSeason}
+              handleGalleryUpload={handleGalleryUpload}
+              handleGalleryDelete={handleGalleryDelete}
+            />
+          )}
+
           {/* ── PDFs ── */}
           {section === 'pdfs' && (
             <PdfsSection
@@ -415,6 +576,13 @@ export default function Dashboard({
               setExpandedSeason={setExpandedSeason}
               handlePdfUpload={handlePdfUpload}
               handlePdfDelete={handlePdfDelete}
+              imageStatuses={imageStatuses}
+              imageError={imageError}
+              imageUploading={imageUploading}
+              imageDeleting={imageDeleting}
+              imageSuccess={imageSuccess}
+              handleImageUpload={handleImageUpload}
+              handleImageDelete={handleImageDelete}
             />
           )}
         </div>

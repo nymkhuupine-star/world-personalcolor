@@ -1,4 +1,4 @@
-export type Section = 'overview' | 'registrations' | 'payments' | 'pdfs';
+export type Section = 'overview' | 'registrations' | 'payments' | 'gallery' | 'pdfs';
 
 export type Analysis = {
   id: string;
@@ -27,3 +27,11 @@ export type Order = {
 };
 
 export type PdfStatuses = Record<string, boolean>;
+
+/** reportId → image file extension currently stored ("jpg"/"png"/"webp"), or null if none. */
+export type ImageStatuses = Record<string, string | null>;
+
+export type GalleryImage = { name: string; url: string };
+
+/** reportId → the season's uploaded gallery images (unbounded count, unlike the single ImageStatuses slot). */
+export type GalleryStatuses = Record<string, GalleryImage[]>;

@@ -77,6 +77,22 @@ export function reportId(season: SeasonKey, subtype: string) {
   return `${season}/${subtype}`;
 }
 
+/**
+ * Resolves a full 12-season name (e.g. "Light Spring", exactly the shape
+ * SeasonName in rule-engine.ts produces) to its {season, subtype} pair —
+ * every subtype's `.label` above is one of those 12 exact names, so this is
+ * just a reverse lookup. Used to find which gallery folder to show a user
+ * their finished result (see AnalysisResult.tsx / ResultGallery).
+ */
+export function resolveFullSeasonName(fullName: string): { season: SeasonKey; subtype: string } | null {
+  const normalized = fullName.trim().toLowerCase();
+  for (const group of REPORT_GROUPS) {
+    const match = group.subtypes.find((s) => s.label.toLowerCase() === normalized);
+    if (match) return { season: group.key, subtype: match.key };
+  }
+  return null;
+}
+
 export function parseReportId(id: string): { season: SeasonKey; subtype: string } | null {
   const [seasonRaw, subtypeRaw, ...rest] = id.split('/');
   if (rest.length) return null;

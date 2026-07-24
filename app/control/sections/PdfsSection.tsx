@@ -2,9 +2,9 @@
 
 import { useRef } from 'react';
 import { createClient } from '@supabase/supabase-js';
-import { Folder, Upload, CheckCircle, XCircle, Loader2, Trash2, ChevronDown } from 'lucide-react';
+import { Folder, Upload, CheckCircle, XCircle, Loader2, Trash2, ChevronDown, ImageIcon } from 'lucide-react';
 import { REPORT_GROUPS, reportId, type SeasonKey } from '@/utils/reportPdfs';
-import type { PdfStatuses } from '../types';
+import type { PdfStatuses, ImageStatuses } from '../types';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -21,23 +21,38 @@ type Props = {
   setExpandedSeason: (v: string | null) => void;
   handlePdfUpload: (season: SeasonKey, subtype: string, file: File) => void;
   handlePdfDelete: (season: SeasonKey, subtype: string) => void;
+  imageStatuses: ImageStatuses;
+  imageError: string | null;
+  imageUploading: string | null;
+  imageDeleting: string | null;
+  imageSuccess: string | null;
+  handleImageUpload: (season: SeasonKey, subtype: string, file: File) => void;
+  handleImageDelete: (season: SeasonKey, subtype: string) => void;
 };
 
 export default function PdfsSection({
   pdfStatuses, pdfError, pdfUploading, pdfDeleting, pdfSuccess,
   expandedSeason, setExpandedSeason, handlePdfUpload, handlePdfDelete,
+  imageStatuses, imageError, imageUploading, imageDeleting, imageSuccess,
+  handleImageUpload, handleImageDelete,
 }: Props) {
-  const fileRefs = useRef<Record<string, HTMLInputElement | null>>({});
+  const pdfFileRefs = useRef<Record<string, HTMLInputElement | null>>({});
+  const imageFileRefs = useRef<Record<string, HTMLInputElement | null>>({});
 
   return (
     <div className="space-y-4">
       <p className="text-sm text-slate-500">
-        Шинжилгээний дараа имэйлээр илгээгдэх PDF тайлангуудыг энд оруулна уу.
-        Улирал бүр дотроо 3 PDF файлтай (Light/True/Bright гэх мэт).
+        Шинжилгээний дараа имэйлээр илгээгдэх PDF тайлангууд болон улирал бүрийн жишиг зургийг энд оруулна уу.
+        Улирал бүр дотроо 3 дэд төрөлтэй (Light/True/Bright гэх мэт), тус бүрдээ PDF болон зураг тусад нь байна.
       </p>
       {pdfError && (
         <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
           {pdfError}
+        </div>
+      )}
+      {imageError && (
+        <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+          {imageError}
         </div>
       )}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -69,26 +84,46 @@ export default function PdfsSection({
                 <div className="mt-4 space-y-3">
                   {subtypes.map(s => {
                     const id = reportId(key, s.key);
-                    const exists = pdfStatuses[id];
-                    const isUploading = pdfUploading === id;
-                    const isSuccess = pdfSuccess === id;
+                    const pdfExists = pdfStatuses[id];
+                    const isPdfUploading = pdfUploading === id;
+                    const isPdfSuccess = pdfSuccess === id;
+                    const imageExt = imageStatuses[id];
+                    const isImageUploading = imageUploading === id;
+                    const isImageSuccess = imageSuccess === id;
+                    const imageUrl = imageExt
+                      ? supabase.storage.from('reports').getPublicUrl(`${key}/${s.key}.${imageExt}`).data.publicUrl
+                      : null;
+
                     return (
-                      <div key={id} className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+                      <div key={id} className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 space-y-3">
                         <div className="flex items-center justify-between gap-3">
                           <div className="min-w-0">
                             <p className="truncate text-xs font-semibold text-slate-700">{s.label}</p>
-                            <p className="text-[11px] text-slate-400">{key}/{s.key}.pdf</p>
+                            <p className="text-[11px] text-slate-400">{key}/{s.key}</p>
                           </div>
-                          {isSuccess ? (
+                          {imageUrl && (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img
+                              src={imageUrl}
+                              alt={s.label}
+                              className="h-10 w-10 shrink-0 rounded-lg border border-slate-200 object-cover"
+                            />
+                          )}
+                        </div>
+
+                        {/* PDF row */}
+                        <div className="flex items-center justify-between gap-3 rounded-lg bg-white px-3 py-2 border border-slate-100">
+                          <span className="text-[11px] font-semibold text-slate-500">PDF</span>
+                          {isPdfSuccess ? (
                             <span className="flex items-center gap-1 text-xs font-semibold text-emerald-600"><CheckCircle className="h-4 w-4" strokeWidth={1.5} /> Амжилттай</span>
-                          ) : exists === true ? (
+                          ) : pdfExists === true ? (
                             <span className="flex items-center gap-1 text-xs font-semibold text-emerald-600"><CheckCircle className="h-4 w-4" strokeWidth={1.5} /> Байна</span>
-                          ) : exists === false ? (
+                          ) : (
                             <span className="flex items-center gap-1 text-xs font-semibold text-rose-500"><XCircle className="h-4 w-4" strokeWidth={1.5} /> Байхгүй</span>
-                          ) : null}
+                          )}
                         </div>
                         <input
-                          ref={el => { fileRefs.current[id] = el; }}
+                          ref={el => { pdfFileRefs.current[id] = el; }}
                           type="file"
                           accept="application/pdf"
                           className="sr-only"
@@ -98,21 +133,21 @@ export default function PdfsSection({
                             e.target.value = '';
                           }}
                         />
-                        <div className="mt-3 flex items-center gap-2">
+                        <div className="flex items-center gap-2">
                           <button
-                            onClick={() => fileRefs.current[id]?.click()}
-                            disabled={isUploading || pdfDeleting === id}
+                            onClick={() => pdfFileRefs.current[id]?.click()}
+                            disabled={isPdfUploading || pdfDeleting === id}
                             className={`flex flex-1 items-center justify-center gap-2 rounded-xl border py-2 text-xs font-semibold transition-all ${
-                              isUploading || pdfDeleting === id
+                              isPdfUploading || pdfDeleting === id
                                 ? 'border-slate-200 bg-white text-slate-400 cursor-not-allowed'
                                 : `border-current ${color} hover:${bg}`
                             }`}
                           >
-                            {isUploading
+                            {isPdfUploading
                               ? <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Хуулж байна...</>
-                              : <><Upload className="h-3.5 w-3.5" strokeWidth={1.5} />{exists ? 'PDF солих' : 'PDF оруулах'}</>}
+                              : <><Upload className="h-3.5 w-3.5" strokeWidth={1.5} />{pdfExists ? 'PDF солих' : 'PDF оруулах'}</>}
                           </button>
-                          {exists && (
+                          {pdfExists && (
                             <a
                               href={supabase.storage.from('reports').getPublicUrl(`${key}/${s.key}.pdf`).data.publicUrl}
                               target="_blank"
@@ -122,14 +157,74 @@ export default function PdfsSection({
                               Харах →
                             </a>
                           )}
-                          {exists && (
+                          {pdfExists && (
                             <button
                               onClick={() => handlePdfDelete(key, s.key)}
-                              disabled={pdfDeleting === id || isUploading}
+                              disabled={pdfDeleting === id || isPdfUploading}
                               title="Устгах"
                               className="flex items-center justify-center rounded-xl border border-rose-200 bg-rose-50 p-2 text-rose-500 transition-all hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-40"
                             >
                               {pdfDeleting === id
+                                ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                : <Trash2 className="h-3.5 w-3.5" strokeWidth={1.5} />}
+                            </button>
+                          )}
+                        </div>
+
+                        {/* Image row */}
+                        <div className="flex items-center justify-between gap-3 rounded-lg bg-white px-3 py-2 border border-slate-100">
+                          <span className="text-[11px] font-semibold text-slate-500">Зураг</span>
+                          {isImageSuccess ? (
+                            <span className="flex items-center gap-1 text-xs font-semibold text-emerald-600"><CheckCircle className="h-4 w-4" strokeWidth={1.5} /> Амжилттай</span>
+                          ) : imageExt ? (
+                            <span className="flex items-center gap-1 text-xs font-semibold text-emerald-600"><CheckCircle className="h-4 w-4" strokeWidth={1.5} /> Байна</span>
+                          ) : (
+                            <span className="flex items-center gap-1 text-xs font-semibold text-rose-500"><XCircle className="h-4 w-4" strokeWidth={1.5} /> Байхгүй</span>
+                          )}
+                        </div>
+                        <input
+                          ref={el => { imageFileRefs.current[id] = el; }}
+                          type="file"
+                          accept="image/jpeg,image/png,image/webp"
+                          className="sr-only"
+                          onChange={e => {
+                            const f = e.target.files?.[0];
+                            if (f) handleImageUpload(key, s.key, f);
+                            e.target.value = '';
+                          }}
+                        />
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => imageFileRefs.current[id]?.click()}
+                            disabled={isImageUploading || imageDeleting === id}
+                            className={`flex flex-1 items-center justify-center gap-2 rounded-xl border py-2 text-xs font-semibold transition-all ${
+                              isImageUploading || imageDeleting === id
+                                ? 'border-slate-200 bg-white text-slate-400 cursor-not-allowed'
+                                : `border-current ${color} hover:${bg}`
+                            }`}
+                          >
+                            {isImageUploading
+                              ? <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Хуулж байна...</>
+                              : <><ImageIcon className="h-3.5 w-3.5" strokeWidth={1.5} />{imageExt ? 'Зураг солих' : 'Зураг оруулах'}</>}
+                          </button>
+                          {imageUrl && (
+                            <a
+                              href={imageUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-xs text-slate-400 hover:text-slate-600 transition-colors whitespace-nowrap"
+                            >
+                              Харах →
+                            </a>
+                          )}
+                          {imageExt && (
+                            <button
+                              onClick={() => handleImageDelete(key, s.key)}
+                              disabled={imageDeleting === id || isImageUploading}
+                              title="Устгах"
+                              className="flex items-center justify-center rounded-xl border border-rose-200 bg-rose-50 p-2 text-rose-500 transition-all hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-40"
+                            >
+                              {imageDeleting === id
                                 ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
                                 : <Trash2 className="h-3.5 w-3.5" strokeWidth={1.5} />}
                             </button>

@@ -2,6 +2,7 @@
 
 import { AnimatePresence, motion } from 'framer-motion';
 import { CreditCard, Lock, Sparkles } from 'lucide-react';
+import ResultGallery from './ResultGallery';
 
 interface Props {
   /** Payment gate — shown after analysis when SKIP_PAYMENT is false; never exposes season/colors. */
@@ -106,6 +107,8 @@ export default function AnalysisResult({ readyToPay, paying, price, onPay, resul
                 </p>
               </div>
             </div>
+
+            <ResultGallery seasonName={resultSeason} />
 
             <button
               type="button"
