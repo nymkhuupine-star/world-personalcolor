@@ -2,6 +2,7 @@
 
 import { AnimatePresence, motion } from 'framer-motion';
 import { useEffect, useRef, useState, type ChangeEvent, type DragEvent } from 'react';
+import { createPortal } from 'react-dom';
 import Image from 'next/image';
 import { Camera, CreditCard, Droplets, Eye, Info, Lock, Sparkles, Sun, Upload, X, Loader2 } from 'lucide-react';
 import supabase from '@/utils/supabase';
@@ -88,6 +89,8 @@ export default function Card() {
   const streamRef = useRef<MediaStream | null>(null);
   const [showCamera, setShowCamera] = useState(false);
   const [cameraError, setCameraError] = useState<string | null>(null);
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setMounted(true); }, []);
 
   useEffect(() => {
     if (!previewUrl) return;
@@ -98,6 +101,14 @@ export default function Card() {
     if (showCamera && videoRef.current && streamRef.current) {
       videoRef.current.srcObject = streamRef.current;
     }
+  }, [showCamera]);
+
+  // Lock background scroll while the full-screen camera is open
+  useEffect(() => {
+    if (!showCamera) return;
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = prevOverflow; };
   }, [showCamera]);
 
   // Stop the camera stream if the component unmounts while it's open
@@ -117,9 +128,17 @@ export default function Card() {
     if (cameraError) { fileRef.current?.click(); return; }
     setCameraError(null);
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' }, audio: false });
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          facingMode: 'user',
+          width:  { ideal: 3840 },
+          height: { ideal: 2160 },
+        },
+        audio: false,
+      });
       streamRef.current = stream;
       setShowCamera(true);
+      console.log('Camera actual settings:', stream.getVideoTracks()[0]?.getSettings());
     } catch (err) {
       console.error('Camera access failed:', err);
       setCameraError('Could not access the camera. Please check your camera permissions or upload a photo instead.');
@@ -394,6 +413,7 @@ export default function Card() {
   }
 
   return (
+    <>
     <motion.div
       initial={{ opacity: 0, y: 48 }}
       animate={{ opacity: 1, y: 0 }}
@@ -448,44 +468,6 @@ export default function Card() {
           onDrop={handleDrop}
           onDragOver={(e) => e.preventDefault()}
         >
-          {/* Live camera capture overlay */}
-          <AnimatePresence>
-            {showCamera && (
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="absolute inset-0 z-30 flex flex-col items-center justify-center gap-4 bg-black"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <video
-                  ref={videoRef}
-                  autoPlay
-                  playsInline
-                  muted
-                  className="absolute inset-0 h-full w-full object-cover"
-                  style={{ transform: 'scaleX(-1)' }}
-                />
-                <button
-                  type="button"
-                  onClick={closeCamera}
-                  className="absolute right-2 top-2 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-black/50 text-white backdrop-blur-sm transition-colors hover:bg-black/70"
-                  aria-label="Close camera"
-                >
-                  <X className="h-4 w-4" strokeWidth={2.5} />
-                </button>
-                <button
-                  type="button"
-                  onClick={capturePhoto}
-                  className="absolute bottom-5 z-10 flex h-16 w-16 items-center justify-center rounded-full border-4 border-white bg-white/20 backdrop-blur-sm transition-transform active:scale-90"
-                  aria-label="Take photo"
-                >
-                  <div className="h-12 w-12 rounded-full bg-white" />
-                </button>
-              </motion.div>
-            )}
-          </AnimatePresence>
-
           {previewUrl ? (
             <>
               <Image src={previewUrl} alt="Uploaded photo" fill unoptimized className="object-cover"
@@ -788,5 +770,58 @@ export default function Card() {
 
       </div>
     </motion.div>
+
+    {/* Full-screen live camera capture — portaled to body so it always covers the real viewport, on phones, tablets and laptops alike, regardless of any parent animation transforms */}
+    {mounted && createPortal(
+      <AnimatePresence>
+        {showCamera && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[100] flex flex-col bg-black"
+          >
+            <video
+              ref={videoRef}
+              autoPlay
+              playsInline
+              muted
+              className="absolute inset-0 h-full w-full object-cover"
+              style={{ transform: 'scaleX(-1)' }}
+            />
+
+            <div
+              className="absolute inset-x-0 top-0 z-10 flex justify-end bg-gradient-to-b from-black/60 to-transparent p-4"
+              style={{ paddingTop: 'calc(env(safe-area-inset-top) + 1rem)' }}
+            >
+              <button
+                type="button"
+                onClick={closeCamera}
+                className="flex h-10 w-10 items-center justify-center rounded-full bg-black/40 text-white backdrop-blur-sm transition-colors hover:bg-black/60 active:scale-90"
+                aria-label="Close camera"
+              >
+                <X className="h-5 w-5" strokeWidth={2.5} />
+              </button>
+            </div>
+
+            <div
+              className="absolute inset-x-0 bottom-0 z-10 flex items-center justify-center bg-gradient-to-t from-black/60 to-transparent p-6"
+              style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 1.5rem)' }}
+            >
+              <button
+                type="button"
+                onClick={capturePhoto}
+                className="flex h-16 w-16 items-center justify-center rounded-full border-4 border-white bg-white/20 backdrop-blur-sm transition-transform active:scale-90"
+                aria-label="Take photo"
+              >
+                <div className="h-12 w-12 rounded-full bg-white" />
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>,
+      document.body,
+    )}
+    </>
   );
 }
