@@ -1,12 +1,13 @@
 'use client';
 
 import { AnimatePresence, motion } from 'framer-motion';
-import { useEffect, useRef, useState, type ChangeEvent, type DragEvent } from 'react';
-import { createPortal } from 'react-dom';
-import Image from 'next/image';
-import { Camera, CreditCard, Droplets, Eye, Info, Lock, Sparkles, Sun, Upload, X, Loader2 } from 'lucide-react';
+import { useEffect, useRef, useState, type ChangeEvent } from 'react';
+import { Info, Loader2, Sparkles } from 'lucide-react';
 import supabase from '@/utils/supabase';
 import Questionnaire from './Questionnaire';
+import UploadZone, { type UploadZoneHandle } from './UploadZone';
+import CameraCapture, { type CameraCaptureHandle } from './CameraCapture';
+import AnalysisResult from './AnalysisResult';
 import type { QuestionnaireAnswers } from '@/lib/personal-color/questionnaire';
 import { isQuestionnaireComplete } from '@/lib/personal-color/questionnaire';
 import type { AnalysisStage } from '@/lib/personal-color/image-analysis';
@@ -70,6 +71,7 @@ export default function Card() {
   const [photoQualityError, setPhotoQualityError] = useState<{ message: string; issues: string[] } | null>(null);
   const [questionnaireAnswers, setQuestionnaireAnswers] = useState<Partial<QuestionnaireAnswers>>({});
   const [stageLabel, setStageLabel] = useState<string | null>(null);
+  const [cameraError, setCameraError] = useState<string | null>(null);
 
   // Payment gate — set after successful analysis, never exposes season/colors to UI
   const [readyToPay, setReadyToPay] = useState(false);
@@ -80,145 +82,15 @@ export default function Card() {
   // SKIP_PAYMENT mode — season name shown directly, no payment gate
   const [resultSeason, setResultSeason] = useState<string | null>(null);
 
-  const fileRef = useRef<HTMLInputElement | null>(null);
   const emailRef = useRef<HTMLInputElement | null>(null);
   const isProcessing = useRef(false);
-
-  // Camera capture
-  const videoRef = useRef<HTMLVideoElement | null>(null);
-  const streamRef = useRef<MediaStream | null>(null);
-  const lightingCanvasRef = useRef<HTMLCanvasElement | null>(null);
-  const [showCamera, setShowCamera] = useState(false);
-  const [cameraError, setCameraError] = useState<string | null>(null);
-  const [lighting, setLighting] = useState<'dark' | 'yellow' | 'good' | null>(null);
-  const [flashing, setFlashing] = useState(false);
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => { setMounted(true); }, []);
+  const cameraRef = useRef<CameraCaptureHandle>(null);
+  const uploadZoneRef = useRef<UploadZoneHandle>(null);
 
   useEffect(() => {
     if (!previewUrl) return;
     return () => URL.revokeObjectURL(previewUrl);
   }, [previewUrl]);
-
-  useEffect(() => {
-    if (showCamera && videoRef.current && streamRef.current) {
-      videoRef.current.srcObject = streamRef.current;
-    }
-  }, [showCamera]);
-
-  // Lock background scroll while the full-screen camera is open
-  useEffect(() => {
-    if (!showCamera) return;
-    const prevOverflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    return () => { document.body.style.overflow = prevOverflow; };
-  }, [showCamera]);
-
-  // Live lighting gauge — samples a downscaled video frame to gauge brightness & warm-light cast
-  useEffect(() => {
-    if (!showCamera) { setLighting(null); return; }
-    const SIZE = 32;
-    const id = setInterval(() => {
-      const video = videoRef.current;
-      if (!video || video.readyState < 2) return;
-      const canvas = lightingCanvasRef.current ?? (lightingCanvasRef.current = document.createElement('canvas'));
-      canvas.width = SIZE;
-      canvas.height = SIZE;
-      const ctx = canvas.getContext('2d');
-      if (!ctx) return;
-      ctx.drawImage(video, 0, 0, SIZE, SIZE);
-      const { data } = ctx.getImageData(0, 0, SIZE, SIZE);
-      let r = 0, g = 0, b = 0;
-      const pixelCount = data.length / 4;
-      for (let i = 0; i < data.length; i += 4) {
-        r += data[i];
-        g += data[i + 1];
-        b += data[i + 2];
-      }
-      r /= pixelCount; g /= pixelCount; b /= pixelCount;
-      const brightness = 0.299 * r + 0.587 * g + 0.114 * b;
-
-      if (brightness < 70) setLighting('dark');
-      else if (r - b > 35 && brightness < 200) setLighting('yellow');
-      else setLighting('good');
-    }, 400);
-    return () => clearInterval(id);
-  }, [showCamera]);
-
-  // Stop the camera stream if the component unmounts while it's open
-  useEffect(() => {
-    return () => { streamRef.current?.getTracks().forEach((t) => t.stop()); };
-  }, []);
-
-  const closeCamera = () => {
-    streamRef.current?.getTracks().forEach((t) => t.stop());
-    streamRef.current = null;
-    setShowCamera(false);
-  };
-
-  const openCamera = async () => {
-    // Camera already failed once (e.g. permission denied) — retrying just
-    // re-triggers the same failure, so go straight to the file picker.
-    if (cameraError) { fileRef.current?.click(); return; }
-    setCameraError(null);
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: {
-          facingMode: 'user',
-          width:  { ideal: 3840 },
-          height: { ideal: 2160 },
-        },
-        audio: false,
-      });
-      streamRef.current = stream;
-      setShowCamera(true);
-      console.log('Camera actual settings:', stream.getVideoTracks()[0]?.getSettings());
-
-      // Best-effort white balance lock — non-standard, Chrome desktop/Android only.
-      // Real skin-tone correctness doesn't rely on this: applyWhiteBalance() in
-      // image-analysis.ts calibrates against the sclera (white of the eye) per photo,
-      // which works on every device/browser regardless of hardware support here.
-      try {
-        const track = stream.getVideoTracks()[0];
-        const caps = track?.getCapabilities?.() as (MediaTrackCapabilities & { whiteBalanceMode?: string[] }) | undefined;
-        if (caps?.whiteBalanceMode?.includes('continuous')) {
-          await track.applyConstraints({ advanced: [{ whiteBalanceMode: 'continuous' } as unknown as MediaTrackConstraintSet] });
-        }
-      } catch (wbErr) {
-        console.warn('White balance constraint not supported on this device:', wbErr);
-      }
-    } catch (err) {
-      console.error('Camera access failed:', err);
-      setCameraError('Could not access the camera. Please check your camera permissions or upload a photo instead.');
-    }
-  };
-
-  const capturePhoto = () => {
-    const video = videoRef.current;
-    if (!video || !video.videoWidth) return;
-
-    // Screen-flash fill light: a solid white full-screen flash right before the
-    // grab is a genuine, camera-visible light source — unlike a drawn-on UI
-    // border (which the sensor never sees, since it's composited after capture),
-    // this light actually bounces off the face and gets recorded, giving the
-    // sclera-based white balance step a more even, more neutral base to start
-    // from — especially in dim or color-cast rooms.
-    setFlashing(true);
-    setTimeout(() => {
-      const canvas = document.createElement('canvas');
-      canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight;
-      const ctx = canvas.getContext('2d');
-      if (!ctx) { setFlashing(false); return; }
-      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-      canvas.toBlob((blob) => {
-        setFlashing(false);
-        if (!blob) return;
-        handleFileSelect(new File([blob], `capture-${Date.now()}.jpg`, { type: 'image/jpeg' }));
-        closeCamera();
-      }, 'image/jpeg', JPEG_QUALITY);
-    }, 220); // give the flash light a beat to actually hit the face before we grab the frame
-  };
 
   const resetCard = () => {
     if (previewUrl) URL.revokeObjectURL(previewUrl);
@@ -254,16 +126,10 @@ export default function Card() {
     pendingImageUrl.current = null;
   };
 
-  const handleDrop = (e: DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    const f = e.dataTransfer.files[0];
-    if (f) handleFileSelect(f);
-  };
-
   // Step 1 — upload photo, run client-side analysis, show payment gate
   const handleUpload = async () => {
     if (isProcessing.current) return;
-    if (!file) { openCamera(); return; }
+    if (!file) { cameraRef.current?.open(); return; }
 
     const trimmedEmail = email.trim();
     if (!trimmedEmail) {
@@ -417,35 +283,6 @@ export default function Card() {
     }
   };
 
-  const requirements = [
-    {
-      icon: Sun,
-      label: 'Natural Light',
-      tips: [
-        { ok: true,  text: 'Stand facing a window during the day — even, shadow-free lighting' },
-        { ok: false, text: 'Under indoor yellow/white bulbs — distorts natural skin tone' },
-      ],
-    },
-    {
-      icon: Droplets,
-      label: 'No Makeup',
-      tips: [
-        { ok: true,  text: 'No foundation, toner, or mascara — a clean, bare face' },
-        { ok: false, text: 'Photos with cream, blush, or lipstick — hides your natural complexion' },
-      ],
-    },
-    {
-      icon: Eye,
-      label: 'Face Forward',
-      tips: [
-        { ok: true,  text: 'Look directly at the camera with your full face visible' },
-        { ok: false, text: 'Turned to the side or partially visible face' },
-      ],
-    },
-  ];
-
-  const [activeTip, setActiveTip] = useState<number | null>(null);
-
   if (PAUSED) {
     return (
       <motion.div
@@ -473,453 +310,178 @@ export default function Card() {
 
   return (
     <>
-    <motion.div
-      initial={{ opacity: 0, y: 48 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.85, delay: 0.25, ease: [0.22, 1, 0.36, 1] }}
-    >
-      <div
-        className="relative flex flex-col gap-5 rounded-[2rem] border border-pink-100 p-8 shadow-[0_24px_64px_-12px_rgba(0,0,0,0.1),0_0_0_1px_rgba(255,255,255,0.6)] backdrop-blur-2xl"
-        style={{ backgroundColor: 'oklch(97% 0.018 18.334)' }}
+      <motion.div
+        initial={{ opacity: 0, y: 48 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.85, delay: 0.25, ease: [0.22, 1, 0.36, 1] }}
       >
-        {/* Full-card loading overlay */}
-        <AnimatePresence>
-          {uploading && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.2 }}
-              className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-5 rounded-[2rem] bg-white/80 backdrop-blur-sm"
-            >
-              <div className="relative flex h-20 w-20 items-center justify-center">
-                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-violet-300 opacity-30" />
-                <div className="relative flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-violet-500 via-purple-500 to-pink-500 shadow-lg shadow-violet-200">
-                  <Loader2 className="h-7 w-7 animate-spin text-white" strokeWidth={2} />
-                </div>
-              </div>
-              <div className="text-center space-y-1 px-6">
-                <AnimatePresence mode="wait">
-                  <motion.p
-                    key={analyzing ? stageLabel : checking ? 'checking' : 'uploading'}
-                    initial={{ opacity: 0, y: 4 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -4 }}
-                    transition={{ duration: 0.2 }}
-                    className="text-sm font-bold text-slate-800"
-                  >
-                    {analyzing ? (stageLabel ?? 'Analyzing...') : checking ? 'Checking photo quality...' : 'Uploading photo...'}
-                  </motion.p>
-                </AnimatePresence>
-                <p className="text-xs text-slate-400">
-                  {analyzing ? 'No AI guessing — deterministic pixel math only' : 'Please wait'}
-                </p>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        {/* Upload zone */}
         <div
-          className="group relative cursor-pointer overflow-hidden rounded-2xl border border-dashed border-slate-200 bg-white/60 transition-all duration-300 hover:border-violet-300/70 hover:bg-violet-50/30"
-          style={{ minHeight: '240px' }}
-          onClick={() => !readyToPay && !resultSeason && openCamera()}
-          onDrop={handleDrop}
-          onDragOver={(e) => e.preventDefault()}
+          className="relative flex flex-col gap-5 rounded-[2rem] border border-pink-100 p-8 shadow-[0_24px_64px_-12px_rgba(0,0,0,0.1),0_0_0_1px_rgba(255,255,255,0.6)] backdrop-blur-2xl"
+          style={{ backgroundColor: 'oklch(97% 0.018 18.334)' }}
         >
-          {previewUrl ? (
-            <>
-              <Image src={previewUrl} alt="Uploaded photo" fill unoptimized className="object-cover"
-                sizes="(min-width: 1024px) 50vw, 100vw" />
-              {!readyToPay && !resultSeason && (
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setFile(null);
-                    setPreviewUrl(null);
-                    setSubmitError(null);
-                    setPhotoQualityError(null);
-                    setQuestionnaireAnswers({});
-                  }}
-                  className="absolute right-2 top-2 z-10 flex h-7 w-7 items-center justify-center rounded-full bg-black/50 text-white backdrop-blur-sm transition-colors hover:bg-black/70"
-                  aria-label="Remove photo"
-                >
-                  <X className="h-3.5 w-3.5" strokeWidth={2.5} />
-                </button>
-              )}
-            </>
-          ) : (
-            <div className="flex h-full flex-col items-center justify-center gap-4 py-10">
-              <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-slate-100 bg-white shadow-sm transition-all duration-300 group-hover:border-violet-200 group-hover:shadow-md group-hover:shadow-violet-100/60">
-                <Camera className="h-5 w-5 text-slate-500 transition-colors duration-300 group-hover:text-violet-500" strokeWidth={1.5} />
-              </div>
-              <div className="text-center space-y-1">
-                <p className="text-sm font-semibold text-slate-700">Take a photo</p>
-                <p className="text-xs text-slate-500">A close-up portrait with your face clearly visible</p>
-              </div>
-              {cameraError && (
-                <div className="px-6 text-center">
-                  <p className="text-xs text-rose-400 mb-1.5">{cameraError}</p>
-                  <button
-                    type="button"
-                    onClick={(e) => { e.stopPropagation(); fileRef.current?.click(); }}
-                    className="inline-flex items-center gap-1.5 text-xs font-semibold text-violet-500 hover:text-violet-600"
-                  >
-                    <Upload className="h-3 w-3" strokeWidth={2} />
-                    Upload from gallery instead
-                  </button>
-                </div>
-              )}
-            </div>
-          )}
-
+          {/* Full-card loading overlay */}
           <AnimatePresence>
             {uploading && (
-              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                className="absolute inset-0 bg-white/20 backdrop-blur-[3px]">
-                <div className="scanning-laser" />
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="flex items-center gap-2.5 rounded-full bg-white/95 px-5 py-2.5 shadow-lg">
-                    <span className="relative flex h-2 w-2">
-                      <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-violet-400 opacity-75" />
-                      <span className="relative inline-flex h-2 w-2 rounded-full bg-violet-500" />
-                    </span>
-                    <span className="text-xs font-semibold tracking-wide text-slate-600">
-                      {analyzing ? (stageLabel ?? 'Analyzing...') : checking ? 'Checking photo quality...' : 'Uploading photo...'}
-                    </span>
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.2 }}
+                className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-5 rounded-[2rem] bg-white/80 backdrop-blur-sm"
+              >
+                <div className="relative flex h-20 w-20 items-center justify-center">
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-violet-300 opacity-30" />
+                  <div className="relative flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-violet-500 via-purple-500 to-pink-500 shadow-lg shadow-violet-200">
+                    <Loader2 className="h-7 w-7 animate-spin text-white" strokeWidth={2} />
                   </div>
+                </div>
+                <div className="text-center space-y-1 px-6">
+                  <AnimatePresence mode="wait">
+                    <motion.p
+                      key={analyzing ? stageLabel : checking ? 'checking' : 'uploading'}
+                      initial={{ opacity: 0, y: 4 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -4 }}
+                      transition={{ duration: 0.2 }}
+                      className="text-sm font-bold text-slate-800"
+                    >
+                      {analyzing ? (stageLabel ?? 'Analyzing...') : checking ? 'Checking photo quality...' : 'Uploading photo...'}
+                    </motion.p>
+                  </AnimatePresence>
+                  <p className="text-xs text-slate-400">
+                    {analyzing ? 'No AI guessing — deterministic pixel math only' : 'Please wait'}
+                  </p>
                 </div>
               </motion.div>
             )}
           </AnimatePresence>
-        </div>
 
-        <input ref={fileRef} type="file" accept="image/*" className="hidden"
-          onChange={(e: ChangeEvent<HTMLInputElement>) => {
-            const f = e.target.files?.[0];
-            if (f) handleFileSelect(f);
-            e.target.value = '';
-          }} />
+          <UploadZone
+            ref={uploadZoneRef}
+            previewUrl={previewUrl}
+            cameraError={cameraError}
+            uploading={uploading}
+            checking={checking}
+            analyzing={analyzing}
+            stageLabel={stageLabel}
+            readyToPay={readyToPay}
+            resultSeason={resultSeason}
+            onOpenCamera={() => cameraRef.current?.open()}
+            onFileSelect={handleFileSelect}
+            onRemovePhoto={() => {
+              setFile(null);
+              setPreviewUrl(null);
+              setSubmitError(null);
+              setPhotoQualityError(null);
+              setQuestionnaireAnswers({});
+            }}
+          />
 
-        {/* Questionnaire — зураг сонгосон, payment gate харагдаагүй үед */}
-        <AnimatePresence>
-          {file && !readyToPay && !resultSeason && (
-            <Questionnaire answers={questionnaireAnswers} onChange={setQuestionnaireAnswers} />
-          )}
-        </AnimatePresence>
+          {/* Questionnaire — зураг сонгосон, payment gate харагдаагүй үед */}
+          <AnimatePresence>
+            {file && !readyToPay && !resultSeason && (
+              <Questionnaire answers={questionnaireAnswers} onChange={setQuestionnaireAnswers} />
+            )}
+          </AnimatePresence>
 
-        {/* Tips — зураг оруулахаас өмнө л харагдана */}
-        {!file && (
-          <div className="space-y-2">
-            <p className="text-center text-[10px] text-slate-400">Tap to see details</p>
-            <div className="grid grid-cols-3 gap-2">
-              {requirements.map(({ icon: Icon, label }, i) => (
-                <button
-                  key={label}
-                  type="button"
-                  onClick={() => setActiveTip(activeTip === i ? null : i)}
-                  className={`flex flex-col items-center gap-1.5 rounded-xl border px-2 py-3 transition-colors ${
-                    activeTip === i
-                      ? 'border-violet-300 bg-violet-50'
-                      : 'border-slate-100/80 bg-white/60 hover:border-violet-200 hover:bg-violet-50/40'
-                  }`}
-                >
-                  <Icon className={`h-3.5 w-3.5 ${activeTip === i ? 'text-violet-500' : 'text-slate-500'}`} strokeWidth={1.5} />
-                  <span className={`text-center text-[11px] font-medium ${activeTip === i ? 'text-violet-600' : 'text-slate-600'}`}>{label}</span>
-                </button>
-              ))}
-            </div>
-            <div className={`overflow-hidden transition-all duration-200 ${activeTip !== null ? 'max-h-40 opacity-100' : 'max-h-0 opacity-0'}`}>
-              {activeTip !== null && (
-                <div className="rounded-xl border border-violet-100 bg-violet-50/70 px-4 py-3 space-y-1.5">
-                  {requirements[activeTip].tips.map((t, j) => (
-                    <div key={j} className="flex items-start gap-2 text-[11px] leading-relaxed">
-                      <span className={`mt-0.5 shrink-0 font-bold ${t.ok ? 'text-emerald-500' : 'text-rose-400'}`}>
-                        {t.ok ? '✓' : '✗'}
-                      </span>
-                      <span className="text-slate-600">{t.text}</span>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-        )}
+          {/* Male notice */}
+          <AnimatePresence>
+            {questionnaireAnswers.gender === 'male' && (
+              <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+                className="rounded-2xl border px-5 py-4 flex items-start gap-3" style={{ background: '#FCFBFF', border: '1px solid #E9DDFE' }}>
+                <Info className="h-4 w-4 shrink-0 text-violet-400 mt-0.5" strokeWidth={1.8} />
+                <p className="text-xs text-violet-700 leading-relaxed">
+                  A male report will be added soon — please check back later.
+                </p>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
-        {/* Male notice */}
-        <AnimatePresence>
-          {questionnaireAnswers.gender === 'male' && (
-            <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
-              className="rounded-2xl border px-5 py-4 flex items-start gap-3" style={{ background: '#FCFBFF', border: '1px solid #E9DDFE' }}>
-              <Info className="h-4 w-4 shrink-0 text-violet-400 mt-0.5" strokeWidth={1.8} />
-              <p className="text-xs text-violet-700 leading-relaxed">
-                A male report will be added soon — please check back later.
-              </p>
+          {/* Email input — payment gate харагдахаас өмнө л харагдана */}
+          {(!file || isQuestionnaireComplete(questionnaireAnswers)) && !readyToPay && !resultSeason && questionnaireAnswers.gender !== 'male' && (
+            <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} className="space-y-2">
+              <label htmlFor="email" className="block text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-600">
+                Email Address
+              </label>
+              <input
+                id="email"
+                ref={emailRef}
+                type="email"
+                inputMode="email"
+                autoComplete="email"
+                placeholder="name@example.com"
+                value={email}
+                onChange={(e: ChangeEvent<HTMLInputElement>) => { setEmail(e.target.value); setEmailError(null); }}
+                disabled={uploading}
+                className="w-full rounded-xl border border-slate-200/80 bg-white/70 px-4 py-3 text-sm text-slate-800 placeholder-slate-400 outline-none transition-all duration-200 focus:border-violet-300 focus:ring-2 focus:ring-violet-200/40 disabled:opacity-60"
+                aria-invalid={emailError ? 'true' : 'false'}
+              />
+              {emailError && <p className="text-xs text-rose-400">{emailError}</p>}
             </motion.div>
           )}
-        </AnimatePresence>
 
-        {/* Email input — payment gate харагдахаас өмнө л харагдана */}
-        {(!file || isQuestionnaireComplete(questionnaireAnswers)) && !readyToPay && !resultSeason && questionnaireAnswers.gender !== 'male' && (
-          <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} className="space-y-2">
-            <label htmlFor="email" className="block text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-600">
-              Email Address
-            </label>
-            <input
-              id="email"
-              ref={emailRef}
-              type="email"
-              inputMode="email"
-              autoComplete="email"
-              placeholder="name@example.com"
-              value={email}
-              onChange={(e) => { setEmail(e.target.value); setEmailError(null); }}
+          {/* Photo quality error */}
+          <AnimatePresence>
+            {photoQualityError && (
+              <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+                className="rounded-2xl border border-amber-200 bg-amber-50/80 px-5 py-4 space-y-2">
+                <p className="text-sm font-semibold text-amber-800">Photo quality insufficient</p>
+                <p className="text-xs leading-relaxed text-amber-700">{photoQualityError.message}</p>
+                {photoQualityError.issues.length > 0 && (
+                  <ul className="text-xs text-amber-600 space-y-0.5 list-disc list-inside">
+                    {photoQualityError.issues.map((issue, i) => <li key={i}>{issue}</li>)}
+                  </ul>
+                )}
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* Submit error */}
+          <AnimatePresence>
+            {submitError && (
+              <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+                className="rounded-2xl border border-rose-200 bg-rose-50/70 px-5 py-4 text-sm text-rose-700">
+                {submitError}
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* CTA — зураг оруулаагүй эсвэл асуулт дуусаагүй, payment gate харагдахгүй үед */}
+          {(!file || isQuestionnaireComplete(questionnaireAnswers)) && !readyToPay && !resultSeason && questionnaireAnswers.gender !== 'male' && (
+            <button
+              onClick={handleUpload}
               disabled={uploading}
-              className="w-full rounded-xl border border-slate-200/80 bg-white/70 px-4 py-3 text-sm text-slate-800 placeholder-slate-400 outline-none transition-all duration-200 focus:border-violet-300 focus:ring-2 focus:ring-violet-200/40 disabled:opacity-60"
-              aria-invalid={emailError ? 'true' : 'false'}
-            />
-            {emailError && <p className="text-xs text-rose-400">{emailError}</p>}
-          </motion.div>
-        )}
-
-        {/* Photo quality error */}
-        <AnimatePresence>
-          {photoQualityError && (
-            <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
-              className="rounded-2xl border border-amber-200 bg-amber-50/80 px-5 py-4 space-y-2">
-              <p className="text-sm font-semibold text-amber-800">Photo quality insufficient</p>
-              <p className="text-xs leading-relaxed text-amber-700">{photoQualityError.message}</p>
-              {photoQualityError.issues.length > 0 && (
-                <ul className="text-xs text-amber-600 space-y-0.5 list-disc list-inside">
-                  {photoQualityError.issues.map((issue, i) => <li key={i}>{issue}</li>)}
-                </ul>
-              )}
-            </motion.div>
+              className="group relative w-full overflow-hidden rounded-lg bg-gradient-to-r from-violet-500 via-purple-500 to-pink-500 py-4 text-sm font-semibold text-white shadow-lg shadow-violet-200/70 transition-all duration-300 hover:scale-[1.025] hover:shadow-xl hover:shadow-violet-300/50 active:scale-[0.975] disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:scale-100"
+            >
+              <span className="relative z-10">
+                {uploading
+                  ? analyzing ? (stageLabel ?? 'Analyzing...')
+                    : checking ? 'Checking photo quality...'
+                    : 'Uploading photo...'
+                  : file ? 'Analyze My Colors' : 'Take a Photo'}
+              </span>
+              <div className="absolute inset-0 bg-gradient-to-r from-violet-600 via-purple-600 to-pink-600 opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+            </button>
           )}
-        </AnimatePresence>
 
-        {/* Submit error */}
-        <AnimatePresence>
-          {submitError && (
-            <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
-              className="rounded-2xl border border-rose-200 bg-rose-50/70 px-5 py-4 text-sm text-rose-700">
-              {submitError}
-            </motion.div>
-          )}
-        </AnimatePresence>
+          <AnalysisResult
+            readyToPay={readyToPay}
+            paying={paying}
+            price={PRICE}
+            onPay={handlePay}
+            resultSeason={resultSeason}
+            onReset={resetCard}
+          />
+        </div>
+      </motion.div>
 
-        {/* CTA — зураг оруулаагүй эсвэл асуулт дуусаагүй, payment gate харагдахгүй үед */}
-        {(!file || isQuestionnaireComplete(questionnaireAnswers)) && !readyToPay && !resultSeason && questionnaireAnswers.gender !== 'male' && (
-          <button
-            onClick={handleUpload}
-            disabled={uploading}
-            className="group relative w-full overflow-hidden rounded-lg bg-gradient-to-r from-violet-500 via-purple-500 to-pink-500 py-4 text-sm font-semibold text-white shadow-lg shadow-violet-200/70 transition-all duration-300 hover:scale-[1.025] hover:shadow-xl hover:shadow-violet-300/50 active:scale-[0.975] disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:scale-100"
-          >
-            <span className="relative z-10">
-              {uploading
-                ? analyzing ? (stageLabel ?? 'Analyzing...')
-                  : checking ? 'Checking photo quality...'
-                  : 'Uploading photo...'
-                : file ? 'Analyze My Colors' : 'Take a Photo'}
-            </span>
-            <div className="absolute inset-0 bg-gradient-to-r from-violet-600 via-purple-600 to-pink-600 opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
-          </button>
-        )}
-
-        {/* Payment gate — шинжилгээ дууссаны дараа л харагдана, result харуулахгүй */}
-        <AnimatePresence>
-          {readyToPay && (
-            <motion.div
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-              className="rounded-2xl border border-violet-100 bg-violet-50/60 px-6 py-5 space-y-4"
-            >
-              {/* Header */}
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-violet-100">
-                  <Sparkles className="h-5 w-5 text-violet-600" strokeWidth={1.5} />
-                </div>
-                <div>
-                  <p className="text-sm font-bold text-slate-800">Your analysis is ready!</p>
-                  <p className="text-xs text-slate-500 mt-0.5">
-                    Pay to receive your full PDF report
-                  </p>
-                </div>
-              </div>
-
-              {/* Price */}
-              <div className="flex items-center justify-between rounded-xl border border-violet-100 bg-white px-4 py-3">
-                <div className="flex items-center gap-2 text-xs text-slate-500">
-                  <Lock className="h-3.5 w-3.5" strokeWidth={1.5} />
-                  Detailed results + PDF report
-                </div>
-                <span className="text-base font-bold text-slate-800">8,900₮</span>
-              </div>
-
-              {/* Pay button */}
-              <button
-                onClick={handlePay}
-                disabled={paying}
-                className="group relative w-full overflow-hidden rounded-2xl bg-gradient-to-r from-violet-500 via-purple-500 to-pink-500 py-4 text-sm font-semibold text-white shadow-lg shadow-violet-200/70 transition-all duration-300 hover:scale-[1.025] active:scale-[0.975] disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:scale-100"
-              >
-                <span className="relative z-10 flex items-center justify-center gap-2">
-                  {paying ? (
-                    <>
-                      <span className="h-4 w-4 rounded-full border-2 border-white/60 border-t-white animate-spin" />
-                      Redirecting to QPay...
-                    </>
-                  ) : (
-                    <>
-                      <CreditCard className="h-4 w-4" strokeWidth={1.75} />
-                      Get PDF Report — 8,900₮
-                    </>
-                  )}
-                </span>
-                <div className="absolute inset-0 bg-gradient-to-r from-violet-600 via-purple-600 to-pink-600 opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
-              </button>
-
-              {/* Reset link */}
-              <button
-                type="button"
-                onClick={resetCard}
-                className="w-full text-xs text-slate-400 hover:text-slate-600 transition-colors text-center"
-              >
-                ← Run a new analysis
-              </button>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        {/* SKIP_PAYMENT result — 2Checkout зөвшөөрөл хүлээгдэж байгаа тул season-ыг шууд харуулна */}
-        <AnimatePresence>
-          {resultSeason && (
-            <motion.div
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-              className="rounded-2xl border border-violet-100 bg-violet-50/60 px-6 py-5 space-y-4 text-center"
-            >
-              <div className="flex flex-col items-center gap-3">
-                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-violet-100">
-                  <Sparkles className="h-6 w-6 text-violet-600" strokeWidth={1.5} />
-                </div>
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-[0.14em] text-violet-500">Your Personal Color</p>
-                  <p className="mt-1 text-2xl font-bold bg-gradient-to-r from-violet-500 to-pink-500 bg-clip-text text-transparent"
-                    style={{ fontFamily: 'var(--font-playfair), Georgia, serif' }}>
-                    {resultSeason}
-                  </p>
-                </div>
-              </div>
-
-              <button
-                type="button"
-                onClick={resetCard}
-                className="w-full text-xs text-slate-400 hover:text-slate-600 transition-colors text-center"
-              >
-                ← Run a new analysis
-              </button>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-      </div>
-    </motion.div>
-
-    {/* Full-screen live camera capture — portaled to body so it always covers the real viewport, on phones, tablets and laptops alike, regardless of any parent animation transforms */}
-    {mounted && createPortal(
-      <AnimatePresence>
-        {showCamera && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[100] flex flex-col bg-black"
-          >
-            <video
-              ref={videoRef}
-              autoPlay
-              playsInline
-              muted
-              className="absolute inset-0 h-full w-full object-cover"
-              style={{ transform: 'scaleX(-1)' }}
-            />
-
-            {/* Screen-flash fill light — real light the camera sensor actually sees,
-                unlike a drawn-on border overlay (which is composited after capture
-                and never reaches the lens). Covers everything while active. */}
-            <AnimatePresence>
-              {flashing && (
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  transition={{ duration: 0.12 }}
-                  className="pointer-events-none absolute inset-0 z-[50] bg-white"
-                />
-              )}
-            </AnimatePresence>
-
-            {/* Face position guide — head-shaped oval, dims everything outside it.
-                Width/height and the label offset both derive from the same min() clamp
-                so the label stays glued to the oval's actual edge on every screen size. */}
-            <div
-              className="pointer-events-none absolute left-1/2 top-[44%] z-[5] -translate-x-1/2 -translate-y-1/2 rounded-[50%] border-2 border-dashed border-white/85"
-              style={{ width: 'min(58vmin, 340px)', height: 'min(78vmin, 460px)', boxShadow: '0 0 0 9999px rgba(0,0,0,0.55)' }}
-            />
-            <p
-              className="pointer-events-none absolute left-1/2 z-[5] -translate-x-1/2 px-4 text-center text-xs font-semibold text-white/90"
-              style={{ top: 'max(calc(44% - min(39vmin, 230px) - 2rem), 4.5rem)' }}
-            >
-              Нүүрээ хүрээн дотор байрлуулна уу
-            </p>
-
-            <div
-              className="absolute inset-x-0 top-0 z-10 flex items-center justify-between bg-gradient-to-b from-black/60 to-transparent p-4"
-              style={{ paddingTop: 'calc(env(safe-area-inset-top) + 1rem)' }}
-            >
-              {/* Live lighting gauge */}
-              {lighting ? (
-                <div className="flex items-center gap-1.5 rounded-full bg-black/40 px-3 py-1.5 backdrop-blur-sm">
-                  <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${lighting === 'good' ? 'bg-emerald-400' : 'bg-rose-500'}`} />
-                  <span className="text-xs font-semibold text-white">
-                    {lighting === 'dark' ? 'Хэт харанхуй' : lighting === 'yellow' ? 'Хэт шар гэрэлтэй' : 'Гэрэлтүүлэг төгс байна'}
-                  </span>
-                </div>
-              ) : <span />}
-
-              <button
-                type="button"
-                onClick={closeCamera}
-                className="flex h-10 w-10 items-center justify-center rounded-full bg-black/40 text-white backdrop-blur-sm transition-colors hover:bg-black/60 active:scale-90"
-                aria-label="Close camera"
-              >
-                <X className="h-5 w-5" strokeWidth={2.5} />
-              </button>
-            </div>
-
-            <div
-              className="absolute inset-x-0 bottom-0 z-10 flex items-center justify-center bg-gradient-to-t from-black/60 to-transparent p-6"
-              style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 1.5rem)' }}
-            >
-              <button
-                type="button"
-                onClick={capturePhoto}
-                className="flex h-16 w-16 items-center justify-center rounded-full border-4 border-white bg-white/20 backdrop-blur-sm transition-transform active:scale-90"
-                aria-label="Take photo"
-              >
-                <div className="h-12 w-12 rounded-full bg-white" />
-              </button>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>,
-      document.body,
-    )}
+      <CameraCapture
+        ref={cameraRef}
+        cameraError={cameraError}
+        onError={setCameraError}
+        onFallbackToFilePicker={() => uploadZoneRef.current?.openFilePicker()}
+        onCapture={handleFileSelect}
+      />
     </>
   );
 }
