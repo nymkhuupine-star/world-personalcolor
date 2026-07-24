@@ -91,6 +91,7 @@ export default function Card() {
   const [showCamera, setShowCamera] = useState(false);
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [lighting, setLighting] = useState<'dark' | 'yellow' | 'good' | null>(null);
+  const [flashing, setFlashing] = useState(false);
   const [mounted, setMounted] = useState(false);
   useEffect(() => { setMounted(true); }, []);
 
@@ -172,6 +173,20 @@ export default function Card() {
       streamRef.current = stream;
       setShowCamera(true);
       console.log('Camera actual settings:', stream.getVideoTracks()[0]?.getSettings());
+
+      // Best-effort white balance lock — non-standard, Chrome desktop/Android only.
+      // Real skin-tone correctness doesn't rely on this: applyWhiteBalance() in
+      // image-analysis.ts calibrates against the sclera (white of the eye) per photo,
+      // which works on every device/browser regardless of hardware support here.
+      try {
+        const track = stream.getVideoTracks()[0];
+        const caps = track?.getCapabilities?.() as (MediaTrackCapabilities & { whiteBalanceMode?: string[] }) | undefined;
+        if (caps?.whiteBalanceMode?.includes('continuous')) {
+          await track.applyConstraints({ advanced: [{ whiteBalanceMode: 'continuous' } as unknown as MediaTrackConstraintSet] });
+        }
+      } catch (wbErr) {
+        console.warn('White balance constraint not supported on this device:', wbErr);
+      }
     } catch (err) {
       console.error('Camera access failed:', err);
       setCameraError('Could not access the camera. Please check your camera permissions or upload a photo instead.');
@@ -181,17 +196,28 @@ export default function Card() {
   const capturePhoto = () => {
     const video = videoRef.current;
     if (!video || !video.videoWidth) return;
-    const canvas = document.createElement('canvas');
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-    canvas.toBlob((blob) => {
-      if (!blob) return;
-      handleFileSelect(new File([blob], `capture-${Date.now()}.jpg`, { type: 'image/jpeg' }));
-      closeCamera();
-    }, 'image/jpeg', JPEG_QUALITY);
+
+    // Screen-flash fill light: a solid white full-screen flash right before the
+    // grab is a genuine, camera-visible light source — unlike a drawn-on UI
+    // border (which the sensor never sees, since it's composited after capture),
+    // this light actually bounces off the face and gets recorded, giving the
+    // sclera-based white balance step a more even, more neutral base to start
+    // from — especially in dim or color-cast rooms.
+    setFlashing(true);
+    setTimeout(() => {
+      const canvas = document.createElement('canvas');
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) { setFlashing(false); return; }
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      canvas.toBlob((blob) => {
+        setFlashing(false);
+        if (!blob) return;
+        handleFileSelect(new File([blob], `capture-${Date.now()}.jpg`, { type: 'image/jpeg' }));
+        closeCamera();
+      }, 'image/jpeg', JPEG_QUALITY);
+    }, 220); // give the flash light a beat to actually hit the face before we grab the frame
   };
 
   const resetCard = () => {
@@ -822,6 +848,21 @@ export default function Card() {
               className="absolute inset-0 h-full w-full object-cover"
               style={{ transform: 'scaleX(-1)' }}
             />
+
+            {/* Screen-flash fill light — real light the camera sensor actually sees,
+                unlike a drawn-on border overlay (which is composited after capture
+                and never reaches the lens). Covers everything while active. */}
+            <AnimatePresence>
+              {flashing && (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.12 }}
+                  className="pointer-events-none absolute inset-0 z-[50] bg-white"
+                />
+              )}
+            </AnimatePresence>
 
             {/* Face position guide — head-shaped oval, dims everything outside it.
                 Width/height and the label offset both derive from the same min() clamp

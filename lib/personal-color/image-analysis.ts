@@ -238,6 +238,25 @@ function chroma(lab: LAB): number {
   return Math.sqrt(lab.a ** 2 + lab.b ** 2);
 }
 
+/** CIE76 ΔE — simple Euclidean LAB distance. */
+function deltaE(a: LAB, b: LAB): number {
+  return Math.sqrt((a.L - b.L) ** 2 + (a.a - b.a) ** 2 + (a.b - b.b) ** 2);
+}
+
+/**
+ * The "hair" rectangle sampled above the forehead landmark reads as scalp,
+ * not hair, when someone is bald or has very short/receding hair — and scalp
+ * is barely distinguishable from forehead skin in LAB space. Treated as real
+ * hair data, that would report a near-zero skin/hair gap and quietly distort
+ * both the contrast metric and the undertone hair blend. When the sampled
+ * "hair" LAB is this close to skin LAB, don't trust it.
+ */
+const HAIR_SKIN_MIN_DELTA_E = 10;
+
+function isHairSignalReliable(hairLab: LAB | null, skinLab: LAB): hairLab is LAB {
+  return hairLab !== null && deltaE(hairLab, skinLab) >= HAIR_SKIN_MIN_DELTA_E;
+}
+
 // ── Skin-pixel filter ─────────────────────────────────────────────────────────
 
 /**
@@ -255,6 +274,118 @@ function isSkinPixel(lab: LAB): boolean {
 /** Filter pixels by skin color in LAB space. */
 function filterSkin(pixels: RGB[]): RGB[] {
   return pixels.filter(p => isSkinPixel(rgbToLab(p)));
+}
+
+// ── Dominant skin tone (K-Means) ─────────────────────────────────────────────
+
+/**
+ * Cluster pixels into k groups by LAB distance. Centroids are seeded
+ * deterministically from L*-sorted percentiles (not random) so the same photo
+ * always produces the same clusters — the pipeline elsewhere is fully
+ * deterministic and this shouldn't be the exception.
+ */
+function kMeansClusterLab(pixels: RGB[], k: number, iterations = 6): { rgb: RGB[]; meanL: number }[] {
+  const labeled = pixels.map(rgb => ({ rgb, lab: rgbToLab(rgb) }));
+  const sortedByL = [...labeled].sort((a, b) => a.lab.L - b.lab.L);
+
+  let centroids: LAB[] = Array.from({ length: k }, (_, i) => {
+    const idx = Math.round(((i + 0.5) / k) * (sortedByL.length - 1));
+    return sortedByL[idx].lab;
+  });
+
+  const assignments = new Array<number>(labeled.length).fill(0);
+  for (let iter = 0; iter < iterations; iter++) {
+    for (let i = 0; i < labeled.length; i++) {
+      const { lab } = labeled[i];
+      let best = 0, bestDist = Infinity;
+      for (let c = 0; c < k; c++) {
+        const dl = lab.L - centroids[c].L, da = lab.a - centroids[c].a, db = lab.b - centroids[c].b;
+        const dist = dl * dl + da * da + db * db;
+        if (dist < bestDist) { bestDist = dist; best = c; }
+      }
+      assignments[i] = best;
+    }
+
+    const sums = Array.from({ length: k }, () => ({ L: 0, a: 0, b: 0, n: 0 }));
+    for (let i = 0; i < labeled.length; i++) {
+      const s = sums[assignments[i]];
+      s.L += labeled[i].lab.L; s.a += labeled[i].lab.a; s.b += labeled[i].lab.b; s.n++;
+    }
+    centroids = sums.map((s, c) => (s.n > 0 ? { L: s.L / s.n, a: s.a / s.n, b: s.b / s.n } : centroids[c]));
+  }
+
+  const clusters: { rgb: RGB[]; meanL: number }[] = Array.from({ length: k }, (_, c) => ({ rgb: [], meanL: centroids[c].L }));
+  for (let i = 0; i < labeled.length; i++) clusters[assignments[i]].rgb.push(labeled[i].rgb);
+  return clusters;
+}
+
+/**
+ * Splits a region's pixels into 3 brightness clusters (K-Means, k=3) and keeps
+ * only the middle one — dropping the brightest cluster (specular highlight /
+ * oily shine) and the darkest (blemish, wrinkle shadow, stubble). Falls back
+ * to the untouched input when there isn't enough data to cluster safely, so
+ * this never starves the downstream minimum-sample-size check.
+ */
+const MIN_CLUSTERABLE = 15;   // need at least this many pixels per cluster to trust k-means
+const MIN_DOMINANT_KEEP = 25; // below this, the "middle" cluster is too thin to trust alone
+
+function extractDominantSkinTone(pixels: RGB[]): RGB[] {
+  if (pixels.length < MIN_CLUSTERABLE * 3) return pixels;
+
+  const clusters = kMeansClusterLab(pixels, 3).filter(c => c.rgb.length > 0);
+  if (clusters.length < 3) return pixels;
+
+  clusters.sort((a, b) => a.meanL - b.meanL);
+  const [darkest, middle, brightest] = clusters;
+
+  if (middle.rgb.length >= MIN_DOMINANT_KEEP) return middle.rgb;
+  // Middle band too thin (skin was fairly uniform and k-means over-split it) —
+  // merge with whichever neighbour is larger instead of returning too few pixels.
+  return darkest.rgb.length > brightest.rgb.length
+    ? [...middle.rgb, ...darkest.rgb]
+    : [...middle.rgb, ...brightest.rgb];
+}
+
+// ── Anti-redness filter ──────────────────────────────────────────────────────
+
+/**
+ * Exertion, cold air, anxiety or rosacea flush the cheeks — pushing a*
+ * (red-green axis) abnormally high in a way that reads as a false
+ * warm/pink signal rather than the person's baseline undertone. This
+ * threshold is a heuristic (not fit to a clinical dataset) sitting inside
+ * the looser a* < 32 bound isSkinPixel() already enforces.
+ */
+const REDNESS_A_THRESHOLD = 24;
+
+/**
+ * Healthy sclera sits close to neutral (a* near 0-3). Fatigue, irritation or
+ * bloodshot eyes push it well past that — used to veto the sclera as a white
+ * balance reference (see the WB step in analyzeImage()).
+ */
+const SCLERA_REDNESS_A_THRESHOLD = 8;
+
+function filterRedness(pixels: RGB[]): { kept: RGB[]; droppedRatio: number } {
+  if (pixels.length === 0) return { kept: [], droppedRatio: 0 };
+  const kept = pixels.filter(p => rgbToLab(p).a <= REDNESS_A_THRESHOLD);
+  return { kept, droppedRatio: 1 - kept.length / pixels.length };
+}
+
+/**
+ * Resample two pixel pools to a target total size so their simple mean
+ * reflects the given weight ratio — lets the rest of the pipeline (which
+ * expects a flat RGB[] to average) stay untouched while still favoring one
+ * region over another (e.g. forehead over flushed cheeks).
+ */
+function weightedConcat(a: RGB[], weightA: number, b: RGB[], weightB: number, targetSize = 200): RGB[] {
+  const resample = (arr: RGB[], n: number): RGB[] => {
+    if (arr.length === 0 || n <= 0) return [];
+    const out: RGB[] = [];
+    for (let i = 0; i < n; i++) out.push(arr[Math.floor((i / n) * arr.length)]);
+    return out;
+  };
+  const total = weightA + weightB;
+  const nA = Math.round(targetSize * (weightA / total));
+  return [...resample(a, nA), ...resample(b, targetSize - nA)];
 }
 
 /** Filter iris pixels (remove bright sclera / eyelid). */
@@ -303,37 +434,51 @@ function calcITA(L: number, b: number): number {
   return Math.atan2(L - 50, b) * (180 / Math.PI);
 }
 
-type SkinDepthCategory = 'very_light' | 'light' | 'intermediate' | 'tan' | 'brown' | 'dark';
+/**
+ * b* neutral-point (mid) and half-range as a *continuous* function of skin
+ * depth (ITA°) — linearly interpolated between anchors instead of looked up
+ * from discrete buckets. Melanin lifts baseline b* (more yellow) as skin
+ * gets deeper, regardless of true undertone — a single fixed cutoff (e.g.
+ * b*=12) reads deep/dark skin as warm by default. A bucketed lookup fixes
+ * that but creates a hard jump right at each boundary; interpolating removes
+ * the cliff and keeps the warm/cool split sliding smoothly with depth. This
+ * matters most for deep/dark skin, where melanin's b* swing is largest and a
+ * bucket edge would most easily misclassify a borderline reading.
+ * Anchors are the old buckets' centers, ordered lightest → deepest (ITA
+ * descending); mid/halfRange values are unchanged from before.
+ */
+const UNDERTONE_ANCHORS: { ita: number; mid: number; halfRange: number }[] = [
+  { ita:  68,   mid: 10, halfRange:  9 }, // very light
+  { ita:  48,   mid: 11, halfRange:  9 }, // light
+  { ita:  34.5, mid: 13, halfRange: 10 }, // intermediate
+  { ita:  19,   mid: 16, halfRange: 10 }, // tan
+  { ita: -10,   mid: 19, halfRange: 11 }, // brown
+  { ita: -50,   mid: 22, halfRange: 12 }, // dark
+];
 
-function classifyDepth(ita: number): SkinDepthCategory {
-  if (ita > 55) return 'very_light';
-  if (ita > 41) return 'light';
-  if (ita > 28) return 'intermediate';
-  if (ita > 10) return 'tan';
-  if (ita > -30) return 'brown';
-  return 'dark';
+function undertoneParams(ita: number): { mid: number; halfRange: number } {
+  const first = UNDERTONE_ANCHORS[0];
+  const last  = UNDERTONE_ANCHORS[UNDERTONE_ANCHORS.length - 1];
+  if (ita >= first.ita) return first;
+  if (ita <= last.ita)  return last;
+
+  for (let i = 0; i < UNDERTONE_ANCHORS.length - 1; i++) {
+    const hi = UNDERTONE_ANCHORS[i], lo = UNDERTONE_ANCHORS[i + 1];
+    if (ita <= hi.ita && ita >= lo.ita) {
+      const t = (ita - lo.ita) / (hi.ita - lo.ita); // 0 at lo, 1 at hi
+      return {
+        mid:       lo.mid       + (hi.mid       - lo.mid)       * t,
+        halfRange: lo.halfRange + (hi.halfRange - lo.halfRange) * t,
+      };
+    }
+  }
+  return last; // unreachable — ita is finite and bounded by first/last above
 }
 
 /**
- * b* neutral-point (mid) and half-range per skin depth category.
- * Melanin lifts baseline b* (more yellow) as skin gets deeper, regardless of
- * true undertone — a single fixed cutoff (e.g. b*=12) reads deep/dark skin
- * as warm by default. Sliding the midpoint with ITA° keeps the warm/cool
- * split relative to what's normal for that depth instead of absolute.
- */
-const UNDERTONE_MATRIX: Record<SkinDepthCategory, { mid: number; halfRange: number }> = {
-  very_light:   { mid: 10, halfRange: 9 },
-  light:        { mid: 11, halfRange: 9 },
-  intermediate: { mid: 13, halfRange: 10 },
-  tan:          { mid: 16, halfRange: 10 },
-  brown:        { mid: 19, halfRange: 11 },
-  dark:         { mid: 22, halfRange: 12 },
-};
-
-/**
  * Undertone from skin LAB (b* axis = yellow↑ / blue↓), thresholded relative
- * to the skin's own depth (see UNDERTONE_MATRIX). Hair LAB gives a
- * secondary signal (weighted 20%).
+ * to the skin's own depth (see undertoneParams). Hair LAB gives a secondary
+ * signal (weighted 20%).
  */
 function calcUndertone(
   skinLab: LAB,
@@ -344,8 +489,7 @@ function calcUndertone(
     ? skinLab.b * 0.80 + hairLab.b * 0.20
     : skinLab.b;
 
-  const depth = classifyDepth(calcITA(skinLab.L, skinLab.b));
-  const { mid, halfRange } = UNDERTONE_MATRIX[depth];
+  const { mid, halfRange } = undertoneParams(calcITA(skinLab.L, skinLab.b));
   const lo = mid - halfRange;
   const hi = mid + halfRange;
 
@@ -511,29 +655,55 @@ export async function analyzeImage(
 
   // ── 3. Extract region pixels ──────────────────────────────────────────────
 
-  // Skin: left cheek + right cheek + forehead (filtered for skin tone)
-  const rawSkinPixels = [
+  // Skin: cheeks + forehead sampled separately (not merged up front) so
+  // redness filtering and dynamic region weighting can treat them differently.
+  const cheekRaw = [
     ...sampleAroundLandmarks(data, width, height, landmarks, LM.LEFT_CHEEK,  8),
     ...sampleAroundLandmarks(data, width, height, landmarks, LM.RIGHT_CHEEK, 8),
-    ...sampleAroundLandmarks(data, width, height, landmarks, LM.FOREHEAD,    6),
   ];
-  let skinPixels = filterSkin(rawSkinPixels);
+  const foreheadRaw = sampleAroundLandmarks(data, width, height, landmarks, LM.FOREHEAD, 6);
 
-  if (skinPixels.length < 30) {
+  const cheekFiltered    = filterSkin(cheekRaw);
+  const foreheadFiltered = filterSkin(foreheadRaw);
+
+  if (cheekFiltered.length + foreheadFiltered.length < 30) {
     throw new Error(
       'Арьсны өнгийг уншиж чадсангүй. ' +
       'Нүүр бүтэн харагдах, байгалийн гэрэлтэй зураг оруулна уу.',
     );
   }
 
-  // White balance: sample sclera from eye contour, use as reference white
+  // Anti-redness: exertion/cold/rosacea flush reads as a false warm/pink
+  // signal — drop those cheek pixels and lean on the forehead more instead.
+  const { kept: cheekDeRed, droppedRatio: cheekRednessRatio } = filterRedness(cheekFiltered);
+  const cheekWeight    = cheekRednessRatio > 0.3 ? 0.3 : 0.65;
+  const foreheadWeight = 1 - cheekWeight;
+
+  // K-Means dominant-tone extraction — drops the specular-highlight cluster
+  // (oily shine) and the shadow cluster (blemish, wrinkle, stubble), keeping
+  // the middle brightness band as the region's true skin tone.
+  const cheekSource    = cheekDeRed.length >= 30 ? cheekDeRed : cheekFiltered;
+  const cheekDominant    = extractDominantSkinTone(cheekSource);
+  const foreheadDominant = extractDominantSkinTone(foreheadFiltered);
+
+  let skinPixels = weightedConcat(cheekDominant, cheekWeight, foreheadDominant, foreheadWeight);
+  if (skinPixels.length < 30) skinPixels = [...cheekDeRed, ...foreheadFiltered];       // fallback 1: skip clustering/weighting
+  if (skinPixels.length < 30) skinPixels = [...cheekFiltered, ...foreheadFiltered];    // fallback 2: skip redness filter too (guaranteed ≥30, checked above)
+
+  // White balance: sample sclera from eye contour, use as reference white.
+  // Tired/irritated/bloodshot eyes push the sclera's own a* (red-green axis)
+  // up independent of ambient lighting — that's a physiological artifact, not
+  // a color-cast signal, so using it as the "should be neutral" reference
+  // would corrupt the correction. When that happens, skip WB entirely and
+  // fall back to a plain sRGB→D65 conversion instead of a bad calibration.
   const scleraRaw = [
     ...sampleAroundLandmarks(data, width, height, landmarks, LM.LEFT_EYE,  4),
     ...sampleAroundLandmarks(data, width, height, landmarks, LM.RIGHT_EYE, 4),
   ];
   const scleraPixels = filterSclera(scleraRaw);
   const scleraRef = avgRGB(scleraPixels);
-  if (scleraRef && scleraPixels.length >= 10) {
+  const scleraBloodshot = scleraRef ? rgbToLab(scleraRef).a > SCLERA_REDNESS_A_THRESHOLD : false;
+  if (scleraRef && scleraPixels.length >= 10 && !scleraBloodshot) {
     skinPixels = applyWhiteBalance(skinPixels, scleraRef);
   }
 
@@ -577,6 +747,16 @@ export async function analyzeImage(
 
   const skinRGB = avgRGB(skinPixels)!;
   const skinLab = rgbToLab(skinRGB);
+
+  // Bald / very short hair → the sampled region is scalp, not hair. Only the
+  // sampled branch is at risk here — a questionnaire-sourced hairOverrideLab
+  // is a self-reported reference, not a pixel sample, so it can't have
+  // "caught scalp instead of hair". Fall back to skin(+iris)-only contrast
+  // and undertone by nulling it out; calcContrast()/calcUndertone() already
+  // handle a null hairLab.
+  if (!hairOverrideLab && !isHairSignalReliable(hairLab, skinLab)) {
+    hairLab = null;
+  }
 
   const eyeRGB = avgRGB(eyePixels.length >= 5 ? eyePixels : skinPixels);
   const eyeLab = eyeRGB ? rgbToLab(eyeRGB) : null;

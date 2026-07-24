@@ -46,12 +46,12 @@ const EYE_COLORS: { value: EyeColor; label: string; swatch: string }[] = [
   { value: 'blue',        label: 'Blue',        swatch: '#4A7AB5' },
 ];
 
-type StepKey = 'gender' | 'vein' | 'hairDyed' | 'naturalHairColor' | 'eyeColor' | 'jewelryPreference';
+type StepKey = 'gender' | 'hairDyed' | 'naturalHairColor' | 'eyeColor' | 'jewelryPreference';
 
 function getSteps(answers: PartialAnswers): StepKey[] {
   const steps: StepKey[] = ['gender'];
   if (answers.gender !== 'male') {
-    steps.push('vein', 'hairDyed');
+    steps.push('hairDyed');
     if (answers.hairDyed === 'yes') steps.push('naturalHairColor');
     steps.push('eyeColor', 'jewelryPreference');
   }
@@ -106,31 +106,6 @@ export default function Questionnaire({ answers, onChange }: Props) {
                   onClick={() => pick({ ...answers, gender: o.value })}>
                   <span className="text-xl leading-none">{o.icon}</span>
                   <span className={`text-[10px] font-medium ${answers.gender === o.value ? 'text-violet-700' : 'text-slate-600'}`}>
-                    {o.label}
-                  </span>
-                </OptionBtn>
-              ))}
-            </div>
-          </div>
-        );
-
-      case 'vein':
-        return (
-          <div className="space-y-2.5">
-            <p className="text-xs font-medium text-slate-600">
-              Look at the veins on the inside of your wrist. What color do they appear?
-            </p>
-            <div className="grid grid-cols-3 gap-1.5">
-              {[
-                { value: 'blue_green' as const, label: 'Blue / Green',    swatch: '#6EA8D8' },
-                { value: 'purple_red' as const, label: 'Purple / Red',    swatch: '#9966BB' },
-                { value: 'both'       as const, label: 'Both',            swatch: '#8899AA' },
-              ].map(o => (
-                <OptionBtn key={o.value} active={answers.vein === o.value}
-                  onClick={() => pick({ ...answers, vein: o.value })}>
-                  <span className="block h-5 w-5 rounded-full border border-white shadow-sm ring-1 ring-black/10"
-                        style={{ backgroundColor: o.swatch }} />
-                  <span className={`text-[10px] font-medium leading-tight ${answers.vein === o.value ? 'text-violet-700' : 'text-slate-600'}`}>
                     {o.label}
                   </span>
                 </OptionBtn>
@@ -212,14 +187,14 @@ export default function Questionnaire({ answers, onChange }: Props) {
         return (
           <div className="space-y-2.5">
             <p className="text-xs font-medium text-slate-600">
-              Which suits you better — gold or silver jewelry?
+              When you wear gold vs. silver jewelry, which one makes your skin look brighter — not which one you just like more?
             </p>
             <div className="grid grid-cols-2 gap-1.5">
               {[
-                { value: 'gold'   as const, label: 'Gold',    swatch: 'linear-gradient(135deg,#F5C842,#D4A017,#F5C842)' },
-                { value: 'silver' as const, label: 'Silver',  swatch: 'linear-gradient(135deg,#D8D8D8,#A0A0A0,#D8D8D8)' },
-                { value: 'both'   as const, label: 'Both',    swatch: 'linear-gradient(135deg,#F5C842 0%,#F5C842 50%,#D8D8D8 50%,#D8D8D8 100%)' },
-                { value: 'unsure' as const, label: 'Not sure', swatch: 'linear-gradient(135deg,#E2E8F0,#CBD5E1)' },
+                { value: 'gold'   as const, label: 'Gold makes it brighter',   swatch: 'linear-gradient(135deg,#F5C842,#D4A017,#F5C842)' },
+                { value: 'silver' as const, label: 'Silver makes it brighter', swatch: 'linear-gradient(135deg,#D8D8D8,#A0A0A0,#D8D8D8)' },
+                { value: 'both'   as const, label: 'Both look equally good',   swatch: 'linear-gradient(135deg,#F5C842 0%,#F5C842 50%,#D8D8D8 50%,#D8D8D8 100%)' },
+                { value: 'unsure' as const, label: "Haven't noticed", swatch: 'linear-gradient(135deg,#E2E8F0,#CBD5E1)' },
               ].map(o => (
                 <OptionBtn key={o.value} active={answers.jewelryPreference === o.value}
                   onClick={() => pick({ ...answers, jewelryPreference: o.value })}>

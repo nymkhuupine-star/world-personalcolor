@@ -17,7 +17,6 @@ export type EyeColor =
 
 export type QuestionnaireAnswers = {
   gender:             'male' | 'female';
-  vein:               'blue_green' | 'purple_red' | 'both';
   hairDyed:           'yes' | 'no';
   naturalHairColor?:  NaturalHairColor; // зөвхөн hairDyed === 'yes' үед
   eyeColor:           EyeColor;
@@ -26,7 +25,7 @@ export type QuestionnaireAnswers = {
 
 /** Асуулга бүрэн бөглөгдсөн эсэхийг шалгах */
 export function isQuestionnaireComplete(a: Partial<QuestionnaireAnswers>): boolean {
-  if (!a.vein || !a.hairDyed || !a.eyeColor || !a.jewelryPreference) return false;
+  if (!a.hairDyed || !a.eyeColor || !a.jewelryPreference) return false;
   if (a.hairDyed === 'yes' && !a.naturalHairColor) return false;
   return true;
 }
@@ -69,12 +68,7 @@ export function questionnaireToMetrics(a: QuestionnaireAnswers): Partial<ColorMe
   // Chroma: soft=Summer/Autumn, clear=Spring/Winter, bright=Bright Spring/Winter
   let soft = 33, clear = 33, bright = 33;
 
-  // Q1: Венийн өнгө → хамгийн хүчтэй undertone дохио + chroma hint
-  if (a.vein === 'blue_green') { cool += 35; warm -= 20; clear += 8; }
-  if (a.vein === 'purple_red') { warm += 35; cool -= 20; clear += 12; soft -= 10; }
-  if (a.vein === 'both')       { neutral += 30; soft += 12; }
-
-  // Q2: Будсан үсний байгалийн өнгө → value + undertone
+  // Q1: Будсан үсний байгалийн өнгө → value + undertone
   if (a.hairDyed === 'yes' && a.naturalHairColor) {
     const h = HAIR_METRICS[a.naturalHairColor];
     light  += h.light;
@@ -84,7 +78,7 @@ export function questionnaireToMetrics(a: QuestionnaireAnswers): Partial<ColorMe
     cool   += h.cool;
   }
 
-  // Q3: Нүдний өнгө → undertone + contrast
+  // Q2: Нүдний өнгө → undertone + contrast
   if (a.eyeColor) {
     const e = EYE_METRICS[a.eyeColor];
     warm    += e.warm;
@@ -95,7 +89,8 @@ export function questionnaireToMetrics(a: QuestionnaireAnswers): Partial<ColorMe
     low     += e.low;
   }
 
-  // Q4: Гоёлын металл → undertone + chroma (хамгийн тодорхой дохио)
+  // Q3: Мөнгөн/алтан гоёл өмсөхөд арьс тод/цонхигор харагдах эсэх (баримт
+  // ажиглалт, хувийн дуршил биш) → undertone + chroma (хамгийн тодорхой дохио)
   if (a.jewelryPreference === 'gold') {
     warm  += 30; cool -= 10;
     clear += 20; soft -= 15;  // алт = Spring/Autumn → тодорхой/дулаан хром
@@ -120,18 +115,44 @@ export function questionnaireToMetrics(a: QuestionnaireAnswers): Partial<ColorMe
   };
 }
 
+/** The category with the highest score in a 3-way metric group (e.g. warm/cool/neutral). */
+function dominantKey(m: Record<string, number>): string {
+  return Object.entries(m).reduce((best, cur) => (cur[1] > best[1] ? cur : best))[0];
+}
+
+/**
+ * Weight used when the image and questionnaire *disagree* on which category
+ * dominates a metric group (e.g. image says undertone=cool, questionnaire
+ * says warm). This is a modest lean toward the image, not a takeover — a
+ * single self-report question disagreeing doesn't prove the image is right.
+ * The image follows a fixed, controlled protocol across every user; a lone
+ * questionnaire answer is a one-off self-report with its own known
+ * reliability issues (see why the vein question was removed entirely).
+ * Neither source is "ground truth" here — there's no validated dataset this
+ * pipeline has been checked against (see prior accuracy discussion).
+ */
+const CONFLICT_IMAGE_WEIGHT = 0.75;
+
+/**
+ * Blends image-derived and questionnaire-derived metrics with a per-group
+ * dynamic weight ("Dynamic Weight Matrix"): each of the 4 metric groups
+ * (undertone/value/chroma/contrast) is weighted independently, based on
+ * whether *that specific group* conflicts between the two sources — not one
+ * global weight applied uniformly regardless of where the disagreement is.
+ */
 export function mergeMetrics(
   image: ColorMetrics,
   questionnaire: Partial<ColorMetrics>,
   imageWeight = 0.6,
 ): ColorMetrics {
-  const qw = 1 - imageWeight;
-
   function blend(img: Record<string, number>, q: Record<string, number> | undefined) {
     if (!q) return img;
+    const conflict = dominantKey(img) !== dominantKey(q);
+    const w  = conflict ? CONFLICT_IMAGE_WEIGHT : imageWeight;
+    const qw = 1 - w;
     const out: Record<string, number> = {};
     for (const key of Object.keys(img)) {
-      out[key] = Math.round(img[key] * imageWeight + (q[key] ?? img[key]) * qw);
+      out[key] = Math.round(img[key] * w + (q[key] ?? img[key]) * qw);
     }
     return out;
   }
