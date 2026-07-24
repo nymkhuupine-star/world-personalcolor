@@ -87,8 +87,10 @@ export default function Card() {
   // Camera capture
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  const lightingCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const [showCamera, setShowCamera] = useState(false);
   const [cameraError, setCameraError] = useState<string | null>(null);
+  const [lighting, setLighting] = useState<'dark' | 'yellow' | 'good' | null>(null);
   const [mounted, setMounted] = useState(false);
   useEffect(() => { setMounted(true); }, []);
 
@@ -109,6 +111,37 @@ export default function Card() {
     const prevOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
     return () => { document.body.style.overflow = prevOverflow; };
+  }, [showCamera]);
+
+  // Live lighting gauge — samples a downscaled video frame to gauge brightness & warm-light cast
+  useEffect(() => {
+    if (!showCamera) { setLighting(null); return; }
+    const SIZE = 32;
+    const id = setInterval(() => {
+      const video = videoRef.current;
+      if (!video || video.readyState < 2) return;
+      const canvas = lightingCanvasRef.current ?? (lightingCanvasRef.current = document.createElement('canvas'));
+      canvas.width = SIZE;
+      canvas.height = SIZE;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return;
+      ctx.drawImage(video, 0, 0, SIZE, SIZE);
+      const { data } = ctx.getImageData(0, 0, SIZE, SIZE);
+      let r = 0, g = 0, b = 0;
+      const pixelCount = data.length / 4;
+      for (let i = 0; i < data.length; i += 4) {
+        r += data[i];
+        g += data[i + 1];
+        b += data[i + 2];
+      }
+      r /= pixelCount; g /= pixelCount; b /= pixelCount;
+      const brightness = 0.299 * r + 0.587 * g + 0.114 * b;
+
+      if (brightness < 70) setLighting('dark');
+      else if (r - b > 35 && brightness < 200) setLighting('yellow');
+      else setLighting('good');
+    }, 400);
+    return () => clearInterval(id);
   }, [showCamera]);
 
   // Stop the camera stream if the component unmounts while it's open
@@ -790,10 +823,34 @@ export default function Card() {
               style={{ transform: 'scaleX(-1)' }}
             />
 
+            {/* Face position guide — head-shaped oval, dims everything outside it.
+                Width/height and the label offset both derive from the same min() clamp
+                so the label stays glued to the oval's actual edge on every screen size. */}
             <div
-              className="absolute inset-x-0 top-0 z-10 flex justify-end bg-gradient-to-b from-black/60 to-transparent p-4"
+              className="pointer-events-none absolute left-1/2 top-[44%] z-[5] -translate-x-1/2 -translate-y-1/2 rounded-[50%] border-2 border-dashed border-white/85"
+              style={{ width: 'min(58vmin, 340px)', height: 'min(78vmin, 460px)', boxShadow: '0 0 0 9999px rgba(0,0,0,0.55)' }}
+            />
+            <p
+              className="pointer-events-none absolute left-1/2 z-[5] -translate-x-1/2 px-4 text-center text-xs font-semibold text-white/90"
+              style={{ top: 'max(calc(44% - min(39vmin, 230px) - 2rem), 4.5rem)' }}
+            >
+              Нүүрээ хүрээн дотор байрлуулна уу
+            </p>
+
+            <div
+              className="absolute inset-x-0 top-0 z-10 flex items-center justify-between bg-gradient-to-b from-black/60 to-transparent p-4"
               style={{ paddingTop: 'calc(env(safe-area-inset-top) + 1rem)' }}
             >
+              {/* Live lighting gauge */}
+              {lighting ? (
+                <div className="flex items-center gap-1.5 rounded-full bg-black/40 px-3 py-1.5 backdrop-blur-sm">
+                  <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${lighting === 'good' ? 'bg-emerald-400' : 'bg-rose-500'}`} />
+                  <span className="text-xs font-semibold text-white">
+                    {lighting === 'dark' ? 'Хэт харанхуй' : lighting === 'yellow' ? 'Хэт шар гэрэлтэй' : 'Гэрэлтүүлэг төгс байна'}
+                  </span>
+                </div>
+              ) : <span />}
+
               <button
                 type="button"
                 onClick={closeCamera}
