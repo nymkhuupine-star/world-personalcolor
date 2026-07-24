@@ -11,8 +11,9 @@ const securityHeaders = [
   { key: 'Strict-Transport-Security', value: 'max-age=63072000; includeSubDomains; preload' },
   // Referrer мэдээлэл хязгаарлах
   { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
-  // Permission policy — камер/микрофон гэх мэтийг хаах
-  { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=()' },
+  // Permission policy — камерыг зөвхөн энэ сайт дээр зөвшөөрч (Card.tsx-ийн зураг авах функцэд шаардлагатай),
+  // микрофон/байршлыг хаана
+  { key: 'Permissions-Policy', value: 'camera=(self), microphone=(), geolocation=()' },
 ];
 
 const nextConfig: NextConfig = {

@@ -112,12 +112,16 @@ export default function Card() {
   };
 
   const openCamera = async () => {
+    // Camera already failed once (e.g. permission denied) — retrying just
+    // re-triggers the same failure, so go straight to the file picker.
+    if (cameraError) { fileRef.current?.click(); return; }
     setCameraError(null);
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' }, audio: false });
       streamRef.current = stream;
       setShowCamera(true);
-    } catch {
+    } catch (err) {
+      console.error('Camera access failed:', err);
       setCameraError('Could not access the camera. Please check your camera permissions or upload a photo instead.');
     }
   };
