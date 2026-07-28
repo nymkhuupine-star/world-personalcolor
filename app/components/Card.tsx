@@ -162,7 +162,8 @@ export default function Card() {
         .upload(filePath, compressed, { contentType: 'image/jpeg', upsert: false });
 
       if (uploadError) {
-        setSubmitError('An error occurred while uploading the photo. Please try again.');
+        console.error('Supabase upload error:', uploadError);
+        setSubmitError(`Upload error: ${uploadError.message}`);
         return;
       }
 
