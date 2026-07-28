@@ -163,7 +163,7 @@ export default function Card() {
 
       if (uploadError) {
         console.error('Supabase upload error:', uploadError);
-        setSubmitError(`Upload error: ${uploadError.message}`);
+        setSubmitError(`Upload error: ${uploadError.message} | url=${process.env.NEXT_PUBLIC_SUPABASE_URL}`);
         return;
       }
 
