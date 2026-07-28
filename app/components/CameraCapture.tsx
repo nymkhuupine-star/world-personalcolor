@@ -11,6 +11,44 @@ import { X } from 'lucide-react';
 // dependency on its parent beyond the props below.
 const JPEG_QUALITY = 0.85;
 
+type Lighting = 'dark' | 'bright' | 'warm' | 'cool' | 'no-face' | 'good';
+
+// Maps the face-guide oval's on-screen position/size (see the CSS below —
+// top-[44%], min(58vmin,340px) x min(78vmin,460px)) to a pixel rect in the
+// video's own coordinate space, inverting the `object-cover` crop the <video>
+// uses to fill the viewport. Without this, the live gauge sampled the whole
+// frame — background, hair, clothing — which is why a red wall or warm shirt
+// could trip a false "too yellow" warning even under perfectly neutral light.
+// The oval is horizontally centered, so the video's `scaleX(-1)` mirror never
+// needs correcting here — mirroring around the center leaves a centered rect unchanged.
+function computeOvalSampleRect(videoW: number, videoH: number, vpW: number, vpH: number) {
+  const vmin = Math.min(vpW, vpH);
+  const ovalW = Math.min(0.58 * vmin, 340);
+  const ovalH = Math.min(0.78 * vmin, 460);
+  const cx = vpW / 2;
+  const cy = vpH * 0.44;
+
+  const scale = Math.max(vpW / videoW, vpH / videoH);
+  const offsetX = (videoW * scale - vpW) / 2;
+  const offsetY = (videoH * scale - vpH) / 2;
+  const toVideoX = (vpX: number) => (vpX + offsetX) / scale;
+  const toVideoY = (vpY: number) => (vpY + offsetY) / scale;
+
+  const x0 = Math.max(0, toVideoX(cx - ovalW / 2));
+  const y0 = Math.max(0, toVideoY(cy - ovalH / 2));
+  const x1 = Math.min(videoW, toVideoX(cx + ovalW / 2));
+  const y1 = Math.min(videoH, toVideoY(cy + ovalH / 2));
+  return { x: x0, y: y0, w: x1 - x0, h: y1 - y0 };
+}
+
+// Cheap RGB-space skin-tone rule (Kovac et al.) — lets the gauge average only
+// face-like pixels inside the oval instead of the whole crop box (which still
+// includes its corners: hair, ears, background peeking around the oval).
+function isSkinTone(r: number, g: number, b: number) {
+  const max = Math.max(r, g, b), min = Math.min(r, g, b);
+  return r > 95 && g > 40 && b > 20 && (max - min) > 15 && Math.abs(r - g) > 15 && r > g && r > b;
+}
+
 export type CameraCaptureHandle = { open: () => void };
 
 interface Props {
@@ -36,8 +74,10 @@ const CameraCapture = forwardRef<CameraCaptureHandle, Props>(function CameraCapt
   const streamRef = useRef<MediaStream | null>(null);
   const lightingCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const [showCamera, setShowCamera] = useState(false);
-  const [lighting, setLighting] = useState<'dark' | 'yellow' | 'good' | null>(null);
+  const [lighting, setLighting] = useState<Lighting | null>(null);
   const [flashing, setFlashing] = useState(false);
+  const emaRef = useRef<{ r: number; g: number; b: number; brightness: number; skinRatio: number } | null>(null);
+  const stableRef = useRef<{ candidate: Lighting | null; count: number }>({ candidate: null, count: 0 });
 
   // SSR-safe "is client" flag — createPortal(..., document.body) needs
   // `document` at call time, which doesn't exist during SSR. useSyncExternalStore
@@ -63,34 +103,76 @@ const CameraCapture = forwardRef<CameraCaptureHandle, Props>(function CameraCapt
     return () => { document.body.style.overflow = prevOverflow; };
   }, [showCamera]);
 
-  // Live lighting gauge — samples a downscaled video frame to gauge brightness & warm-light cast
+  // Live lighting gauge — samples only the face-guide oval (not the whole frame,
+  // which false-triggered on warm backgrounds/clothing), averages skin-toned
+  // pixels only, and requires a reading to repeat before it reaches the UI so a
+  // single specular-highlight frame can't flip the badge.
   useEffect(() => {
     if (!showCamera) return;
-    const SIZE = 32;
+    const SIZE = 48;
+    const EMA_ALPHA = 0.3;
+    const STABLE_FRAMES = 2;
+    const MIN_SKIN_RATIO = 0.12;
+    emaRef.current = null;
+    stableRef.current = { candidate: null, count: 0 };
+
     const id = setInterval(() => {
       const video = videoRef.current;
-      if (!video || video.readyState < 2) return;
+      if (!video || video.readyState < 2 || !video.videoWidth) return;
+
+      const rect = computeOvalSampleRect(video.videoWidth, video.videoHeight, window.innerWidth, window.innerHeight);
+      if (rect.w <= 0 || rect.h <= 0) return;
+
       const canvas = lightingCanvasRef.current ?? (lightingCanvasRef.current = document.createElement('canvas'));
       canvas.width = SIZE;
       canvas.height = SIZE;
       const ctx = canvas.getContext('2d');
       if (!ctx) return;
-      ctx.drawImage(video, 0, 0, SIZE, SIZE);
+      ctx.drawImage(video, rect.x, rect.y, rect.w, rect.h, 0, 0, SIZE, SIZE);
       const { data } = ctx.getImageData(0, 0, SIZE, SIZE);
-      let r = 0, g = 0, b = 0;
-      const pixelCount = data.length / 4;
+
+      let skinR = 0, skinG = 0, skinB = 0, skinCount = 0;
+      const totalCount = data.length / 4;
       for (let i = 0; i < data.length; i += 4) {
-        r += data[i];
-        g += data[i + 1];
-        b += data[i + 2];
+        const pr = data[i], pg = data[i + 1], pb = data[i + 2];
+        if (isSkinTone(pr, pg, pb)) { skinR += pr; skinG += pg; skinB += pb; skinCount++; }
       }
-      r /= pixelCount; g /= pixelCount; b /= pixelCount;
+
+      const skinRatio = skinCount / totalCount;
+      const r = skinCount > 0 ? skinR / skinCount : 0;
+      const g = skinCount > 0 ? skinG / skinCount : 0;
+      const b = skinCount > 0 ? skinB / skinCount : 0;
       const brightness = 0.299 * r + 0.587 * g + 0.114 * b;
 
-      if (brightness < 70) setLighting('dark');
-      else if (r - b > 35 && brightness < 200) setLighting('yellow');
-      else setLighting('good');
-    }, 400);
+      const prev = emaRef.current;
+      const ema = prev
+        ? {
+            r: prev.r + EMA_ALPHA * (r - prev.r),
+            g: prev.g + EMA_ALPHA * (g - prev.g),
+            b: prev.b + EMA_ALPHA * (b - prev.b),
+            brightness: prev.brightness + EMA_ALPHA * (brightness - prev.brightness),
+            skinRatio: prev.skinRatio + EMA_ALPHA * (skinRatio - prev.skinRatio),
+          }
+        : { r, g, b, brightness, skinRatio };
+      emaRef.current = ema;
+
+      // Priority: can't judge light quality without a face in frame; then hard
+      // exposure problems; then a color cast measured on skin pixels only, as a
+      // brightness-normalized ratio (not a raw channel gap) so it doesn't drift
+      // with scene brightness the way the old `r - b > 35` rule did.
+      let candidate: Lighting;
+      if (ema.skinRatio < MIN_SKIN_RATIO) candidate = 'no-face';
+      else if (ema.brightness < 70) candidate = 'dark';
+      else if (ema.brightness > 225) candidate = 'bright';
+      else if ((ema.r - ema.b) / Math.max(ema.brightness, 1) > 0.22) candidate = 'warm';
+      else if ((ema.b - ema.r) / Math.max(ema.brightness, 1) > 0.16) candidate = 'cool';
+      else candidate = 'good';
+
+      const stable = stableRef.current;
+      stable.count = candidate === stable.candidate ? stable.count + 1 : 1;
+      stable.candidate = candidate;
+      if (stable.count >= STABLE_FRAMES) setLighting(candidate);
+    }, 350);
     return () => { clearInterval(id); setLighting(null); };
   }, [showCamera]);
 
@@ -208,16 +290,31 @@ const CameraCapture = forwardRef<CameraCaptureHandle, Props>(function CameraCapt
 
           {/* Face position guide — head-shaped oval, dims everything outside it.
               Width/height and the label offset both derive from the same min() clamp
-              so the label stays glued to the oval's actual edge on every screen size. */}
+              so the label stays glued to the oval's actual edge on every screen size.
+              Border color reflects the live gauge, so the oval itself is real feedback
+              (green = framed + lit correctly) rather than a static decoration. */}
           <div
-            className="pointer-events-none absolute left-1/2 top-[44%] z-[5] -translate-x-1/2 -translate-y-1/2 rounded-[50%] border-2 border-dashed border-white/85"
-            style={{ width: 'min(58vmin, 340px)', height: 'min(78vmin, 460px)', boxShadow: '0 0 0 9999px rgba(0,0,0,0.55)' }}
+            className="pointer-events-none absolute left-1/2 top-[44%] z-[5] -translate-x-1/2 -translate-y-1/2 rounded-[50%] border-2 border-dashed transition-colors duration-300"
+            style={{
+              width: 'min(58vmin, 340px)',
+              height: 'min(78vmin, 460px)',
+              boxShadow: '0 0 0 9999px rgba(0,0,0,0.55)',
+              borderColor: lighting === 'good'
+                ? 'rgba(52,211,153,0.9)'
+                : lighting === null || lighting === 'no-face'
+                  ? 'rgba(255,255,255,0.85)'
+                  : 'rgba(244,63,94,0.9)',
+            }}
           />
           <p
             className="pointer-events-none absolute left-1/2 z-[5] -translate-x-1/2 px-4 text-center text-xs font-semibold text-white/90"
             style={{ top: 'max(calc(44% - min(39vmin, 230px) - 2rem), 4.5rem)' }}
           >
-            Нүүрээ хүрээн дотор байрлуулна уу
+            {lighting === 'no-face'
+              ? 'Нүүрээ хүрээн дотор, тод харагдахаар байрлуулна уу'
+              : 'Нүүрээ хүрээн дотор байрлуулна уу'}
+            <br />
+            <span className="font-normal text-white/70">Байгалийн цайвар гэрэлд, нүдний шил/малгайгүйгээр авахыг зөвлөж байна</span>
           </p>
 
           <div
@@ -229,7 +326,12 @@ const CameraCapture = forwardRef<CameraCaptureHandle, Props>(function CameraCapt
               <div className="flex items-center gap-1.5 rounded-full bg-black/40 px-3 py-1.5 backdrop-blur-sm">
                 <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${lighting === 'good' ? 'bg-emerald-400' : 'bg-rose-500'}`} />
                 <span className="text-xs font-semibold text-white">
-                  {lighting === 'dark' ? 'Хэт харанхуй' : lighting === 'yellow' ? 'Хэт шар гэрэлтэй' : 'Гэрэлтүүлэг төгс байна'}
+                  {lighting === 'no-face' ? 'Нүүр олдсонгүй'
+                    : lighting === 'dark' ? 'Хэт харанхуй'
+                    : lighting === 'bright' ? 'Хэт тод гэрэлтэй'
+                    : lighting === 'warm' ? 'Хэт шар гэрэлтэй'
+                    : lighting === 'cool' ? 'Хэт хөх гэрэлтэй'
+                    : 'Гэрэлтүүлэг төгс байна'}
                 </span>
               </div>
             ) : <span />}
