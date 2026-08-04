@@ -17,7 +17,7 @@ export default function Home() {
       <Header />
       <HeroSection />
       {/* <ColorShowcase /> */}
-      <ScienceSection />
+      {/* <ScienceSection /> */}
       <Benefits />
       <Testimonials />
       <HowItWorks />
