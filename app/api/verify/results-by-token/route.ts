@@ -24,7 +24,7 @@ export async function POST(req: Request) {
     const { token } = body;
 
     if (typeof token !== 'string' || !token)
-      return Response.json({ error: 'Token шаардлагатай.' }, { status: 400 });
+      return Response.json({ error: 'Token is required.' }, { status: 400 });
 
     const now = new Date().toISOString();
     const { data: session, error: sessionErr } = await supabase
@@ -35,7 +35,7 @@ export async function POST(req: Request) {
       .single();
 
     if (sessionErr || !session)
-      return Response.json({ error: 'Session дууссан байна. Дахин нэвтэрнэ үү.' }, { status: 401 });
+      return Response.json({ error: 'Session expired. Please sign in again.' }, { status: 401 });
 
     const { data: analyses, error: analysesErr } = await supabase
       .from('analyses')
@@ -44,7 +44,7 @@ export async function POST(req: Request) {
       .order('created_at', { ascending: false });
 
     if (analysesErr)
-      return Response.json({ error: 'Үр дүн татахад алдаа гарлаа.' }, { status: 500 });
+      return Response.json({ error: 'An error occurred while fetching results.' }, { status: 500 });
 
     let finalAnalyses: AnalysisRow[] = (analyses ?? []) as AnalysisRow[];
 
@@ -85,6 +85,6 @@ export async function POST(req: Request) {
     });
   } catch (err) {
     console.error('results-by-token error:', err);
-    return Response.json({ error: 'Дотоод алдаа гарлаа.' }, { status: 500 });
+    return Response.json({ error: 'An internal error occurred.' }, { status: 500 });
   }
 }

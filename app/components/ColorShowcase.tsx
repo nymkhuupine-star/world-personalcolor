@@ -6,22 +6,22 @@ import Image from 'next/image';
 const seasons = [
   {
     name: 'Spring',
-    label: 'Хавар',
+    label: 'Spring',
     colors: ['#F9C5D1', '#F4A7B9', '#F7E7A6', '#A8D5A2', '#FAB87F'],
   },
   {
     name: 'Summer',
-    label: 'Зун',
+    label: 'Summer',
     colors: ['#B5D5E8', '#7EC8E3', '#C4B7D7', '#D4A5A5', '#E8C4D4'],
   },
   {
     name: 'Autumn',
-    label: 'Намар',
+    label: 'Autumn',
     colors: ['#C4956A', '#E8735A', '#D4A017', '#8B6914', '#A0522D'],
   },
   {
     name: 'Winter',
-    label: 'Өвөл',
+    label: 'Winter',
     colors: ['#2C4770', '#8B2252', '#B5A4D8', '#1A1A2E', '#C0C0C0'],
   },
 ];
@@ -88,10 +88,10 @@ export default function ColorShowcase() {
             className="mt-3 text-3xl font-bold text-slate-900 lg:text-4xl"
             style={{ fontFamily: 'var(--font-playfair), Georgia, serif' }}
           >
-            Таны өнгийг олж мэд
+            Discover Your Colors
           </h2>
           <p className="mt-4 text-slate-500 text-base max-w-md mx-auto">
-            4 улирлын өнгөний хэлбэрт суурилан таны арьс, үс, нүдний өнгөтэй хамгийн таарах палитрыг тодорхойлно.
+            Based on the 4-season color theory, we identify the palette that best complements your skin, hair, and eye color.
           </p>
         </motion.div>
 

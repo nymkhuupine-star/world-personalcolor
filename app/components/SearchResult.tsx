@@ -25,7 +25,7 @@ const SEASON_STYLE: Record<string, { gradient: string; bg: string; text: string 
 };
 
 function formatDate(d: string) {
-  return new Date(d).toLocaleString('mn-MN', { year: 'numeric', month: 'long', day: 'numeric' });
+  return new Date(d).toLocaleString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
 }
 
 const SESSION_KEY = 'pc_search_session';
@@ -124,7 +124,7 @@ export default function SearchResult() {
       setAnalyses(data.analyses ?? []);
       setStep('results');
     } catch {
-      setError('Алдаа гарлаа. Дахин оролдоно уу.');
+      setError('An error occurred. Please try again.');
     } finally {
       setLoading(false);
     }

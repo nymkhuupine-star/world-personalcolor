@@ -71,9 +71,8 @@ const UploadZone = forwardRef<UploadZoneHandle, Props>(function UploadZone(
     <>
       {/* Upload zone */}
       <div
-        className="group relative cursor-pointer overflow-hidden rounded-2xl border border-dashed border-slate-200 bg-white/60 transition-all duration-300 hover:border-violet-300/70 hover:bg-violet-50/30"
+        className="group relative overflow-hidden rounded-2xl border border-dashed border-slate-200 bg-white/60 transition-all duration-300 hover:border-violet-300/70 hover:bg-violet-50/30"
         style={{ minHeight: '240px' }}
-        onClick={() => !readyToPay && !resultSeason && onOpenCamera()}
         onDrop={handleDrop}
         onDragOver={(e) => e.preventDefault()}
       >
@@ -98,22 +97,28 @@ const UploadZone = forwardRef<UploadZoneHandle, Props>(function UploadZone(
               <Camera className="h-5 w-5 text-slate-500 transition-colors duration-300 group-hover:text-violet-500" strokeWidth={1.5} />
             </div>
             <div className="text-center space-y-1">
-              <p className="text-sm font-semibold text-slate-700">Take a photo</p>
+              <p className="text-sm font-semibold text-slate-700">Add your photo</p>
               <p className="text-xs text-slate-500">A close-up portrait with your face clearly visible</p>
             </div>
-            {cameraError && (
-              <div className="px-6 text-center">
-                <p className="text-xs text-rose-400 mb-1.5">{cameraError}</p>
-                <button
-                  type="button"
-                  onClick={(e) => { e.stopPropagation(); fileRef.current?.click(); }}
-                  className="inline-flex items-center gap-1.5 text-xs font-semibold text-violet-500 hover:text-violet-600"
-                >
-                  <Upload className="h-3 w-3" strokeWidth={2} />
-                  Upload from gallery instead
-                </button>
-              </div>
-            )}
+            <div className="flex items-center gap-2.5">
+              <button
+                type="button"
+                onClick={() => onOpenCamera()}
+                className="inline-flex items-center gap-1.5 rounded-full bg-violet-500 px-4 py-2 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-violet-600"
+              >
+                <Camera className="h-3.5 w-3.5" strokeWidth={2} />
+                Take a Photo
+              </button>
+              <button
+                type="button"
+                onClick={() => fileRef.current?.click()}
+                className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-600 shadow-sm transition-colors hover:border-violet-300 hover:text-violet-600"
+              >
+                <Upload className="h-3.5 w-3.5" strokeWidth={2} />
+                Upload Photo
+              </button>
+            </div>
+            {cameraError && <p className="px-6 text-center text-xs text-rose-400">{cameraError}</p>}
           </div>
         )}
 

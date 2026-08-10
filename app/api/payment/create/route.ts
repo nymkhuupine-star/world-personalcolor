@@ -19,11 +19,11 @@ export async function POST(req: Request) {
     const { email, analysisResult, amount } = body;
 
     if (typeof email !== 'string' || !isEmail(email))
-      return Response.json({ error: 'Зөв имэйл хаяг оруулна уу.' }, { status: 400 });
+      return Response.json({ error: 'Please enter a valid email address.' }, { status: 400 });
     if (typeof amount !== 'number' || amount <= 0)
-      return Response.json({ error: 'Дүн буруу байна.' }, { status: 400 });
+      return Response.json({ error: 'Invalid amount.' }, { status: 400 });
     if (!analysisResult || typeof analysisResult !== 'object' || Array.isArray(analysisResult))
-      return Response.json({ error: 'Шинжилгээний үр дүн байхгүй байна.' }, { status: 400 });
+      return Response.json({ error: 'Analysis result is missing.' }, { status: 400 });
 
     // Insert order — row.id becomes transactionId
     const { data: order, error: insertErr } = await supabase
@@ -34,7 +34,7 @@ export async function POST(req: Request) {
 
     if (insertErr || !order) {
       console.error('payment/create insert error:', insertErr);
-      return Response.json({ error: 'Захиалга хадгалахад алдаа гарлаа.' }, { status: 500 });
+      return Response.json({ error: 'An error occurred while saving the order.' }, { status: 500 });
     }
 
     const transactionId = order.id as string;
@@ -47,7 +47,7 @@ export async function POST(req: Request) {
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       console.error('payment/create Bonum error:', msg);
-      return Response.json({ error: `Bonum invoice үүсгэхэд алдаа гарлаа. (${msg})` }, { status: 502 });
+      return Response.json({ error: `An error occurred while creating the Bonum invoice. (${msg})` }, { status: 502 });
     }
 
     // Persist invoiceId and transactionId
@@ -58,12 +58,12 @@ export async function POST(req: Request) {
 
     if (updateErr) {
       console.error('payment/create update error:', updateErr);
-      return Response.json({ error: 'Захиалга шинэчлэхэд алдаа гарлаа.' }, { status: 500 });
+      return Response.json({ error: 'An error occurred while updating the order.' }, { status: 500 });
     }
 
     return Response.json({ followUpLink, orderId: transactionId });
   } catch (err) {
     console.error('payment/create error:', err);
-    return Response.json({ error: 'Дотоод алдаа гарлаа.' }, { status: 500 });
+    return Response.json({ error: 'An internal error occurred.' }, { status: 500 });
   }
 }

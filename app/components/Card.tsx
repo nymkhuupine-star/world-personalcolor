@@ -189,13 +189,13 @@ export default function Card() {
       setAnalyzing(true);
       setStageLabel(STAGE_LABELS.model);
 
+      const { analyzeImage, UserFacingImageError } = await import('@/lib/personal-color/image-analysis');
+      const { getPrimaryAndSecondarySeason } = await import('@/lib/personal-color/rule-engine');
+      const { questionnaireToMetrics, mergeMetrics, isQuestionnaireComplete: isComplete, HAIR_LAB }
+        = await import('@/lib/personal-color/questionnaire');
+
       let seasonName: string;
       try {
-        const { analyzeImage }              = await import('@/lib/personal-color/image-analysis');
-        const { getPrimaryAndSecondarySeason } = await import('@/lib/personal-color/rule-engine');
-        const { questionnaireToMetrics, mergeMetrics, isQuestionnaireComplete: isComplete, HAIR_LAB }
-          = await import('@/lib/personal-color/questionnaire');
-
         // Dyed hair reads the dye color from the photo, not the true undertone
         // signal — override with the questionnaire's natural hair color LAB.
         const hairOverrideLab =
@@ -216,11 +216,9 @@ export default function Card() {
           colorMetrics as Parameters<typeof getPrimaryAndSecondarySeason>[0],
         ).primary.season;
       } catch (err) {
-        const rawMsg = err instanceof Error ? err.message : '';
-        const isUserFacing = rawMsg && /[Ѐ-ӿ]/.test(rawMsg);
         setPhotoQualityError({
-          message: isUserFacing
-            ? rawMsg
+          message: err instanceof UserFacingImageError
+            ? err.message
             : 'Could not detect a face. Please upload a photo where your face is fully visible.',
           issues: [],
         });

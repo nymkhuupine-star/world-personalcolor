@@ -31,9 +31,9 @@ export async function POST(req: Request) {
     const { email, code } = body;
 
     if (typeof email !== 'string' || !isEmail(email))
-      return Response.json({ error: 'Зөв имэйл хаяг оруулна уу.' }, { status: 400 });
+      return Response.json({ error: 'Please enter a valid email address.' }, { status: 400 });
     if (typeof code !== 'string' || !/^\d{6}$/.test(code))
-      return Response.json({ error: 'Код буруу байна.' }, { status: 400 });
+      return Response.json({ error: 'Invalid code.' }, { status: 400 });
 
     const now = new Date().toISOString();
     const { data: codeRow, error: codeErr } = await supabase
@@ -48,7 +48,7 @@ export async function POST(req: Request) {
       .single();
 
     if (codeErr || !codeRow)
-      return Response.json({ error: 'Код буруу эсвэл хугацаа дууссан байна.' }, { status: 400 });
+      return Response.json({ error: 'The code is incorrect or has expired.' }, { status: 400 });
 
     await supabase.from('verification_codes').update({ used: true }).eq('id', codeRow.id);
 
@@ -98,7 +98,7 @@ export async function POST(req: Request) {
     return Response.json({ success: true, token, analyses: finalAnalyses });
   } catch (err) {
     console.error('check-code error:', err);
-    return Response.json({ error: 'Дотоод алдаа гарлаа.' }, { status: 500 });
+    return Response.json({ error: 'An internal error occurred.' }, { status: 500 });
   }
 }
 

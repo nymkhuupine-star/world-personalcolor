@@ -21,7 +21,7 @@ export const metadata: Metadata = {
   title: "Personal Color AI",
 
   description:
-    "AI-д суурилсан хувийн өнгөний шинжилгээ — улирлын палитраа олж, илүү зөв сонголт хий.",
+    "AI-powered personal color analysis — discover your seasonal palette and make better choices.",
 
   icons: {
     icon: "/favicon-rounded.png",
@@ -35,7 +35,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "Personal Color AI",
     description:
-      "AI-д суурилсан хувийн өнгөний шинжилгээ — улирлын палитраа олж, илүү зөв сонголт хий.",
+      "AI-powered personal color analysis — discover your seasonal palette and make better choices.",
     images: [
       {
         url: "/personal%20(6).png",
@@ -49,7 +49,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Personal Color AI",
     description:
-      "AI-д суурилсан хувийн өнгөний шинжилгээ — улирлын палитраа олж, илүү зөв сонголт хий.",
+      "AI-powered personal color analysis — discover your seasonal palette and make better choices.",
     images: ["/personal%20(6).png"],
   },
 };
@@ -63,7 +63,7 @@ export default function RootLayout({
     <ClerkProvider afterSignOutUrl="/">
 
       <html
-        lang="mn"
+        lang="en"
         className={`${inter.variable} ${playfair.variable} h-full antialiased`}
       >
         <body

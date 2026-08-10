@@ -15,9 +15,9 @@ export async function POST(req: Request) {
     const { email, analysisId } = body;
 
     if (typeof email !== 'string' || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
-      return Response.json({ error: 'Зөв имэйл хаяг оруулна уу.' }, { status: 400 });
+      return Response.json({ error: 'Please enter a valid email address.' }, { status: 400 });
     if (typeof analysisId !== 'string' || !analysisId)
-      return Response.json({ error: 'analysisId шаардлагатай.' }, { status: 400 });
+      return Response.json({ error: 'analysisId is required.' }, { status: 400 });
 
     let analysis: { season: string; sub_type: string; reasoning: string | null } | null = null;
 
@@ -41,7 +41,7 @@ export async function POST(req: Request) {
     }
 
     if (!analysis)
-      return Response.json({ error: 'Үр дүн олдсонгүй.' }, { status: 404 });
+      return Response.json({ error: 'Result not found.' }, { status: 404 });
 
     const { folder, file: subtypeFile } = seasonNameToStoragePath(analysis.sub_type as SeasonName);
     const pdfPath = `${folder}/${subtypeFile}.pdf`;
@@ -80,6 +80,6 @@ export async function POST(req: Request) {
     return Response.json({ success: true });
   } catch (err) {
     console.error('resend-result error:', err);
-    return Response.json({ error: 'Имэйл илгээхэд алдаа гарлаа.' }, { status: 500 });
+    return Response.json({ error: 'An error occurred while sending the email.' }, { status: 500 });
   }
 }

@@ -2,38 +2,38 @@ import type { SeasonName } from './rule-engine';
 
 export const SEASON_DESCRIPTIONS: Record<SeasonName, string> = {
   'Light Spring':
-    'Таны хувийн өнгөний төрөл бол Light Spring юм. Таны өнгө төрх цайвар, дулаан бөгөөд зөөлөн гэрэлтсэн мэдрэмж төрүүлдэг. Персик, цайвар шаргал, шүрэн ягаан зэрэг дулаан бөгөөд хөнгөн өнгүүд таны нүүрийг гэрэлтүүлж, байгалийн өнгө төрхийг тань улам тодотгоно.',
+    'Your personal color type is Light Spring. Your coloring is light, warm, and gives off a soft, glowing feeling. Warm, light shades like peach, light blonde, and coral pink light up your face and bring out your natural coloring even more.',
 
   'True Spring':
-    'Таны хувийн өнгөний төрөл бол True Spring юм. Таны өнгө төрх дулаан, цэвэр, эрч хүчтэй байдаг. Алтан шаргал, тод ногоон, шүрэн улбар шар зэрэг дулаан өнгүүд таны арьсны өнгийг сэргээж, илүү гэрэлтэй харагдуулна.',
+    'Your personal color type is True Spring. Your coloring is warm, clear, and full of energy. Warm shades like golden blonde, bright green, and coral orange refresh your skin tone and make you look even more radiant.',
 
   'Bright Spring':
-    'Таны хувийн өнгөний төрөл бол Bright Spring юм. Таны нүүрний өнгөнүүд тод ялгардаг бөгөөд цэвэр, тод өнгөнүүд танд хамгийн сайн зохидог. Тод цэнхэр, шүрэн улаан, тод ягаан зэрэг өнгүүд таны өнгө төрхийг илүү амьд, эрч хүчтэй харагдуулна.',
+    'Your personal color type is Bright Spring. The colors in your face stand out vividly, and clear, bright shades suit you best. Colors like bright blue, coral red, and bright pink make your coloring look even more vivid and energetic.',
 
   'Light Summer':
-    'Таны хувийн өнгөний төрөл бол Light Summer юм. Таны өнгө төрх зөөлөн, цайвар бөгөөд хүйтэн туяатай байдаг. Лаванд, цайвар цэнхэр, зөөлөн ягаан зэрэг өнгүүд таны эмэгтэйлэг, дөлгөөн төрхийг илүү тодруулна.',
+    'Your personal color type is Light Summer. Your coloring is soft, light, and has a cool undertone. Shades like lavender, light blue, and soft pink bring out your gentle, feminine look even more.',
 
   'True Summer':
-    'Таны хувийн өнгөний төрөл бол True Summer юм. Таны арьс, нүд, үсний өнгө хүйтэн бөгөөд зөөлөн туяатай байдаг. Сарнайн ягаан, хүйтэн цэнхэр, зөөлөн нил ягаан зэрэг өнгүүд таны байгалийн өнгө төрхтэй хамгийн сайн зохицно.',
+    'Your personal color type is True Summer. Your skin, eyes, and hair color are cool with a soft undertone. Shades like rose pink, cool blue, and soft violet blend best with your natural coloring.',
 
   'Soft Summer':
-    'Таны хувийн өнгөний төрөл бол Soft Summer юм. Таны өнгө төрх намуухан, зөөлөн бөгөөд нүд, үс, арьсны өнгө хоорондын ялгаа бага байдаг. Саарал туяатай ягаан, бүдэг хөх, зөөлөн нил өнгүүд танд хамгийн зохимжтой.',
+    'Your personal color type is Soft Summer. Your coloring is muted and soft, with little contrast between your eyes, hair, and skin color. Grayed pink, muted blue, and soft violet shades suit you best.',
 
   'Soft Autumn':
-    'Таны хувийн өнгөний төрөл бол Soft Autumn юм. Таны өнгө төрх дулаан бөгөөд зөөлөн мэдрэмж төрүүлдэг. Зөөлөн хүрэн, бүдэг ногоон, дулаан шаргал зэрэг байгалийн өнгөнүүд таны нүүрийг илүү тэнцвэртэй, дулаан харагдуулна.',
+    'Your personal color type is Soft Autumn. Your coloring is warm and gives off a soft feeling. Natural shades like soft brown, muted green, and warm blonde make your face look more balanced and warm.',
 
   'True Autumn':
-    'Таны хувийн өнгөний төрөл бол True Autumn юм. Таны өнгө төрх баялаг, дулаан бөгөөд байгалийн өнгөнүүдтэй гайхалтай зохицдог. Зэсэн хүрэн, чидун ногоон, алтлаг шар зэрэг өнгүүд таны байгалийн гоо үзэсгэлэнг тодотгоно.',
+    'Your personal color type is True Autumn. Your coloring is rich, warm, and blends beautifully with natural shades. Colors like copper brown, olive green, and golden yellow highlight your natural beauty.',
 
   'Dark Autumn':
-    'Таны хувийн өнгөний төрөл бол Dark Autumn юм. Таны нүд, үс, арьсны өнгө гүн бөгөөд дулаан туяатай байдаг. Хар хүрэн, ойн ногоон, дарсны улаан зэрэг баялаг өнгөнүүд таны эрхэмсэг төрхийг улам тодруулна.',
+    'Your personal color type is Dark Autumn. Your eyes, hair, and skin color are deep with a warm undertone. Rich shades like dark brown, forest green, and wine red bring out your striking look even more.',
 
   'Cool Winter':
-    'Таны хувийн өнгөний төрөл бол Cool Winter юм. Таны өнгө төрх тод, цэвэр бөгөөд хүйтэн туяатай байдаг. Мөсөн цэнхэр, тод ягаан, цэвэр цагаан зэрэг өнгүүд таны нүүрний онцлогийг илүү тод харагдуулна.',
+    'Your personal color type is Cool Winter. Your coloring is bright, clear, and has a cool undertone. Shades like ice blue, bright pink, and pure white make your features stand out even more clearly.',
 
   'Bright Winter':
-    'Таны хувийн өнгөний төрөл бол Bright Winter юм. Таны нүд, арьсны өнгө хоорондоо тод ялгардаг бөгөөд тод өнгөнүүд танд гайхалтай зохидог. Цэвэр улаан, тод цэнхэр, хар цагаан хослолууд таны өнгө төрхийг илүү хүчтэй тодруулна.',
+    'Your personal color type is Bright Winter. Your eyes and skin tone contrast vividly, and bright colors suit you wonderfully. Combinations like pure red, bright blue, and black-and-white highlight your coloring with even more impact.',
 
   'Dark Winter':
-    'Таны хувийн өнгөний төрөл бол Dark Winter юм. Таны өнгө төрх гүн, тод бөгөөд хүчтэй сэтгэгдэл төрүүлдэг. Дарсны улаан, хар хөх, нүүрсэн саарал зэрэг гүн хүйтэн өнгөнүүд таны эрхэмсэг, хүчирхэг дүр төрхийг улам тодотгоно.',
+    'Your personal color type is Dark Winter. Your coloring is deep, bold, and leaves a strong impression. Deep, cool shades like wine red, navy, and charcoal gray bring out your striking, powerful look even more.',
 };

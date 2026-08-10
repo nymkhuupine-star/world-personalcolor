@@ -11,6 +11,11 @@ import type { ColorMetrics } from './rule-engine';
 
 // ── Internal types ────────────────────────────────────────────────────────────
 
+/** Deliberate, user-readable error — safe to surface as-is in the UI, unlike
+ *  unexpected internal errors (library failures, bad input) whose raw message
+ *  shouldn't reach the user. */
+export class UserFacingImageError extends Error {}
+
 type RGB = { r: number; g: number; b: number };
 export type LAB = { L: number; a: number; b: number };
 type Point = { x: number; y: number };
@@ -106,7 +111,7 @@ function detectLandmarks(fm: FaceMeshInstance, canvas: HTMLCanvasElement): Promi
     fm.onResults((results: FaceMeshResults) => {
       const face = results.multiFaceLandmarks?.[0];
       if (!face?.length) {
-        reject(new Error('Нүүр илрүүлж чадсангүй. Нүүр бүтэн харагдах зураг оруулна уу.'));
+        reject(new UserFacingImageError('Could not detect a face. Please upload a photo where your face is fully visible.'));
       } else {
         resolve(face);
       }
@@ -570,8 +575,8 @@ function checkBrightness(data: Uint8ClampedArray): string | null {
     count++;
   }
   const avg = sum / count;
-  if (avg < 38)  return 'Зураг хэт харанхуй байна. Байгалийн гэрэлтэй орчинд авсан зураг оруулна уу.';
-  if (avg > 232) return 'Зураг хэт гэрэлтэй байна. Тал руу харсан буюу сүүдэртэй газраас зураг авна уу.';
+  if (avg < 38)  return 'The photo is too dark. Please upload a photo taken in natural light.';
+  if (avg > 232) return 'The photo is too bright. Try facing away from direct light or taking it in a shaded area.';
   return null;
 }
 
@@ -593,7 +598,7 @@ function checkBlur(data: Uint8ClampedArray, width: number, height: number): stri
     }
   }
   const variance = count > 0 ? sumSq / count : 999;
-  if (variance < 55) return 'Зураг бүдэг байна. Фокус зөв, тодорхой зураг оруулна уу.';
+  if (variance < 55) return 'The photo is blurry. Please upload a sharp, well-focused photo.';
   return null;
 }
 
@@ -624,7 +629,7 @@ export type AnalysisStage = 'landmarks' | 'sampling' | 'color';
  * Analyze an image file and return ColorMetrics for the Rule Engine.
  *
  * Must be called in a browser context (uses Canvas API + MediaPipe WASM).
- * Throws a user-readable Mongolian error if no face is detected.
+ * Throws a UserFacingImageError with a user-readable message if no face is detected.
  */
 export async function analyzeImage(
   imageFile: File,
@@ -648,7 +653,7 @@ export async function analyzeImage(
   // Face size check — face must span at least 12% of image width
   const faceWidthRatio = landmarks[454].x - landmarks[234].x;
   if (faceWidthRatio < 0.12) {
-    throw new Error('Нүүр хэт жижиг байна. Нүүрийгээ илүү ойртуулсан зураг оруулна уу.');
+    throw new UserFacingImageError('Your face is too small in the frame. Please take a closer photo of your face.');
   }
 
   onStage?.('landmarks');
@@ -667,9 +672,9 @@ export async function analyzeImage(
   const foreheadFiltered = filterSkin(foreheadRaw);
 
   if (cheekFiltered.length + foreheadFiltered.length < 30) {
-    throw new Error(
-      'Арьсны өнгийг уншиж чадсангүй. ' +
-      'Нүүр бүтэн харагдах, байгалийн гэрэлтэй зураг оруулна уу.',
+    throw new UserFacingImageError(
+      'Could not read your skin tone. ' +
+      'Please upload a photo with your full face visible in natural light.',
     );
   }
 

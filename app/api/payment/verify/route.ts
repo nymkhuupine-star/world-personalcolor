@@ -39,7 +39,7 @@ export async function GET(req: Request) {
     const orderId = searchParams.get('orderId');
 
     if (!orderId)
-      return Response.json({ error: 'orderId шаардлагатай.' }, { status: 400 });
+      return Response.json({ error: 'orderId is required.' }, { status: 400 });
 
     const { data: order, error: findErr } = await supabase
       .from('analysis_orders')
@@ -48,7 +48,7 @@ export async function GET(req: Request) {
       .single();
 
     if (findErr || !order)
-      return Response.json({ error: 'Захиалга олдсонгүй.' }, { status: 404 });
+      return Response.json({ error: 'Order not found.' }, { status: 404 });
 
     const stored = order.analysis_result as StoredAnalysis | null;
 
@@ -118,6 +118,6 @@ export async function GET(req: Request) {
 
   } catch (err) {
     console.error('payment/verify error:', err);
-    return Response.json({ error: 'Дотоод алдаа гарлаа.' }, { status: 500 });
+    return Response.json({ error: 'An internal error occurred.' }, { status: 500 });
   }
 }

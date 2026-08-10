@@ -18,7 +18,7 @@ export async function POST(req: Request) {
     const { email } = body;
 
     if (typeof email !== 'string' || !isEmail(email))
-      return Response.json({ error: 'Зөв имэйл хаяг оруулна уу.' }, { status: 400 });
+      return Response.json({ error: 'Please enter a valid email address.' }, { status: 400 });
 
     // Rate limit: max 3 codes per email per 10 minutes
     const tenMinAgo = new Date(Date.now() - 10 * 60 * 1000).toISOString();
@@ -31,14 +31,14 @@ export async function POST(req: Request) {
     if (countErr) {
       console.error('verification_codes table error:', countErr);
       return Response.json(
-        { error: 'Суурь өгөгдлийн сан алдаа. Supabase migration ажиллуулсан уу?' },
+        { error: 'Database error. Have the Supabase migrations been run?' },
         { status: 500 }
       );
     }
 
     if ((count ?? 0) >= 3)
       return Response.json(
-        { error: 'Хэт олон хүсэлт. 10 минутын дараа дахин оролдоно уу.' },
+        { error: 'Too many requests. Please try again in 10 minutes.' },
         { status: 429 }
       );
 
@@ -51,7 +51,7 @@ export async function POST(req: Request) {
 
     if (insertErr) {
       console.error('Insert error:', insertErr);
-      return Response.json({ error: 'Код хадгалахад алдаа гарлаа.' }, { status: 500 });
+      return Response.json({ error: 'An error occurred while saving the code.' }, { status: 500 });
     }
 
     const year = new Date().getFullYear();
@@ -76,6 +76,6 @@ export async function POST(req: Request) {
     return Response.json({ success: true });
   } catch (err) {
     console.error('send-code unexpected error:', err);
-    return Response.json({ error: 'Имэйл илгээхэд алдаа гарлаа.' }, { status: 500 });
+    return Response.json({ error: 'An error occurred while sending the email.' }, { status: 500 });
   }
 }

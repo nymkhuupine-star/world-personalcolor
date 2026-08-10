@@ -5,7 +5,7 @@ import {
   forwardRef, useEffect, useImperativeHandle, useRef, useState, useSyncExternalStore,
 } from 'react';
 import { createPortal } from 'react-dom';
-import { X } from 'lucide-react';
+import { Glasses, Sun, X } from 'lucide-react';
 
 // Mirrors Card.tsx's JPEG_QUALITY — kept local so this component has no
 // dependency on its parent beyond the props below.
@@ -76,6 +76,9 @@ const CameraCapture = forwardRef<CameraCaptureHandle, Props>(function CameraCapt
   const [showCamera, setShowCamera] = useState(false);
   const [lighting, setLighting] = useState<Lighting | null>(null);
   const [flashing, setFlashing] = useState(false);
+  // Short viewports (landscape phones) don't have room for the tips row without
+  // it overlapping the face oval — drop it there rather than risk covering the face.
+  const [compactHeight, setCompactHeight] = useState(false);
   const emaRef = useRef<{ r: number; g: number; b: number; brightness: number; skinRatio: number } | null>(null);
   const stableRef = useRef<{ candidate: Lighting | null; count: number }>({ candidate: null, count: 0 });
 
@@ -101,6 +104,14 @@ const CameraCapture = forwardRef<CameraCaptureHandle, Props>(function CameraCapt
     const prevOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
     return () => { document.body.style.overflow = prevOverflow; };
+  }, [showCamera]);
+
+  useEffect(() => {
+    if (!showCamera) return;
+    const update = () => setCompactHeight(window.innerHeight < 560);
+    update();
+    window.addEventListener('resize', update);
+    return () => window.removeEventListener('resize', update);
   }, [showCamera]);
 
   // Live lighting gauge — samples only the face-guide oval (not the whole frame,
@@ -311,10 +322,8 @@ const CameraCapture = forwardRef<CameraCaptureHandle, Props>(function CameraCapt
             style={{ top: 'max(calc(44% - min(39vmin, 230px) - 2rem), 4.5rem)' }}
           >
             {lighting === 'no-face'
-              ? 'Нүүрээ хүрээн дотор, тод харагдахаар байрлуулна уу'
-              : 'Нүүрээ хүрээн дотор байрлуулна уу'}
-            <br />
-            <span className="font-normal text-white/70">Байгалийн цайвар гэрэлд, нүдний шил/малгайгүйгээр авахыг зөвлөж байна</span>
+              ? 'Position your face clearly within the frame'
+              : 'Position your face within the frame'}
           </p>
 
           <div
@@ -326,12 +335,12 @@ const CameraCapture = forwardRef<CameraCaptureHandle, Props>(function CameraCapt
               <div className="flex items-center gap-1.5 rounded-full bg-black/40 px-3 py-1.5 backdrop-blur-sm">
                 <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${lighting === 'good' ? 'bg-emerald-400' : 'bg-rose-500'}`} />
                 <span className="text-xs font-semibold text-white">
-                  {lighting === 'no-face' ? 'Нүүр олдсонгүй'
-                    : lighting === 'dark' ? 'Хэт харанхуй'
-                    : lighting === 'bright' ? 'Хэт тод гэрэлтэй'
-                    : lighting === 'warm' ? 'Хэт шар гэрэлтэй'
-                    : lighting === 'cool' ? 'Хэт хөх гэрэлтэй'
-                    : 'Гэрэлтүүлэг төгс байна'}
+                  {lighting === 'no-face' ? 'No face detected'
+                    : lighting === 'dark' ? 'Too dark'
+                    : lighting === 'bright' ? 'Too bright'
+                    : lighting === 'warm' ? 'Too much warm light'
+                    : lighting === 'cool' ? 'Too much cool light'
+                    : 'Lighting looks great'}
                 </span>
               </div>
             ) : <span />}
@@ -347,13 +356,38 @@ const CameraCapture = forwardRef<CameraCaptureHandle, Props>(function CameraCapt
           </div>
 
           <div
-            className="absolute inset-x-0 bottom-0 z-10 flex items-center justify-center bg-gradient-to-t from-black/60 to-transparent p-6"
+            className="absolute inset-x-0 bottom-0 z-10 flex flex-col items-center gap-3 bg-gradient-to-t from-black/70 via-black/40 to-transparent px-4 pt-10 pb-6"
             style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 1.5rem)' }}
           >
+            {/* Professional-grade capture tips — accurate undertone reading depends on
+                clean, unfiltered light hitting the skin and nothing (glass, tint, shadow)
+                sitting between the sensor and the face. Sits in the bottom bar (which
+                already has spare height around the shutter button) rather than the
+                top slot, which is only ever tall enough for one short line before it
+                collides with the gauge bar or the face oval on short/mobile screens.
+                Dropped entirely on short/landscape viewports, where even this bottom
+                slot doesn't have room without creeping over the face oval. */}
+            {!compactHeight && (
+              <div className="flex max-w-[22rem] flex-wrap items-center justify-center gap-x-3 gap-y-1.5 rounded-xl bg-black/35 px-3 py-2 backdrop-blur-sm">
+                <div className="flex items-center gap-1 text-[11px] text-white/85">
+                  <Sun className="h-3 w-3 shrink-0 text-amber-300" strokeWidth={2} />
+                  Stand near natural light
+                </div>
+                <div className="flex items-center gap-1 text-[11px] text-white/85">
+                  <Glasses className="h-3 w-3 shrink-0 text-amber-300" strokeWidth={2} />
+                  Take off your glasses
+                </div>
+                <div className="flex items-center gap-1 text-[11px] text-white/85">
+                  <span className="shrink-0 text-amber-300">✓</span>
+                  No hat, no makeup
+                </div>
+              </div>
+            )}
+
             <button
               type="button"
               onClick={capturePhoto}
-              className="flex h-16 w-16 items-center justify-center rounded-full border-4 border-white bg-white/20 backdrop-blur-sm transition-transform active:scale-90"
+              className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full border-4 border-white bg-white/20 backdrop-blur-sm transition-transform active:scale-90"
               aria-label="Take photo"
             >
               <div className="h-12 w-12 rounded-full bg-white" />
