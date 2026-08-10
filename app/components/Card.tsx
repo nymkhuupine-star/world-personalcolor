@@ -73,6 +73,10 @@ export default function Card() {
   const [stageLabel, setStageLabel] = useState<string | null>(null);
   const [cameraError, setCameraError] = useState<string | null>(null);
 
+  // Gate the questionnaire (and everything after it) behind the photo-guidance
+  // checklist in UploadZone — reset per photo so it's shown again for each new pick.
+  const [photoGuidanceDone, setPhotoGuidanceDone] = useState(false);
+
   // Payment gate — set after successful analysis, never exposes season/colors to UI
   const [readyToPay, setReadyToPay] = useState(false);
   const [paying, setPaying] = useState(false);
@@ -105,6 +109,7 @@ export default function Card() {
     setReadyToPay(false);
     setPaying(false);
     setResultSeason(null);
+    setPhotoGuidanceDone(false);
     pendingSeason.current   = null;
     pendingImageUrl.current = null;
   };
@@ -122,6 +127,7 @@ export default function Card() {
     setPreviewUrl(URL.createObjectURL(selectedFile));
     setReadyToPay(false);
     setSubmitError(null);
+    setPhotoGuidanceDone(false);
     pendingSeason.current   = null;
     pendingImageUrl.current = null;
   };
@@ -365,6 +371,8 @@ export default function Card() {
             stageLabel={stageLabel}
             readyToPay={readyToPay}
             resultSeason={resultSeason}
+            guidanceDone={photoGuidanceDone}
+            onGuidanceDone={() => setPhotoGuidanceDone(true)}
             onOpenCamera={() => cameraRef.current?.open()}
             onFileSelect={handleFileSelect}
             onRemovePhoto={() => {
@@ -373,12 +381,13 @@ export default function Card() {
               setSubmitError(null);
               setPhotoQualityError(null);
               setQuestionnaireAnswers({});
+              setPhotoGuidanceDone(false);
             }}
           />
 
-          {/* Questionnaire — зураг сонгосон, payment gate харагдаагүй үед */}
+          {/* Questionnaire — зураг сонгож, гарын авлагыг зөвшөөрсний дараа л харагдана */}
           <AnimatePresence>
-            {file && !readyToPay && !resultSeason && (
+            {file && photoGuidanceDone && !readyToPay && !resultSeason && (
               <Questionnaire answers={questionnaireAnswers} onChange={setQuestionnaireAnswers} />
             )}
           </AnimatePresence>

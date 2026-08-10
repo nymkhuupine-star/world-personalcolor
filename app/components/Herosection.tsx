@@ -193,7 +193,7 @@ export default function HeroSection() {
             className="absolute -right-10 top-1/2 -z-10 flex -translate-y-1/2 flex-col gap-3"
           >
             {paletteSwatches.map((swatch) => (
-              <div key={swatch.name} className="h-20 w-40 overflow-hidden rounded-2xl shadow-xl">
+              <div key={swatch.name} className="h-20 w-40 overflow-hidden rounded-full shadow-xl">
                 <Image
                   src={swatch.file}
                   alt={swatch.name}

@@ -3,7 +3,7 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import { forwardRef, useImperativeHandle, useRef, useState, type ChangeEvent, type DragEvent } from 'react';
 import Image from 'next/image';
-import { Camera, Droplets, Eye, Sun, Upload, X } from 'lucide-react';
+import { Ban, Camera, Check, Droplets, Eye, Sun, Upload, X } from 'lucide-react';
 
 export type UploadZoneHandle = { openFilePicker: () => void };
 
@@ -16,6 +16,9 @@ interface Props {
   stageLabel: string | null;
   readyToPay: boolean;
   resultSeason: string | null;
+  /** Owned by Card so it can gate the questionnaire behind the same checklist. */
+  guidanceDone: boolean;
+  onGuidanceDone: () => void;
   onOpenCamera: () => void;
   onFileSelect: (file: File) => void;
   onRemovePhoto: () => void;
@@ -32,10 +35,18 @@ const requirements = [
   },
   {
     icon: Droplets,
-    label: 'No Makeup',
+    label: 'Bare Face',
     tips: [
-      { ok: true,  text: 'No foundation, toner, or mascara — a clean, bare face' },
-      { ok: false, text: 'Photos with cream, blush, or lipstick — hides your natural complexion' },
+      { ok: true,  text: 'No makeup and no glasses — your natural skin tone and eyes fully visible' },
+      { ok: false, text: 'Foundation, tinted lenses, or sunglasses — masks your true coloring' },
+    ],
+  },
+  {
+    icon: Ban,
+    label: 'No Filters',
+    tips: [
+      { ok: true,  text: 'A raw, unedited photo straight from the camera' },
+      { ok: false, text: 'Filters, beauty apps, or heavy editing — alters your true skin tone' },
     ],
   },
   {
@@ -51,7 +62,7 @@ const requirements = [
 /** Drop/preview zone — take-a-photo trigger, drag & drop, file picker, and the photo-tips accordion. */
 const UploadZone = forwardRef<UploadZoneHandle, Props>(function UploadZone(
   { previewUrl, cameraError, uploading, checking, analyzing, stageLabel, readyToPay, resultSeason,
-    onOpenCamera, onFileSelect, onRemovePhoto },
+    guidanceDone, onGuidanceDone, onOpenCamera, onFileSelect, onRemovePhoto },
   ref,
 ) {
   const fileRef = useRef<HTMLInputElement | null>(null);
@@ -148,11 +159,57 @@ const UploadZone = forwardRef<UploadZoneHandle, Props>(function UploadZone(
           e.target.value = '';
         }} />
 
+      {/* Post-selection guidance — inline, right under the photo itself, so
+          the selected photo stays fully visible instead of being buried under
+          a blur + dark overlay + modal stack. */}
+      {previewUrl && !readyToPay && !resultSeason && (
+        <div className="space-y-2.5">
+          <p className="flex items-center gap-1.5 text-xs font-semibold text-emerald-600">
+            <Check className="h-3.5 w-3.5" strokeWidth={2.5} />
+            Photo selected
+          </p>
+          {!guidanceDone && (
+                <div className="rounded-2xl border border-slate-100 bg-white/70 p-4">
+                  <p className="text-sm font-bold text-slate-800">Is your photo ready for analysis?</p>
+                  <p className="mt-0.5 text-xs text-slate-500">Make sure your photo follows these guidelines for the most accurate result.</p>
+
+                  <div className="mt-3 grid grid-cols-2 gap-2">
+                    {requirements.map(({ icon: Icon, label }) => (
+                      <div key={label} className="flex items-center gap-2 rounded-xl border border-slate-100 bg-slate-50/70 px-3 py-2.5">
+                        <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-violet-50">
+                          <Icon className="h-3.5 w-3.5 text-violet-500" strokeWidth={1.75} />
+                        </div>
+                        <span className="text-xs font-semibold text-slate-700">{label}</span>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="mt-4 flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => fileRef.current?.click()}
+                      className="rounded-xl border border-slate-200 px-4 py-3 text-xs font-semibold text-slate-500 transition-colors hover:border-slate-300 hover:text-slate-700"
+                    >
+                      Change Photo
+                    </button>
+                    <button
+                      type="button"
+                      onClick={onGuidanceDone}
+                      className="flex-1 rounded-xl bg-gradient-to-r from-violet-500 via-purple-500 to-pink-500 py-3 text-sm font-semibold text-white shadow-md shadow-violet-200/70 transition-transform active:scale-[0.98]"
+                    >
+                      Continue
+                    </button>
+                  </div>
+                </div>
+            )}
+        </div>
+      )}
+
       {/* Tips — зураг оруулахаас өмнө л харагдана */}
       {!previewUrl && (
         <div className="space-y-2">
           <p className="text-center text-[10px] text-slate-400">Tap to see details</p>
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
             {requirements.map(({ icon: Icon, label }, i) => (
               <button
                 key={label}
