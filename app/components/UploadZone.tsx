@@ -15,7 +15,6 @@ interface Props {
   analyzing: boolean;
   stageLabel: string | null;
   readyToPay: boolean;
-  resultSeason: string | null;
   /** Owned by Card so it can gate the questionnaire behind the same checklist. */
   guidanceDone: boolean;
   onGuidanceDone: () => void;
@@ -61,7 +60,7 @@ const requirements = [
 
 /** Drop/preview zone — take-a-photo trigger, drag & drop, file picker, and the photo-tips accordion. */
 const UploadZone = forwardRef<UploadZoneHandle, Props>(function UploadZone(
-  { previewUrl, cameraError, uploading, checking, analyzing, stageLabel, readyToPay, resultSeason,
+  { previewUrl, cameraError, uploading, checking, analyzing, stageLabel, readyToPay,
     guidanceDone, onGuidanceDone, onOpenCamera, onFileSelect, onRemovePhoto },
   ref,
 ) {
@@ -91,7 +90,7 @@ const UploadZone = forwardRef<UploadZoneHandle, Props>(function UploadZone(
           <>
             <Image src={previewUrl} alt="Uploaded photo" fill unoptimized className="object-cover"
               sizes="(min-width: 1024px) 50vw, 100vw" />
-            {!readyToPay && !resultSeason && (
+            {!readyToPay && (
               <button
                 type="button"
                 onClick={(e) => { e.stopPropagation(); onRemovePhoto(); }}
@@ -162,7 +161,7 @@ const UploadZone = forwardRef<UploadZoneHandle, Props>(function UploadZone(
       {/* Post-selection guidance — inline, right under the photo itself, so
           the selected photo stays fully visible instead of being buried under
           a blur + dark overlay + modal stack. */}
-      {previewUrl && !readyToPay && !resultSeason && (
+      {previewUrl && !readyToPay && (
         <div className="space-y-2.5">
           <p className="flex items-center gap-1.5 text-xs font-semibold text-emerald-600">
             <Check className="h-3.5 w-3.5" strokeWidth={2.5} />

@@ -2,6 +2,7 @@
 
 import { AnimatePresence, motion } from 'framer-motion';
 import { useEffect, useRef, useState, type ChangeEvent } from 'react';
+import { useRouter } from 'next/navigation';
 import { Info, Loader2, Sparkles } from 'lucide-react';
 import supabase from '@/utils/supabase';
 import Questionnaire from './Questionnaire';
@@ -83,9 +84,7 @@ export default function Card() {
   const pendingSeason   = useRef<string | null>(null);
   const pendingImageUrl = useRef<string | null>(null);
 
-  // SKIP_PAYMENT mode — season name shown directly, no payment gate
-  const [resultSeason, setResultSeason] = useState<string | null>(null);
-
+  const router = useRouter();
   const emailRef = useRef<HTMLInputElement | null>(null);
   const isProcessing = useRef(false);
   const cameraRef = useRef<CameraCaptureHandle>(null);
@@ -108,7 +107,6 @@ export default function Card() {
     setStageLabel(null);
     setReadyToPay(false);
     setPaying(false);
-    setResultSeason(null);
     setPhotoGuidanceDone(false);
     pendingSeason.current   = null;
     pendingImageUrl.current = null;
@@ -238,7 +236,10 @@ export default function Card() {
       setAnalyzing(false);
       setStageLabel(null);
       if (SKIP_PAYMENT) {
-        setResultSeason(seasonName);
+        // Magazine-style result lives on its own page, not inline in the card —
+        // photo/email ride along as query params to fill the cover page's photo slot.
+        const resultParams = new URLSearchParams({ photo: imgUrl, email: trimmedEmail });
+        router.push(`/result/${encodeURIComponent(seasonName)}?${resultParams.toString()}`);
       } else {
         setReadyToPay(true);
       }
@@ -370,7 +371,6 @@ export default function Card() {
             analyzing={analyzing}
             stageLabel={stageLabel}
             readyToPay={readyToPay}
-            resultSeason={resultSeason}
             guidanceDone={photoGuidanceDone}
             onGuidanceDone={() => setPhotoGuidanceDone(true)}
             onOpenCamera={() => cameraRef.current?.open()}
@@ -387,7 +387,7 @@ export default function Card() {
 
           {/* Questionnaire — зураг сонгож, гарын авлагыг зөвшөөрсний дараа л харагдана */}
           <AnimatePresence>
-            {file && photoGuidanceDone && !readyToPay && !resultSeason && (
+            {file && photoGuidanceDone && !readyToPay && (
               <Questionnaire answers={questionnaireAnswers} onChange={setQuestionnaireAnswers} />
             )}
           </AnimatePresence>
@@ -406,7 +406,7 @@ export default function Card() {
           </AnimatePresence>
 
           {/* Email input — payment gate харагдахаас өмнө л харагдана */}
-          {(!file || isQuestionnaireComplete(questionnaireAnswers)) && !readyToPay && !resultSeason && questionnaireAnswers.gender !== 'male' && (
+          {(!file || isQuestionnaireComplete(questionnaireAnswers)) && !readyToPay && questionnaireAnswers.gender !== 'male' && (
             <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} className="space-y-2">
               <label htmlFor="email" className="block text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-600">
                 Email Address
@@ -455,7 +455,7 @@ export default function Card() {
           </AnimatePresence>
 
           {/* CTA — зураг оруулаагүй эсвэл асуулт дуусаагүй, payment gate харагдахгүй үед */}
-          {(!file || isQuestionnaireComplete(questionnaireAnswers)) && !readyToPay && !resultSeason && questionnaireAnswers.gender !== 'male' && (
+          {(!file || isQuestionnaireComplete(questionnaireAnswers)) && !readyToPay && questionnaireAnswers.gender !== 'male' && (
             <button
               onClick={handleUpload}
               disabled={uploading}
@@ -477,7 +477,6 @@ export default function Card() {
             paying={paying}
             price={PRICE}
             onPay={handlePay}
-            resultSeason={resultSeason}
             onReset={resetCard}
           />
         </div>

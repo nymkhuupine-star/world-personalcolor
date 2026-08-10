@@ -82,7 +82,7 @@ export function reportId(season: SeasonKey, subtype: string) {
  * SeasonName in rule-engine.ts produces) to its {season, subtype} pair —
  * every subtype's `.label` above is one of those 12 exact names, so this is
  * just a reverse lookup. Used to find which gallery folder to show a user
- * their finished result (see AnalysisResult.tsx / ResultGallery).
+ * their finished result (see app/result/[season]/page.tsx / ResultMagazine).
  */
 export function resolveFullSeasonName(fullName: string): { season: SeasonKey; subtype: string } | null {
   const normalized = fullName.trim().toLowerCase();
