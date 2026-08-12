@@ -3,6 +3,7 @@ import { isAdminUser } from '@/lib/admin-auth';
 import Dashboard from './Dashboard';
 import Unauthorized from './Unauthorized';
 import type { Order, Analysis } from './types';
+import { ORDERS_FETCH_LIMIT } from './utils';
 
 export default async function ControlPage() {
   if (!(await isAdminUser())) {
@@ -20,7 +21,7 @@ export default async function ControlPage() {
       .from('analysis_orders')
       .select('id,email,amount,paid,paid_at,created_at,admin_confirmed,email_sent_at,pdf_downloaded_at,analysis_result->seasonName')
       .order('created_at', { ascending: false })
-      .limit(300),
+      .limit(ORDERS_FETCH_LIMIT),
     supabase
       .from('analyses')
       .select('id,email,season,sub_type,email_sent,paid,created_at')

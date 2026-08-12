@@ -1,5 +1,11 @@
 export const UB_TZ = 'Asia/Ulaanbaatar';
 
+/** Test/zero-amount orders below this are excluded from revenue totals. */
+export const MIN_REAL_PAYMENT = 1000;
+
+/** Keep in sync with the `.limit()` used by /api/admin/orders. */
+export const ORDERS_FETCH_LIMIT = 500;
+
 const ubFmt = new Intl.DateTimeFormat('en-CA', {
   timeZone: UB_TZ,
   year: 'numeric',
@@ -32,4 +38,16 @@ export function formatDate(d: string): string {
 
 export function today(): string {
   return toUBDate(new Date().toISOString());
+}
+
+/** 'YYYY-MM-DD' in UB timezone, n days before today (n=0 → today). */
+export function daysAgo(n: number): string {
+  return toUBDate(new Date(Date.now() - n * 24 * 60 * 60 * 1000).toISOString());
+}
+
+/** 'YYYY-MM-DD' of the 1st of the current UB-timezone month. */
+export function monthStart(): string {
+  const ubNow = new Date(new Date().toLocaleString('en-US', { timeZone: UB_TZ }));
+  const first = new Date(ubNow.getFullYear(), ubNow.getMonth(), 1);
+  return toUBDate(first.toISOString());
 }

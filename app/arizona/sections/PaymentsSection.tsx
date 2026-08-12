@@ -1,47 +1,47 @@
 'use client';
 
-import { CheckCircle, XCircle, Loader2, CreditCard, ChevronDown, Mail, Download } from 'lucide-react';
+import { CheckCircle, XCircle, Loader2, CreditCard, ChevronDown, Mail, Download, Inbox } from 'lucide-react';
 import type { Order } from '../types';
-import { toUBDate, ubDayLabel, formatDate, today as getToday } from '../utils';
+import { toUBDate, ubDayLabel, formatDate, today as getToday, daysAgo, monthStart, MIN_REAL_PAYMENT } from '../utils';
 
 type Props = {
   orders: Order[];
   loading: boolean;
   paySearch: string;
   setPaySearch: (v: string) => void;
-  payDate: string;
-  setPayDate: (v: string) => void;
+  payDateFrom: string;
+  setPayDateFrom: (v: string) => void;
+  payDateTo: string;
+  setPayDateTo: (v: string) => void;
   expandedDays: Set<string>;
   setExpandedDays: React.Dispatch<React.SetStateAction<Set<string>>>;
   handleConfirmOrder: (id: string) => Promise<void>;
   confirmingId: string | null;
   confirmedId: string | null;
+  confirmError: string | null;
 };
 
 export default function PaymentsSection({
   orders, loading, paySearch, setPaySearch,
-  payDate, setPayDate,
+  payDateFrom, setPayDateFrom, payDateTo, setPayDateTo,
   expandedDays, setExpandedDays,
-  handleConfirmOrder, confirmingId, confirmedId,
+  handleConfirmOrder, confirmingId, confirmedId, confirmError,
 }: Props) {
   const todayStr = getToday();
   const paidOrders = orders.filter(o => o.paid);
   const bonumOrders = paidOrders.filter(o => !o.admin_confirmed);
-  const totalRevenue = paidOrders.filter(o => (o.amount ?? 0) >= 1000).reduce((s, o) => s + (o.amount ?? 0), 0);
+  const totalRevenue = paidOrders.filter(o => (o.amount ?? 0) >= MIN_REAL_PAYMENT).reduce((s, o) => s + (o.amount ?? 0), 0);
 
+  // Paid orders are keyed by paid_at, unpaid ones by created_at — matches how rows are grouped below.
   const dateKey = (o: Order) => toUBDate((o.paid && o.paid_at) ? o.paid_at : o.created_at);
+  const hasDateFilter = !!payDateFrom || !!payDateTo;
 
-  // Build sorted list of unique dates that have PAID orders
-  const paidDateKey = (o: Order) => toUBDate(o.paid_at ?? o.created_at);
-  const availablePaidDates = Array.from(
-    new Set(paidOrders.map(paidDateKey))
-  ).sort((a, b) => b.localeCompare(a));
+  const setPreset = (from: string, to: string) => { setPayDateFrom(from); setPayDateTo(to); };
 
   const filtered = orders.filter(o => {
-    if (payDate) {
-      if (!o.paid) return false;
-      if (paidDateKey(o) !== payDate) return false;
-    }
+    const d = dateKey(o);
+    if (payDateFrom && d < payDateFrom) return false;
+    if (payDateTo && d > payDateTo) return false;
     if (!paySearch) return true;
     return (
       o.email.toLowerCase().includes(paySearch.toLowerCase()) ||
@@ -97,36 +97,31 @@ export default function PaymentsSection({
                 value={paySearch}
                 onChange={e => setPaySearch(e.target.value)}
                 placeholder="Имэйлээр хайх..."
-                className={`w-full rounded-xl border bg-slate-50 py-2 pl-9 pr-3 text-xs text-slate-700 outline-none focus:ring-2 ${
-                  paySearch && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(paySearch)
-                    ? 'border-rose-300 focus:border-rose-300 focus:ring-rose-100'
-                    : 'border-slate-200 focus:border-violet-300 focus:ring-violet-100'
-                }`}
+                className="w-full rounded-xl border border-slate-200 bg-slate-50 py-2 pl-9 pr-3 text-xs text-slate-700 outline-none focus:border-violet-300 focus:ring-2 focus:ring-violet-100"
               />
               <svg className="absolute left-3 top-2.5 h-3.5 w-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z" />
               </svg>
-              {paySearch && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(paySearch) && (
-                <p className="absolute left-0 top-full mt-1 text-[10px] text-rose-500">Буруу имэйл формат</p>
-              )}
             </div>
             <div className="flex items-center gap-1.5">
-              <select
-                value={payDate}
-                onChange={e => setPayDate(e.target.value)}
-                className="rounded-xl border border-slate-200 bg-slate-50 py-2 px-3 text-xs text-slate-700 outline-none focus:border-violet-300 focus:ring-2 focus:ring-violet-100"
-              >
-                <option value="">Бүх өдрүүд</option>
-                {availablePaidDates.map(d => {
-                  const [, m, day] = d.split('-');
-                  return (
-                    <option key={d} value={d}>{m}/{day}</option>
-                  );
-                })}
-              </select>
-              {payDate && (
+              <input
+                type="date"
+                value={payDateFrom}
+                max={payDateTo || undefined}
+                onChange={e => setPayDateFrom(e.target.value)}
+                className="rounded-xl border border-slate-200 bg-slate-50 py-2 px-2.5 text-xs text-slate-700 outline-none focus:border-violet-300 focus:ring-2 focus:ring-violet-100"
+              />
+              <span className="text-xs text-slate-300">—</span>
+              <input
+                type="date"
+                value={payDateTo}
+                min={payDateFrom || undefined}
+                onChange={e => setPayDateTo(e.target.value)}
+                className="rounded-xl border border-slate-200 bg-slate-50 py-2 px-2.5 text-xs text-slate-700 outline-none focus:border-violet-300 focus:ring-2 focus:ring-violet-100"
+              />
+              {hasDateFilter && (
                 <button
-                  onClick={() => setPayDate('')}
+                  onClick={() => setPreset('', '')}
                   className="rounded-lg bg-slate-100 px-2 py-2 text-xs text-slate-400 hover:bg-slate-200 transition-colors"
                 >✕</button>
               )}
@@ -134,16 +129,49 @@ export default function PaymentsSection({
           </div>
         </div>
 
+        {/* Quick date presets */}
+        <div className="flex flex-wrap items-center gap-1.5 px-4 pb-3 md:px-6 -mt-1">
+          {[
+            { label: 'Өнөөдөр', from: getToday(), to: getToday() },
+            { label: 'Сүүлийн 7 хоног', from: daysAgo(6), to: getToday() },
+            { label: 'Сүүлийн 14 хоног', from: daysAgo(13), to: getToday() },
+            { label: 'Энэ сар', from: monthStart(), to: getToday() },
+          ].map(p => (
+            <button
+              key={p.label}
+              onClick={() => setPreset(p.from, p.to)}
+              className={`rounded-full border px-3 py-1 text-[11px] font-medium transition-colors ${
+                payDateFrom === p.from && payDateTo === p.to
+                  ? 'border-violet-300 bg-violet-50 text-violet-600'
+                  : 'border-slate-200 text-slate-500 hover:bg-slate-50'
+              }`}
+            >
+              {p.label}
+            </button>
+          ))}
+        </div>
+
+        {confirmError && (
+          <div className="mx-4 mt-3 md:mx-6 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+            {confirmError}
+          </div>
+        )}
+
         {loading ? (
           <div className="flex items-center justify-center gap-2 py-20 text-slate-400 text-sm">
             <Loader2 className="h-4 w-4 animate-spin" /> Уншиж байна...
+          </div>
+        ) : filtered.length === 0 ? (
+          <div className="flex flex-col items-center justify-center gap-2 py-20 text-slate-400 text-sm">
+            <Inbox className="h-8 w-8 text-slate-200" strokeWidth={1.5} />
+            <p>{paySearch || hasDateFilter ? 'Хайлтад тохирох захиалга олдсонгүй' : 'Одоохондоо захиалга байхгүй'}</p>
           </div>
         ) : (
           <div>
             {groups.map(({ day, label, items }) => {
               const isToday = day === todayStr;
-              const isOpen = isToday || expandedDays.has(day) || !!paySearch || !!payDate;
-              const dayRevenue = items.filter(o => o.paid && (o.amount ?? 0) >= 1000).reduce((s, o) => s + (o.amount ?? 0), 0);
+              const isOpen = isToday || expandedDays.has(day) || !!paySearch || hasDateFilter;
+              const dayRevenue = items.filter(o => o.paid && (o.amount ?? 0) >= MIN_REAL_PAYMENT).reduce((s, o) => s + (o.amount ?? 0), 0);
               return (
                 <div key={day}>
                   <button
@@ -162,15 +190,13 @@ export default function PaymentsSection({
                   {isOpen && (
                     <div className="overflow-x-auto">
                       <table className="w-full">
-                        {isToday && (
-                          <thead>
-                            <tr className="border-b border-slate-100 bg-slate-50/50">
-                              {['#', 'Имэйл хаяг', 'Өнгөний төрөл', 'Дүн', 'Статус', 'Огноо', 'Үйлдэл', ''].map((h, i) => (
-                                <th key={i} className={`px-5 py-2.5 text-left text-[11px] font-semibold text-slate-400 ${i === 3 ? 'text-right' : ''} ${i === 4 ? 'text-center' : ''}`}>{h}</th>
-                              ))}
-                            </tr>
-                          </thead>
-                        )}
+                        <thead>
+                          <tr className="border-b border-slate-100 bg-slate-50/50">
+                            {['#', 'Имэйл хаяг', 'Өнгөний төрөл', 'Дүн', 'Статус', 'Огноо', 'Үйлдэл', ''].map((h, i) => (
+                              <th key={i} className={`px-5 py-2.5 text-left text-[11px] font-semibold text-slate-400 ${i === 3 ? 'text-right' : ''} ${i === 4 ? 'text-center' : ''}`}>{h}</th>
+                            ))}
+                          </tr>
+                        </thead>
                         <tbody>
                           {items.map((o, idx) => (
                             <tr key={o.id} className="border-b border-slate-50 hover:bg-slate-50/60 transition-colors">

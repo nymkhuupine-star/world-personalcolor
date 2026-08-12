@@ -5,6 +5,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { createClient } from '@supabase/supabase-js';
+import { UserButton } from '@clerk/nextjs';
 import {
   Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis,
 } from 'recharts';
@@ -14,7 +15,8 @@ import {
   CheckCircle, Loader2, ChevronRight,
 } from 'lucide-react';
 import { REPORT_GROUPS, reportId, type SeasonKey } from '@/utils/reportPdfs';
-import { toUBDate, formatDate, UB_TZ } from './utils';
+import { toUBDate, formatDate, UB_TZ, MIN_REAL_PAYMENT } from './utils';
+import ConfirmDialog from './ConfirmDialog';
 import type { Section, Order, Analysis, PdfStatuses, ImageStatuses, GalleryStatuses } from './types';
 
 const supabase = createClient(
@@ -58,7 +60,8 @@ export default function Dashboard({
   const [loading, setLoading] = useState(false);
   const [regSearch, setRegSearch] = useState('');
   const [paySearch, setPaySearch] = useState('');
-  const [payDate, setPayDate] = useState('');
+  const [payDateFrom, setPayDateFrom] = useState('');
+  const [payDateTo, setPayDateTo] = useState('');
   const [pdfStatuses, setPdfStatuses] = useState<PdfStatuses>({});
   const [pdfUploading, setPdfUploading] = useState<string | null>(null);
   const [pdfDeleting, setPdfDeleting] = useState<string | null>(null);
@@ -76,6 +79,8 @@ export default function Dashboard({
   const [expandedSeason, setExpandedSeason] = useState<string | null>(null);
   const [confirmingId, setConfirmingId] = useState<string | null>(null);
   const [confirmedId, setConfirmedId] = useState<string | null>(null);
+  const [confirmOrderError, setConfirmOrderError] = useState<string | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<{ message: string; onConfirm: () => void } | null>(null);
 
   const preloaded = new Set<Section>();
   if (initialOrders.length > 0) { preloaded.add('overview'); preloaded.add('payments'); }
@@ -125,6 +130,7 @@ export default function Dashboard({
   const handleConfirmOrder = async (orderId: string) => {
     if (confirmingId) return;
     setConfirmingId(orderId);
+    setConfirmOrderError(null);
     try {
       const res = await fetch('/api/admin/confirm-order', {
         method: 'POST',
@@ -135,14 +141,18 @@ export default function Dashboard({
         setConfirmedId(orderId);
         await fetchOrders();
         setTimeout(() => setConfirmedId(null), 4000);
+      } else {
+        const data = (await res.json().catch(() => ({}))) as { error?: string };
+        setConfirmOrderError(data.error ?? `Баталгаажуулж чадсангүй (${res.status}).`);
       }
-    } catch { /* silent */ }
+    } catch {
+      setConfirmOrderError('Сервертэй холбогдож чадсангүй.');
+    }
     setConfirmingId(null);
   };
 
-  const handlePdfDelete = async (season: SeasonKey, subtype: string) => {
+  const doPdfDelete = async (season: SeasonKey, subtype: string) => {
     const id = reportId(season, subtype);
-    if (!confirm(`"${subtype}.pdf" файлыг устгах уу?`)) return;
     setPdfDeleting(id);
     setPdfSuccess(null);
     setPdfError(null);
@@ -162,6 +172,13 @@ export default function Dashboard({
       setPdfError('Сервертэй холбогдож чадсангүй.');
     }
     setPdfDeleting(null);
+  };
+
+  const handlePdfDelete = (season: SeasonKey, subtype: string) => {
+    setPendingDelete({
+      message: `"${subtype}.pdf" файлыг устгах уу?`,
+      onConfirm: () => { setPendingDelete(null); void doPdfDelete(season, subtype); },
+    });
   };
 
   const handlePdfUpload = async (season: SeasonKey, subtype: string, file: File) => {
@@ -198,9 +215,8 @@ export default function Dashboard({
     setPdfUploading(null);
   };
 
-  const handleImageDelete = async (season: SeasonKey, subtype: string) => {
+  const doImageDelete = async (season: SeasonKey, subtype: string) => {
     const id = reportId(season, subtype);
-    if (!confirm(`"${subtype}" улирлын зургийг устгах уу?`)) return;
     setImageDeleting(id);
     setImageSuccess(null);
     setImageError(null);
@@ -220,6 +236,13 @@ export default function Dashboard({
       setImageError('Сервертэй холбогдож чадсангүй.');
     }
     setImageDeleting(null);
+  };
+
+  const handleImageDelete = (season: SeasonKey, subtype: string) => {
+    setPendingDelete({
+      message: `"${subtype}" улирлын зургийг устгах уу?`,
+      onConfirm: () => { setPendingDelete(null); void doImageDelete(season, subtype); },
+    });
   };
 
   const handleImageUpload = async (season: SeasonKey, subtype: string, file: File) => {
@@ -256,10 +279,9 @@ export default function Dashboard({
     setImageUploading(null);
   };
 
-  const handleGalleryDelete = async (season: SeasonKey, subtype: string, name: string) => {
+  const doGalleryDelete = async (season: SeasonKey, subtype: string, name: string) => {
     const id = reportId(season, subtype);
     const deletingKey = `${id}/${name}`;
-    if (!confirm('Энэ зургийг устгах уу?')) return;
     setGalleryDeleting(deletingKey);
     setGalleryError(null);
     try {
@@ -278,6 +300,13 @@ export default function Dashboard({
       setGalleryError('Сервертэй холбогдож чадсангүй.');
     }
     setGalleryDeleting(null);
+  };
+
+  const handleGalleryDelete = (season: SeasonKey, subtype: string, name: string) => {
+    setPendingDelete({
+      message: 'Энэ зургийг устгах уу?',
+      onConfirm: () => { setPendingDelete(null); void doGalleryDelete(season, subtype, name); },
+    });
   };
 
   const handleGalleryUpload = async (season: SeasonKey, subtype: string, file: File) => {
@@ -334,7 +363,7 @@ export default function Dashboard({
   // ── Overview calculations ──
   const today = new Date().toLocaleDateString('en-CA', { timeZone: UB_TZ });
   const paidOrders = orders.filter(o => o.paid);
-  const realPaidOrders = paidOrders.filter(o => (o.amount ?? 0) >= 1000);
+  const realPaidOrders = paidOrders.filter(o => (o.amount ?? 0) >= MIN_REAL_PAYMENT);
   const totalRevenue = realPaidOrders.reduce((sum, o) => sum + (o.amount ?? 0), 0);
 
   const now = new Date();
@@ -349,7 +378,7 @@ export default function Dashboard({
     })
     .reduce((sum, o) => sum + (o.amount ?? 0), 0);
 
-  const todayOrders = realPaidOrders.filter(o => o.paid_at && toUBDate(o.paid_at) === today && !o.admin_confirmed);
+  const todayOrders = realPaidOrders.filter(o => o.paid_at && toUBDate(o.paid_at) === today);
   const todayRevenue = todayOrders.reduce((sum, o) => sum + (o.amount ?? 0), 0);
 
   const chartData = Array.from({ length: daysInMonth }, (_, i) => {
@@ -404,8 +433,12 @@ export default function Dashboard({
           })}
         </nav>
 
-        <div className="border-t border-slate-100 px-5 py-4">
-          <Link href="/" className="text-xs text-slate-400 hover:text-slate-600 transition-colors">
+        <div className="border-t border-slate-100 px-5 py-4 space-y-3">
+          <div className="flex items-center gap-2">
+            <UserButton />
+            <span className="text-xs text-slate-500">Гарах / бүртгэл</span>
+          </div>
+          <Link href="/" className="block text-xs text-slate-400 hover:text-slate-600 transition-colors">
             ← Үндсэн хуудас руу буцах
           </Link>
         </div>
@@ -421,14 +454,19 @@ export default function Dashboard({
             </h1>
             <p className="text-[10px] text-slate-400 md:text-xs">Personal Color AI — Admin</p>
           </div>
-          <button
-            onClick={handleRefresh}
-            disabled={loading}
-            className="flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 shadow-sm transition hover:bg-slate-50 disabled:opacity-50"
-          >
-            <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} strokeWidth={1.5} />
-            <span className="hidden sm:inline">Шинэчлэх</span>
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleRefresh}
+              disabled={loading}
+              className="flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 shadow-sm transition hover:bg-slate-50 disabled:opacity-50"
+            >
+              <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} strokeWidth={1.5} />
+              <span className="hidden sm:inline">Шинэчлэх</span>
+            </button>
+            <div className="md:hidden">
+              <UserButton />
+            </div>
+          </div>
         </div>
 
         <div className="px-4 py-4 space-y-4 md:px-8 md:py-8 md:space-y-6">
@@ -540,13 +578,16 @@ export default function Dashboard({
               loading={loading}
               paySearch={paySearch}
               setPaySearch={setPaySearch}
-              payDate={payDate}
-              setPayDate={setPayDate}
+              payDateFrom={payDateFrom}
+              setPayDateFrom={setPayDateFrom}
+              payDateTo={payDateTo}
+              setPayDateTo={setPayDateTo}
               expandedDays={expandedDays}
               setExpandedDays={setExpandedDays}
               handleConfirmOrder={handleConfirmOrder}
               confirmingId={confirmingId}
               confirmedId={confirmedId}
+              confirmError={confirmOrderError}
             />
           )}
 
@@ -606,6 +647,14 @@ export default function Dashboard({
           );
         })}
       </nav>
+
+      {pendingDelete && (
+        <ConfirmDialog
+          message={pendingDelete.message}
+          onConfirm={pendingDelete.onConfirm}
+          onCancel={() => setPendingDelete(null)}
+        />
+      )}
     </div>
   );
 }
