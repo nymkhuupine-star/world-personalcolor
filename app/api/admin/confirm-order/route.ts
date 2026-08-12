@@ -1,21 +1,16 @@
-import { cookies } from 'next/headers';
 import { deliverResult } from '@/lib/deliverResult';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
+import { requireAdmin } from '@/lib/admin-auth';
 
 export const runtime = 'nodejs';
 
 type StoredAnalysis = { seasonName: string; imageUrl?: string };
 
-async function requireAdmin(): Promise<boolean> {
-  const cookieStore = await cookies();
-  const token = cookieStore.get('admin_token')?.value;
-  return !!process.env.ADMIN_SECRET && token === process.env.ADMIN_SECRET;
-}
-
 export async function POST(req: Request) {
+  const unauthorized = await requireAdmin();
+  if (unauthorized) return unauthorized;
+
   const supabase = getSupabaseAdmin();
-  if (!await requireAdmin())
-    return Response.json({ error: 'Unauthorized' }, { status: 401 });
 
   const { orderId } = await req.json().catch(() => ({})) as { orderId?: string };
   if (!orderId) return Response.json({ error: 'orderId шаардлагатай.' }, { status: 400 });

@@ -1,16 +1,16 @@
 import { deliverResult } from '@/lib/deliverResult';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
+import { requireAdmin } from '@/lib/admin-auth';
 
 export const runtime = 'nodejs';
 
 type StoredAnalysis = { seasonName: string; imageUrl?: string };
 
 export async function POST(req: Request) {
+  const unauthorized = await requireAdmin();
+  if (unauthorized) return unauthorized;
+
   const supabase = getSupabaseAdmin();
-  const secret = req.headers.get('x-admin-secret');
-  if (!secret || secret !== process.env.ADMIN_SECRET) {
-    return Response.json({ error: 'Unauthorized' }, { status: 401 });
-  }
 
   const body = await req.json().catch(() => ({})) as { invoiceId?: string; orderId?: string };
   const { invoiceId, orderId } = body;

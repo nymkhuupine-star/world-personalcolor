@@ -1,16 +1,12 @@
-import { cookies } from 'next/headers';
 import { createClient } from '@supabase/supabase-js';
+import { isAdminUser } from '@/lib/admin-auth';
 import Dashboard from './Dashboard';
-import AdminLogin from './AdminLogin';
+import Unauthorized from './Unauthorized';
 import type { Order, Analysis } from './types';
 
 export default async function ControlPage() {
-  const cookieStore = await cookies();
-  const token = cookieStore.get('admin_token')?.value;
-  const secret = process.env.ADMIN_SECRET;
-
-  if (!secret || token !== secret) {
-    return <AdminLogin />;
+  if (!(await isAdminUser())) {
+    return <Unauthorized />;
   }
 
   const supabase = createClient(

@@ -1,6 +1,6 @@
-import { cookies } from 'next/headers';
 import { randomUUID } from 'crypto';
 import { createClient } from '@supabase/supabase-js';
+import { requireAdmin } from '@/lib/admin-auth';
 import { isSeasonKey, isSubtypeKeyForSeason } from '@/utils/reportPdfs';
 
 export const runtime = 'nodejs';
@@ -19,15 +19,6 @@ function adminClient() {
   );
 }
 
-async function requireAdmin(): Promise<{ error: Response } | { error: null }> {
-  const cookieStore = await cookies();
-  const token = cookieStore.get('admin_token')?.value;
-  const secret = process.env.ADMIN_SECRET;
-  if (!secret || token !== secret)
-    return { error: Response.json({ error: 'Unauthorized' }, { status: 401 }) };
-  return { error: null };
-}
-
 function galleryFolder(season: string, subtype: string) {
   return `${season}/${subtype}/gallery`;
 }
@@ -39,8 +30,8 @@ function validateSeasonSubtype(season: unknown, subtype: unknown): { season: str
 }
 
 export async function GET(req: Request) {
-  const check = await requireAdmin();
-  if (check.error) return check.error;
+  const unauthorized = await requireAdmin();
+  if (unauthorized) return unauthorized;
 
   const url = new URL(req.url);
   const parsed = validateSeasonSubtype(url.searchParams.get('season'), url.searchParams.get('subtype'));
@@ -64,8 +55,8 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
-  const check = await requireAdmin();
-  if (check.error) return check.error;
+  const unauthorized = await requireAdmin();
+  if (unauthorized) return unauthorized;
 
   try {
     const { season, subtype, mimeType } = (await req.json()) as { season?: string; subtype?: string; mimeType?: string };
@@ -92,8 +83,8 @@ export async function POST(req: Request) {
 }
 
 export async function DELETE(req: Request) {
-  const check = await requireAdmin();
-  if (check.error) return check.error;
+  const unauthorized = await requireAdmin();
+  if (unauthorized) return unauthorized;
 
   try {
     const { season, subtype, name } = (await req.json()) as { season?: string; subtype?: string; name?: string };

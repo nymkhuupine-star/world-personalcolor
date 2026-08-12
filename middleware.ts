@@ -1,7 +1,7 @@
 import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server';
 import { NextResponse } from 'next/server';
 
-const isProtectedRoute = createRouteMatcher(['/dashboard(.*)']);
+const isProtectedRoute = createRouteMatcher(['/dashboard(.*)', '/arizona(.*)', '/api/admin(.*)']);
 
 const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
 const RATE_LIMIT = 10;

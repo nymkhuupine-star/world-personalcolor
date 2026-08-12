@@ -1,5 +1,5 @@
-import { cookies } from 'next/headers';
 import { createClient } from '@supabase/supabase-js';
+import { requireAdmin } from '@/lib/admin-auth';
 import { REPORT_GROUPS, isSeasonKey, isSubtypeKeyForSeason, reportId } from '@/utils/reportPdfs';
 
 export const runtime = 'nodejs';
@@ -21,23 +21,14 @@ function adminClient() {
   );
 }
 
-async function requireAdmin(): Promise<{ error: Response } | { error: null }> {
-  const cookieStore = await cookies();
-  const token = cookieStore.get('admin_token')?.value;
-  const secret = process.env.ADMIN_SECRET;
-  if (!secret || token !== secret)
-    return { error: Response.json({ error: 'Unauthorized' }, { status: 401 }) };
-  return { error: null };
-}
-
 /** All possible image paths for a subtype — used to find/remove whichever extension is currently stored. */
 function imageVariantPaths(season: string, subtype: string) {
   return ALLOWED_EXTS.map((ext) => `${season}/${subtype}.${ext}`);
 }
 
 export async function GET() {
-  const check = await requireAdmin();
-  if (check.error) return check.error;
+  const unauthorized = await requireAdmin();
+  if (unauthorized) return unauthorized;
 
   const sb = adminClient();
   const statuses: Record<string, string | null> = {};
@@ -57,8 +48,8 @@ export async function GET() {
 }
 
 export async function DELETE(req: Request) {
-  const check = await requireAdmin();
-  if (check.error) return check.error;
+  const unauthorized = await requireAdmin();
+  if (unauthorized) return unauthorized;
 
   try {
     const { season, subtype } = (await req.json()) as { season?: string; subtype?: string };
@@ -85,8 +76,8 @@ export async function DELETE(req: Request) {
 }
 
 export async function POST(req: Request) {
-  const check = await requireAdmin();
-  if (check.error) return check.error;
+  const unauthorized = await requireAdmin();
+  if (unauthorized) return unauthorized;
 
   try {
     const { season, subtype, mimeType } = (await req.json()) as { season?: string; subtype?: string; mimeType?: string };
