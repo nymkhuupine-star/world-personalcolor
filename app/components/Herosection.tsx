@@ -18,14 +18,6 @@ const fadeUp = {
   }),
 };
 
-const paletteSwatches = [
-  { name: 'Coral Pink', file: '/Coral Pink.png' },
-  { name: 'Violet', file: '/Violet.png' },
-  { name: 'Fresh Turquoise', file: '/Fresh Turquoise.png' },
-  { name: 'Golden Yellow', file: '/Golden Yellow.png' },
-  { name: 'Warm Orange', file: '/Warm Orange.png' },
-];
-
 const archColors = [
   { color: '#F2C4CE', label: 'Spring' },
   { color: '#F4A7B9', label: 'Spring' },
@@ -186,24 +178,6 @@ export default function HeroSection() {
           </motion.div>
         </div>
         <div className="relative">
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 1.1, duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
-            className="absolute -right-10 top-1/2 -z-10 flex -translate-y-1/2 flex-col gap-3"
-          >
-            {paletteSwatches.map((swatch) => (
-              <div key={swatch.name} className="h-20 w-40 overflow-hidden rounded-full shadow-xl">
-                <Image
-                  src={swatch.file}
-                  alt={swatch.name}
-                  width={80}
-                  height={80}
-                  className="h-full w-full object-cover"
-                />
-              </div>
-            ))}
-          </motion.div>
           <Card />
         </div>
       </div>

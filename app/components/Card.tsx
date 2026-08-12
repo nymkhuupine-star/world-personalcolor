@@ -405,8 +405,8 @@ export default function Card() {
             )}
           </AnimatePresence>
 
-          {/* Email input — payment gate харагдахаас өмнө л харагдана */}
-          {(!file || isQuestionnaireComplete(questionnaireAnswers)) && !readyToPay && questionnaireAnswers.gender !== 'male' && (
+          {/* Email input — зураг оруулж, questionnaire дуусаагүй бол харагдахгүй */}
+          {file && isQuestionnaireComplete(questionnaireAnswers) && !readyToPay && questionnaireAnswers.gender !== 'male' && (
             <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} className="space-y-2">
               <label htmlFor="email" className="block text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-600">
                 Email Address
@@ -454,8 +454,8 @@ export default function Card() {
             )}
           </AnimatePresence>
 
-          {/* CTA — зураг оруулаагүй эсвэл асуулт дуусаагүй, payment gate харагдахгүй үед */}
-          {(!file || isQuestionnaireComplete(questionnaireAnswers)) && !readyToPay && questionnaireAnswers.gender !== 'male' && (
+          {/* CTA — зураг оруулж, асуулга дуусаагүй бол харагдахгүй (UploadZone-ийн товчидтой давхцахгүй) */}
+          {file && isQuestionnaireComplete(questionnaireAnswers) && !readyToPay && questionnaireAnswers.gender !== 'male' && (
             <button
               onClick={handleUpload}
               disabled={uploading}
@@ -466,7 +466,7 @@ export default function Card() {
                   ? analyzing ? (stageLabel ?? 'Analyzing...')
                     : checking ? 'Checking photo quality...'
                     : 'Uploading photo...'
-                  : file ? 'Analyze My Colors' : 'Take a Photo'}
+                  : 'Analyze My Colors'}
               </span>
               <div className="absolute inset-0 bg-gradient-to-r from-violet-600 via-purple-600 to-pink-600 opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
             </button>

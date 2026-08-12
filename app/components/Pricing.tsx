@@ -48,7 +48,7 @@ export default function Pricing() {
             Pricing
           </span>
           <h2 className="font-serif text-4xl font-bold text-slate-900">
-            Choose the <em className="not-italic bg-gradient-to-r from-violet-500 to-pink-500 bg-clip-text text-transparent">plan</em> that's right for you
+            Choose the <em className="not-italic bg-gradient-to-r from-violet-500 to-pink-500 bg-clip-text text-transparent">plan</em> that&apos;s right for you
           </h2>
         </motion.div>
 

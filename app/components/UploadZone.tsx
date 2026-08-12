@@ -79,76 +79,86 @@ const UploadZone = forwardRef<UploadZoneHandle, Props>(function UploadZone(
 
   return (
     <>
-      {/* Upload zone */}
-      <div
-        className="group relative overflow-hidden rounded-2xl border border-dashed border-slate-200 bg-white/60 transition-all duration-300 hover:border-violet-300/70 hover:bg-violet-50/30"
-        style={{ minHeight: '240px' }}
-        onDrop={handleDrop}
-        onDragOver={(e) => e.preventDefault()}
-      >
-        {previewUrl ? (
-          <>
-            <Image src={previewUrl} alt="Uploaded photo" fill unoptimized className="object-cover"
-              sizes="(min-width: 1024px) 50vw, 100vw" />
-            {!readyToPay && (
-              <button
-                type="button"
-                onClick={(e) => { e.stopPropagation(); onRemovePhoto(); }}
-                className="absolute right-2 top-2 z-10 flex h-7 w-7 items-center justify-center rounded-full bg-black/50 text-white backdrop-blur-sm transition-colors hover:bg-black/70"
-                aria-label="Remove photo"
-              >
-                <X className="h-3.5 w-3.5" strokeWidth={2.5} />
-              </button>
-            )}
-          </>
-        ) : (
-          <div className="flex h-full flex-col items-center justify-center gap-4 py-10">
-            <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-slate-100 bg-white shadow-sm transition-all duration-300 group-hover:border-violet-200 group-hover:shadow-md group-hover:shadow-violet-100/60">
-              <Camera className="h-5 w-5 text-slate-500 transition-colors duration-300 group-hover:text-violet-500" strokeWidth={1.5} />
-            </div>
-            <div className="text-center space-y-1">
-              <p className="text-sm font-semibold text-slate-700">Add your photo</p>
-              <p className="text-xs text-slate-500">A close-up portrait with your face clearly visible</p>
-            </div>
-            <div className="flex items-center gap-2.5">
-              <button
-                type="button"
-                onClick={() => onOpenCamera()}
-                className="inline-flex items-center gap-1.5 rounded-full bg-violet-500 px-4 py-2 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-violet-600"
-              >
-                <Camera className="h-3.5 w-3.5" strokeWidth={2} />
-                Take a Photo
-              </button>
-              <button
-                type="button"
-                onClick={() => fileRef.current?.click()}
-                className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-600 shadow-sm transition-colors hover:border-violet-300 hover:text-violet-600"
-              >
-                <Upload className="h-3.5 w-3.5" strokeWidth={2} />
-                Upload Photo
-              </button>
-            </div>
-            {cameraError && <p className="px-6 text-center text-xs text-rose-400">{cameraError}</p>}
-          </div>
-        )}
-
-        <AnimatePresence>
-          {uploading && (
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-              className="absolute inset-0 bg-white/20 backdrop-blur-[3px]">
-              <div className="scanning-laser" />
-              <div className="absolute inset-0 flex items-center justify-center">
-                <div className="flex items-center gap-2.5 rounded-full bg-white/95 px-5 py-2.5 shadow-lg">
-                  <span className="relative flex h-2 w-2">
-                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-violet-400 opacity-75" />
-                    <span className="relative inline-flex h-2 w-2 rounded-full bg-violet-500" />
-                  </span>
-                  <span className="text-xs font-semibold tracking-wide text-slate-600">{busyLabel}</span>
-                </div>
-              </div>
-            </motion.div>
+      {/* Upload zone — photo card, echoes the polaroid-style hero visual.
+          Outer wrapper has no overflow-hidden so the floating teaser card can spill past its edge. */}
+      <div className="relative">
+        <div
+          className="group relative overflow-hidden rounded-[2rem] border border-dashed border-slate-200 bg-white/60 transition-all duration-300 hover:border-violet-300/70 hover:bg-violet-50/30"
+          style={{ aspectRatio: '1 / 1', minHeight: '280px' }}
+          onDrop={handleDrop}
+          onDragOver={(e) => e.preventDefault()}
+        >
+          {previewUrl ? (
+            <>
+              <Image src={previewUrl} alt="Uploaded photo" fill unoptimized className="object-cover"
+                sizes="(min-width: 1024px) 50vw, 100vw" />
+              {!readyToPay && (
+                <button
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); onRemovePhoto(); }}
+                  className="absolute right-2 top-2 z-10 flex h-7 w-7 items-center justify-center rounded-full bg-black/50 text-white backdrop-blur-sm transition-colors hover:bg-black/70"
+                  aria-label="Remove photo"
+                >
+                  <X className="h-3.5 w-3.5" strokeWidth={2.5} />
+                </button>
+              )}
+            </>
+          ) : (
+            <Image src="/model.png" alt="" fill priority className="object-cover" sizes="(min-width: 1024px) 50vw, 100vw" />
           )}
-        </AnimatePresence>
+
+          <AnimatePresence>
+            {uploading && (
+              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                className="absolute inset-0 bg-white/20 backdrop-blur-[3px]">
+                <div className="scanning-laser" />
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="flex items-center gap-2.5 rounded-full bg-white/95 px-5 py-2.5 shadow-lg">
+                    <span className="relative flex h-2 w-2">
+                      <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-violet-400 opacity-75" />
+                      <span className="relative inline-flex h-2 w-2 rounded-full bg-violet-500" />
+                    </span>
+                    <span className="text-xs font-semibold tracking-wide text-slate-600">{busyLabel}</span>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+
+        {/* Floating teaser cards — overlaid on the model photo, pre-upload only */}
+        {!previewUrl && (
+          <>
+            <div className="absolute inset-x-4 bottom-2 z-10 space-y-2 rounded-2xl bg-white/90 p-3 shadow-xl backdrop-blur-md">
+              <div className="flex flex-col items-center gap-1 text-center">
+                <div className="flex h-7 w-7 items-center justify-center rounded-full bg-violet-50">
+                  <Camera className="h-3.5 w-3.5 text-violet-500" strokeWidth={1.5} />
+                </div>
+                <p className="text-xs font-bold text-slate-800">Add your photo</p>
+                <p className="text-[11px] text-slate-500">A clear, natural photo works best</p>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => onOpenCamera()}
+                  className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-full bg-violet-500 px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-violet-600"
+                >
+                  <Camera className="h-3.5 w-3.5" strokeWidth={2} />
+                  Take a Photo
+                </button>
+                <button
+                  type="button"
+                  onClick={() => fileRef.current?.click()}
+                  className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 shadow-sm transition-colors hover:border-violet-300 hover:text-violet-600"
+                >
+                  <Upload className="h-3.5 w-3.5" strokeWidth={2} />
+                  Upload Photo
+                </button>
+              </div>
+              {cameraError && <p className="text-center text-xs text-rose-400">{cameraError}</p>}
+            </div>
+          </>
+        )}
       </div>
 
       <input ref={fileRef} type="file" accept="image/*" className="hidden"
