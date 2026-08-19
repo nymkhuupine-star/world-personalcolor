@@ -105,6 +105,26 @@ function fileToCanvas(file: File): Promise<HTMLCanvasElement> {
   });
 }
 
+/**
+ * Downscale a canvas so its longer edge is at most maxDim, preserving aspect
+ * ratio. Never upscales. Used to normalize Laplacian-variance blur detection
+ * across camera resolutions — a 4K photo's native detail inflates variance
+ * regardless of actual focus, while a small webcam capture reads as low
+ * variance even in perfect focus. Measuring both on the same target size
+ * puts them on equal footing so one fixed threshold works for either.
+ */
+function resizeForBlurCheck(canvas: HTMLCanvasElement, maxDim = 800): HTMLCanvasElement {
+  const { width, height } = canvas;
+  const scale = Math.min(1, maxDim / Math.max(width, height));
+  if (scale === 1) return canvas;
+
+  const out = document.createElement('canvas');
+  out.width = Math.max(1, Math.round(width * scale));
+  out.height = Math.max(1, Math.round(height * scale));
+  out.getContext('2d')!.drawImage(canvas, 0, 0, out.width, out.height);
+  return out;
+}
+
 /** Run MediaPipe FaceMesh on a canvas and return landmarks for the first face. */
 function detectLandmarks(fm: FaceMeshInstance, canvas: HTMLCanvasElement): Promise<NormalizedLandmark[]> {
   return new Promise((resolve, reject) => {
@@ -334,6 +354,18 @@ function kMeansClusterLab(pixels: RGB[], k: number, iterations = 6): { rgb: RGB[
 const MIN_CLUSTERABLE = 15;   // need at least this many pixels per cluster to trust k-means
 const MIN_DOMINANT_KEEP = 25; // below this, the "middle" cluster is too thin to trust alone
 
+/**
+ * Floor on combined cheek+forehead pixels that pass the skin-color filter,
+ * below which the mean skin LAB is too noisy to trust. This is a bail-out
+ * for degenerate cases (heavy occlusion, extreme lighting, a filter that
+ * rejected almost everything) — not the typical sample size. The landmark
+ * circles sampleAroundLandmarks() draws around each cheek/forehead point
+ * already yield low thousands of raw pixels before this filter runs, and
+ * the final averaging pool below (weightedConcat's targetSize) resamples
+ * from that pool rather than averaging only these filtered pixels directly.
+ */
+const MIN_SKIN_SAMPLE_PIXELS = 150;
+
 function extractDominantSkinTone(pixels: RGB[]): RGB[] {
   if (pixels.length < MIN_CLUSTERABLE * 3) return pixels;
 
@@ -356,11 +388,19 @@ function extractDominantSkinTone(pixels: RGB[]): RGB[] {
 /**
  * Exertion, cold air, anxiety or rosacea flush the cheeks — pushing a*
  * (red-green axis) abnormally high in a way that reads as a false
- * warm/pink signal rather than the person's baseline undertone. This
- * threshold is a heuristic (not fit to a clinical dataset) sitting inside
- * the looser a* < 32 bound isSkinPixel() already enforces.
+ * warm/pink signal rather than the person's baseline undertone. A fixed
+ * absolute cutoff doesn't transfer across skin depths: deeper/darker skin's
+ * own resting a* sits lower to begin with, and melanin dampens how far a
+ * flush visibly pushes it, so a universal number either misses real flush
+ * on deep skin or falsely trips on lighter skin's ordinary cheek color.
+ * Threshold relative to the forehead's own a* instead — the forehead is
+ * rarely flushed the way cheeks are, so it stands in for the person's own
+ * unflushed baseline. Falls back to the old absolute cutoff when there's no
+ * reliable forehead baseline to compare against.
  */
-const REDNESS_A_THRESHOLD = 24;
+const REDNESS_A_MARGIN = 12;       // relative: cheek a* may exceed forehead a* by this much
+const REDNESS_A_THRESHOLD = 24;    // absolute fallback when no forehead baseline is available
+const MIN_BASELINE_PIXELS = 20;    // forehead samples needed to trust it as a baseline
 
 /**
  * Healthy sclera sits close to neutral (a* near 0-3). Fatigue, irritation or
@@ -369,9 +409,19 @@ const REDNESS_A_THRESHOLD = 24;
  */
 const SCLERA_REDNESS_A_THRESHOLD = 8;
 
-function filterRedness(pixels: RGB[]): { kept: RGB[]; droppedRatio: number } {
+/** Median a* — more robust than a mean against a handful of stray outlier pixels. */
+function medianA(pixels: RGB[]): number {
+  const sorted = pixels.map(p => rgbToLab(p).a).sort((x, y) => x - y);
+  const mid = Math.floor(sorted.length / 2);
+  return sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
+}
+
+function filterRedness(pixels: RGB[], foreheadBaseline: RGB[]): { kept: RGB[]; droppedRatio: number } {
   if (pixels.length === 0) return { kept: [], droppedRatio: 0 };
-  const kept = pixels.filter(p => rgbToLab(p).a <= REDNESS_A_THRESHOLD);
+  const cutoff = foreheadBaseline.length >= MIN_BASELINE_PIXELS
+    ? medianA(foreheadBaseline) + REDNESS_A_MARGIN
+    : REDNESS_A_THRESHOLD;
+  const kept = pixels.filter(p => rgbToLab(p).a <= cutoff);
   return { kept, droppedRatio: 1 - kept.length / pixels.length };
 }
 
@@ -381,7 +431,7 @@ function filterRedness(pixels: RGB[]): { kept: RGB[]; droppedRatio: number } {
  * expects a flat RGB[] to average) stay untouched while still favoring one
  * region over another (e.g. forehead over flushed cheeks).
  */
-function weightedConcat(a: RGB[], weightA: number, b: RGB[], weightB: number, targetSize = 200): RGB[] {
+function weightedConcat(a: RGB[], weightA: number, b: RGB[], weightB: number, targetSize = 400): RGB[] {
   const resample = (arr: RGB[], n: number): RGB[] => {
     if (arr.length === 0 || n <= 0) return [];
     const out: RGB[] = [];
@@ -412,6 +462,39 @@ function applyWhiteBalance(pixels: RGB[], scleraRef: RGB): RGB[] {
   const sr = Math.min(255 / Math.max(scleraRef.r, 1), 1.5);
   const sg = Math.min(255 / Math.max(scleraRef.g, 1), 1.5);
   const sb = Math.min(255 / Math.max(scleraRef.b, 1), 1.5);
+  return pixels.map(({ r, g, b }) => ({
+    r: Math.min(255, Math.round(r * sr)),
+    g: Math.min(255, Math.round(g * sg)),
+    b: Math.min(255, Math.round(b * sb)),
+  }));
+}
+
+/**
+ * Whole-frame average color, strided for speed. Feeds the Gray World
+ * fallback below — deliberately sampled from the full image (not just the
+ * face) since the assumption is about the scene's overall color balance.
+ */
+function averageSceneColor(data: Uint8ClampedArray): RGB {
+  let r = 0, g = 0, b = 0, n = 0;
+  for (let i = 0; i < data.length; i += 40) { // stride ~10px
+    r += data[i]; g += data[i + 1]; b += data[i + 2]; n++;
+  }
+  return { r: r / n, g: g / n, b: b / n };
+}
+
+/**
+ * Gray World assumption: a natural scene's average color tends toward
+ * neutral gray, so any consistent skew in the frame average is read as an
+ * ambient color cast. Used only as a fallback when there's no usable sclera
+ * reference — it's weaker evidence than a known-white sclera (a scene that's
+ * legitimately dominated by one hue, e.g. a warm wooden background, will
+ * fool it), so the correction is capped tighter (±30% per channel) than
+ * applyWhiteBalance's sclera-based 1.5× cap.
+ */
+function applyGrayWorldBalance(pixels: RGB[], sceneAvg: RGB): RGB[] {
+  const gray = (sceneAvg.r + sceneAvg.g + sceneAvg.b) / 3;
+  const scaleFor = (c: number) => Math.min(1.3, Math.max(0.7, gray / Math.max(c, 1)));
+  const sr = scaleFor(sceneAvg.r), sg = scaleFor(sceneAvg.g), sb = scaleFor(sceneAvg.b);
   return pixels.map(({ r, g, b }) => ({
     r: Math.min(255, Math.round(r * sr)),
     g: Math.min(255, Math.round(g * sg)),
@@ -541,19 +624,32 @@ function calcChroma(skinLab: LAB): ColorMetrics['chroma'] {
 }
 
 /**
- * Contrast from the L* range across skin, hair, and eye regions.
+ * Contrast from the L* range across skin, hair, eye, and sclera regions.
  *   high:   large L* gap (e.g. fair skin + dark hair/eyes)
  *   medium: moderate gap
  *   low:    similar lightness across all regions
+ *
+ * eyeLab is deliberately iris-only (filterIris() explicitly excludes the
+ * sclera to isolate iris color) — so on its own it can't supply the "bright
+ * white against dark everything else" look that reads as high contrast on
+ * deep/dark skin (a hallmark of Bright/Dark Winter). Skin+hair+iris L* alone
+ * cluster low together for deep skin regardless of true contrast level,
+ * biasing every deep-skin photo toward "low contrast" even when a bright
+ * sclera says otherwise. scleraLab (reusing the reference already sampled
+ * for white balance, same reliability gate) adds that missing signal back
+ * as its own L* data point, without touching a* or b* — contrast stays a
+ * lightness-only metric so it doesn't overlap with the separate chroma axis.
  */
 function calcContrast(
   skinLab: LAB,
   hairLab: LAB | null,
   eyeLab:  LAB | null,
+  scleraLab: LAB | null = null,
 ): ColorMetrics['contrast'] {
   const ls = [skinLab.L];
   if (hairLab) ls.push(hairLab.L);
   if (eyeLab)  ls.push(eyeLab.L);
+  if (scleraLab) ls.push(scleraLab.L);
 
   const range = Math.max(...ls) - Math.min(...ls);
 
@@ -568,15 +664,71 @@ function calcContrast(
 
 export type QualityResult = { ok: boolean; issues: string[] };
 
-function checkBrightness(data: Uint8ClampedArray): string | null {
-  let sum = 0, count = 0;
+type LumaStats = { avgLuma: number; stdDevLuma: number; avgR: number; avgG: number; avgB: number };
+
+/** Single pass over strided pixels — feeds both the brightness and color-cast checks. */
+function computeLumaStats(data: Uint8ClampedArray): LumaStats {
+  let sumLuma = 0, sumLumaSq = 0, sumR = 0, sumG = 0, sumB = 0, count = 0;
   for (let i = 0; i < data.length; i += 32) { // sample every 8th pixel (stride=8 → 32 bytes)
-    sum += 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
+    const r = data[i], g = data[i + 1], b = data[i + 2];
+    const luma = 0.299 * r + 0.587 * g + 0.114 * b;
+    sumLuma += luma;
+    sumLumaSq += luma * luma;
+    sumR += r; sumG += g; sumB += b;
     count++;
   }
-  const avg = sum / count;
-  if (avg < 38)  return 'The photo is too dark. Please upload a photo taken in natural light.';
-  if (avg > 232) return 'The photo is too bright. Try facing away from direct light or taking it in a shaded area.';
+  const avgLuma = sumLuma / count;
+  return {
+    avgLuma,
+    stdDevLuma: Math.sqrt(Math.max(0, sumLumaSq / count - avgLuma * avgLuma)),
+    avgR: sumR / count,
+    avgG: sumG / count,
+    avgB: sumB / count,
+  };
+}
+
+/**
+ * A low/high average luminance alone can't tell "underexposed room" apart
+ * from "well-lit photo of someone with deep or very fair skin" — both read
+ * as an extreme mean. What differs is spread: a genuinely bad exposure
+ * clips toward black/white and goes flat (low std-dev), while a properly
+ * lit subject of any skin tone still shows contrast between skin,
+ * catchlights, teeth, hair, background. So exposure is only flagged when
+ * the extreme mean is *also* accompanied by a flat histogram.
+ */
+const DARK_LUMA_THRESHOLD = 38;
+const BRIGHT_LUMA_THRESHOLD = 232;
+const FLAT_STDDEV_THRESHOLD = 25; // below this, the frame lacks real detail/contrast
+
+function checkBrightness(stats: LumaStats): string | null {
+  const { avgLuma, stdDevLuma } = stats;
+  if (avgLuma < DARK_LUMA_THRESHOLD && stdDevLuma < FLAT_STDDEV_THRESHOLD) {
+    return 'The photo is too dark. Please upload a photo taken in natural light.';
+  }
+  if (avgLuma > BRIGHT_LUMA_THRESHOLD && stdDevLuma < FLAT_STDDEV_THRESHOLD) {
+    return 'The photo is too bright. Try facing away from direct light or taking it in a shaded area.';
+  }
+  return null;
+}
+
+/**
+ * Strong incandescent (yellow/orange) or shade/overcast (blue) ambient light
+ * shifts the whole frame's color balance, which corrupts undertone detection
+ * more than it corrupts exposure. Heuristic threshold, not fit to a dataset —
+ * kept generous so a face-filling selfie (whose skin is naturally warmer
+ * than neutral gray, R > B by construction) doesn't trip it on skin tone
+ * alone; only a real ambient cast pushes the whole-frame average this far.
+ */
+const COLOR_CAST_THRESHOLD = 45;
+
+function checkColorCast(stats: LumaStats): string | null {
+  const warmth = (stats.avgR + stats.avgG) / 2 - stats.avgB;
+  if (warmth > COLOR_CAST_THRESHOLD) {
+    return 'The photo has a strong yellow/orange lighting cast. Please take the photo in natural white light.';
+  }
+  if (-warmth > COLOR_CAST_THRESHOLD) {
+    return 'The photo has a strong blue lighting cast. Please take the photo in natural white light.';
+  }
   return null;
 }
 
@@ -612,9 +764,20 @@ export async function checkImageQuality(imageFile: File): Promise<QualityResult>
   const { data } = canvas.getContext('2d')!.getImageData(0, 0, width, height);
 
   const issues: string[] = [];
-  const bIssue = checkBrightness(data);
+
+  const lumaStats = computeLumaStats(data);
+  const bIssue = checkBrightness(lumaStats);
   if (bIssue) issues.push(bIssue);
-  const blurIssue = checkBlur(data, width, height);
+  const castIssue = checkColorCast(lumaStats);
+  if (castIssue) issues.push(castIssue);
+
+  // Normalize resolution before measuring blur so the same variance
+  // threshold is meaningful for both a 4K photo and a small webcam capture.
+  const blurCanvas = resizeForBlurCheck(canvas);
+  const blurData = blurCanvas === canvas
+    ? data
+    : blurCanvas.getContext('2d')!.getImageData(0, 0, blurCanvas.width, blurCanvas.height).data;
+  const blurIssue = checkBlur(blurData, blurCanvas.width, blurCanvas.height);
   if (blurIssue) issues.push(blurIssue);
 
   return { ok: issues.length === 0, issues };
@@ -671,7 +834,7 @@ export async function analyzeImage(
   const cheekFiltered    = filterSkin(cheekRaw);
   const foreheadFiltered = filterSkin(foreheadRaw);
 
-  if (cheekFiltered.length + foreheadFiltered.length < 30) {
+  if (cheekFiltered.length + foreheadFiltered.length < MIN_SKIN_SAMPLE_PIXELS) {
     throw new UserFacingImageError(
       'Could not read your skin tone. ' +
       'Please upload a photo with your full face visible in natural light.',
@@ -680,7 +843,10 @@ export async function analyzeImage(
 
   // Anti-redness: exertion/cold/rosacea flush reads as a false warm/pink
   // signal — drop those cheek pixels and lean on the forehead more instead.
-  const { kept: cheekDeRed, droppedRatio: cheekRednessRatio } = filterRedness(cheekFiltered);
+  // Threshold is relative to the forehead's own a* (see filterRedness), so
+  // flush detection transfers across skin depths instead of using one
+  // universal cutoff.
+  const { kept: cheekDeRed, droppedRatio: cheekRednessRatio } = filterRedness(cheekFiltered, foreheadFiltered);
   const cheekWeight    = cheekRednessRatio > 0.3 ? 0.3 : 0.65;
   const foreheadWeight = 1 - cheekWeight;
 
@@ -693,14 +859,15 @@ export async function analyzeImage(
 
   let skinPixels = weightedConcat(cheekDominant, cheekWeight, foreheadDominant, foreheadWeight);
   if (skinPixels.length < 30) skinPixels = [...cheekDeRed, ...foreheadFiltered];       // fallback 1: skip clustering/weighting
-  if (skinPixels.length < 30) skinPixels = [...cheekFiltered, ...foreheadFiltered];    // fallback 2: skip redness filter too (guaranteed ≥30, checked above)
+  if (skinPixels.length < 30) skinPixels = [...cheekFiltered, ...foreheadFiltered];    // fallback 2: skip redness filter too (guaranteed ≥ MIN_SKIN_SAMPLE_PIXELS, checked above)
 
   // White balance: sample sclera from eye contour, use as reference white.
   // Tired/irritated/bloodshot eyes push the sclera's own a* (red-green axis)
   // up independent of ambient lighting — that's a physiological artifact, not
   // a color-cast signal, so using it as the "should be neutral" reference
-  // would corrupt the correction. When that happens, skip WB entirely and
-  // fall back to a plain sRGB→D65 conversion instead of a bad calibration.
+  // would corrupt the correction. When that happens, fall back to a Gray
+  // World estimate (whole-frame average ≈ neutral) rather than skipping
+  // correction entirely — a weaker but still useful signal.
   const scleraRaw = [
     ...sampleAroundLandmarks(data, width, height, landmarks, LM.LEFT_EYE,  4),
     ...sampleAroundLandmarks(data, width, height, landmarks, LM.RIGHT_EYE, 4),
@@ -710,6 +877,8 @@ export async function analyzeImage(
   const scleraBloodshot = scleraRef ? rgbToLab(scleraRef).a > SCLERA_REDNESS_A_THRESHOLD : false;
   if (scleraRef && scleraPixels.length >= 10 && !scleraBloodshot) {
     skinPixels = applyWhiteBalance(skinPixels, scleraRef);
+  } else {
+    skinPixels = applyGrayWorldBalance(skinPixels, averageSceneColor(data));
   }
 
   // Eyes: use iris landmarks if available (refined mode), else eye contour
@@ -766,6 +935,12 @@ export async function analyzeImage(
   const eyeRGB = avgRGB(eyePixels.length >= 5 ? eyePixels : skinPixels);
   const eyeLab = eyeRGB ? rgbToLab(eyeRGB) : null;
 
+  // Same reliability gate as the white-balance step above (enough sclera
+  // pixels, not bloodshot) — reused here as a contrast signal instead.
+  const scleraLab = (scleraRef && scleraPixels.length >= 10 && !scleraBloodshot)
+    ? rgbToLab(scleraRef)
+    : null;
+
   onStage?.('color');
 
   // ── 5. Calculate ColorMetrics ─────────────────────────────────────────────
@@ -774,6 +949,6 @@ export async function analyzeImage(
     undertone: calcUndertone(skinLab, hairLab),
     value:     calcValue(skinLab),
     chroma:    calcChroma(skinLab),
-    contrast:  calcContrast(skinLab, hairLab, eyeLab),
+    contrast:  calcContrast(skinLab, hairLab, eyeLab, scleraLab),
   };
 }
