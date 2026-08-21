@@ -84,7 +84,7 @@ const UploadZone = forwardRef<UploadZoneHandle, Props>(function UploadZone(
       <div className="relative">
         <div
           className="group relative overflow-hidden rounded-[2rem] border border-dashed border-slate-200 bg-white/60 transition-all duration-300 hover:border-violet-300/70 hover:bg-violet-50/30"
-          style={{ aspectRatio: '1 / 1', minHeight: '280px' }}
+          style={{ aspectRatio: '1 / 1' }}
           onDrop={handleDrop}
           onDragOver={(e) => e.preventDefault()}
         >
@@ -129,7 +129,7 @@ const UploadZone = forwardRef<UploadZoneHandle, Props>(function UploadZone(
         {/* Floating teaser cards — overlaid on the model photo, pre-upload only */}
         {!previewUrl && (
           <>
-            <div className="absolute inset-x-4 bottom-2 z-10 space-y-2 rounded-2xl bg-white/90 p-3 shadow-xl backdrop-blur-md">
+            <div className="absolute inset-x-4 -bottom-2 z-10 space-y-2 rounded-2xl bg-white/90 p-3 shadow-xl backdrop-blur-md">
               <div className="flex flex-col items-center gap-1 text-center">
                 <div className="flex h-7 w-7 items-center justify-center rounded-full bg-violet-50">
                   <Camera className="h-3.5 w-3.5 text-violet-500" strokeWidth={1.5} />

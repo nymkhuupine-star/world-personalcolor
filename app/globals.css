@@ -54,3 +54,16 @@ body {
 .orb-summer  { animation-delay: -6s; }
 .orb-autumn  { animation-delay: -12s; }
 .orb-winter  { animation-delay: -18s; }
+
+/* Infinite testimonial marquee — each row is the item list duplicated once,
+   translated by exactly half its own width so the loop point is invisible. */
+@keyframes marquee-left {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
+}
+@keyframes marquee-right {
+  from { transform: translateX(-50%); }
+  to   { transform: translateX(0); }
+}
+.marquee-left  { animation: marquee-left 42s linear infinite; }
+.marquee-right { animation: marquee-right 42s linear infinite; }

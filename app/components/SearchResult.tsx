@@ -209,7 +209,7 @@ export default function SearchResult() {
               exit={{ opacity: 0, y: -16 }}
               transition={{ duration: 0.3 }}
             >
-              <form onSubmit={sendCode} className="bg-white rounded-3xl border border-slate-100 shadow-sm p-10">
+              <form onSubmit={sendCode} className="bg-white rounded-3xl border border-slate-100 shadow-sm p-6 sm:p-10">
                 <div className="flex items-center justify-center mb-7">
                   <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-violet-50 border border-violet-100">
                     <Mail className="h-6 w-6 text-violet-500" strokeWidth={1.5} />
@@ -250,7 +250,7 @@ export default function SearchResult() {
               exit={{ opacity: 0, y: -16 }}
               transition={{ duration: 0.3 }}
             >
-              <form onSubmit={verifyCode} className="bg-white rounded-3xl border border-slate-100 shadow-sm p-8">
+              <form onSubmit={verifyCode} className="bg-white rounded-3xl border border-slate-100 shadow-sm p-5 sm:p-8">
                 <div className="flex items-center justify-center mb-6">
                   <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-violet-50 border border-violet-100">
                     <Key className="h-6 w-6 text-violet-500" strokeWidth={1.5} />
@@ -261,7 +261,7 @@ export default function SearchResult() {
                   Enter the 6-digit code sent to
                 </p>
 
-                <div className="flex gap-2 justify-center mb-6" onPaste={handlePaste}>
+                <div className="flex gap-1 justify-center mb-6 sm:gap-2" onPaste={handlePaste}>
                   {digits.map((d, i) => (
                     <input
                       key={i}
@@ -272,7 +272,7 @@ export default function SearchResult() {
                       value={d}
                       onChange={e => handleDigitChange(i, e.target.value)}
                       onKeyDown={e => handleDigitKeyDown(i, e)}
-                      className="h-14 w-11 rounded-xl border-2 border-slate-200 text-center text-2xl font-bold text-slate-800 outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100 transition caret-transparent"
+                      className="h-11 w-8 rounded-xl border-2 border-slate-200 text-center text-lg font-bold text-slate-800 outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100 transition caret-transparent sm:h-14 sm:w-11 sm:text-2xl"
                     />
                   ))}
                 </div>

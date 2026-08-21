@@ -82,7 +82,7 @@ function ColorArch() {
 
 export default function HeroSection() {
   return (
-    <section className="relative min-h-screen overflow-hidden flex items-center mt-[-100px]"
+    <section className="relative overflow-hidden flex items-start pt-32 lg:min-h-screen lg:items-center lg:pt-0 mt-[-100px]"
       style={{ background: 'linear-gradient(135deg, #ffffff 0%, #fdf4f0 40%, #fce8e2 70%, #fad4cc 100%)' }}
     >
       {/* Soft background glow — radial-gradient, no blur filter */}
@@ -95,7 +95,7 @@ export default function HeroSection() {
           style={{ background: 'radial-gradient(ellipse 45% 40% at 40% 80%, rgba(253,164,175,0.22) 0%, transparent 70%)' }} />
       </div> */}
 
-      <div className="relative z-10 mx-auto grid w-full max-w-7xl grid-cols-1 items-center gap-20 px-6 py-40 lg:grid-cols-2 lg:px-12">
+      <div className="relative z-10 mx-auto grid w-full max-w-7xl grid-cols-1 items-center gap-12 px-6 py-16 lg:grid-cols-2 lg:gap-20 lg:px-12 lg:py-40">
         {/* LEFT — Headline */} 
         <div className="flex flex-col gap-8">
           <motion.div
@@ -120,10 +120,10 @@ export default function HeroSection() {
             className="text-3xl font-bold leading-tight text-slate-900 lg:text-4xl xl:text-5xl"
           >
             Reveal your natural beauty with your{' '}
+            <br />
             <em className="not-italic bg-gradient-to-r from-violet-500 to-pink-500 bg-clip-text text-transparent">
-              personal color
+              personal color.
             </em>
-
           </motion.h1>
 
           <motion.div
@@ -164,20 +164,20 @@ export default function HeroSection() {
               ))}
             </div>
 
-            <div>
-              <div className="flex items-center gap-1 mb-0.5">
+            <div className="leading-tight">
+              <div className="flex items-center gap-0.5 mb-0.5">
                 {[...Array(5)].map((_, i) => (
-                  <svg key={i} className="h-3.5 w-3.5 fill-amber-400" viewBox="0 0 20 20">
+                  <svg key={i} className="h-3 w-3 fill-amber-400" viewBox="0 0 20 20">
                     <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
                   </svg>
                 ))}
               </div>
-              <p className="text-sm font-bold text-slate-800">1,000+ users</p>
-              <p className="text-xs font-medium text-slate-600">found their perfect colors</p>
+              <p className="text-sm font-bold leading-snug text-slate-800">1,000+ happy users</p>
+              <p className="text-xs font-medium leading-snug text-slate-600">discovered their best colors</p>
             </div>
           </motion.div>
         </div>
-        <div className="relative">
+        <div id="upload" className="relative scroll-mt-28">
           <Card />
         </div>
       </div>
