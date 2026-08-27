@@ -41,6 +41,49 @@ body {
   animation: scan-down 2s linear infinite;
 }
 
+/* Persistent face-scan overlay — hero placeholder photo, pre-upload */
+@keyframes scan-sweep {
+  0%   { top: 4%;  opacity: 0; }
+  10%  { opacity: 1; }
+  90%  { opacity: 1; }
+  100% { top: 96%; opacity: 0; }
+}
+
+.face-scan-line {
+  position: absolute;
+  left: 8%;
+  right: 8%;
+  height: 2px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.9) 25%,
+    rgba(196, 181, 253, 0.95) 50%,
+    rgba(244, 114, 182, 0.9) 75%,
+    transparent
+  );
+  box-shadow: 0 0 18px 4px rgba(196, 181, 253, 0.5), 0 0 34px 10px rgba(244, 114, 182, 0.22);
+  animation: scan-sweep 3.8s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+}
+
+@keyframes mesh-breathe {
+  0%, 100% { opacity: 0.35; }
+  50%      { opacity: 0.65; }
+}
+@keyframes mesh-drift {
+  0%, 100% { transform: translate(0%, 0%) scale(1); }
+  25%      { transform: translate(0.8%, -0.6%) scale(1.02); }
+  50%      { transform: translate(-0.6%, 0.7%) scale(0.985); }
+  75%      { transform: translate(0.5%, 0.4%) scale(1.01); }
+}
+.face-scan-mesh { animation: mesh-breathe 3.8s ease-in-out infinite, mesh-drift 7s ease-in-out infinite; }
+
+@keyframes node-glow {
+  0%, 100% { opacity: 0.3; }
+  50%      { opacity: 1; }
+}
+.face-scan-node { animation: node-glow 2.4s ease-in-out infinite; }
+
 /* Background orb float animation */
 @keyframes float-orb {
   0%, 100% { transform: translate(0px, 0px) scale(1); }

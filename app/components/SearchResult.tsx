@@ -184,7 +184,7 @@ export default function SearchResult() {
   }
 
   return (
-    <section id="search-result" className="py-20 px-6 bg-pink-100/100 from-slate-50 to-white">
+    <section id="search-result" className="py-20 px-6" style={{ backgroundColor: '#FFF7FA' }}>
       <div className="mx-auto max-w-lg">
         <div className="text-center mb-10">
           <span className="inline-block mb-4 text-[11px] font-semibold uppercase tracking-[0.18em] text-violet-500">

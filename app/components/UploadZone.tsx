@@ -7,6 +7,65 @@ import { Ban, Camera, Check, Droplets, Eye, Sun, Upload, X } from 'lucide-react'
 
 export type UploadZoneHandle = { openFilePicker: () => void };
 
+// Deterministic face-mesh grid — fixed layout so server/client renders match (no Math.random).
+const MESH_COLS = 6;
+const MESH_ROWS = 8;
+// big.png is a near-square, front-facing portrait cropped to 1:1 (object-cover) —
+// the face sits centered, slightly above the vertical midpoint.
+const MESH_X0 = 30, MESH_X1 = 72;
+const MESH_Y0 = 12, MESH_Y1 = 58;
+
+function FaceScanOverlay() {
+  const nodes: { x: number; y: number }[] = [];
+  for (let r = 0; r <= MESH_ROWS; r++) {
+    for (let c = 0; c <= MESH_COLS; c++) {
+      const baseX = MESH_X0 + (c / MESH_COLS) * (MESH_X1 - MESH_X0);
+      const baseY = MESH_Y0 + (r / MESH_ROWS) * (MESH_Y1 - MESH_Y0);
+      const jitter = Math.sin((r * MESH_COLS + c) * 12.9898) * 1.6;
+      nodes.push({ x: baseX + jitter, y: baseY + jitter * 0.6 });
+    }
+  }
+  const at = (r: number, c: number) => nodes[r * (MESH_COLS + 1) + c];
+
+  const lines: { x1: number; y1: number; x2: number; y2: number }[] = [];
+  for (let r = 0; r <= MESH_ROWS; r++) {
+    for (let c = 0; c <= MESH_COLS; c++) {
+      const p = at(r, c);
+      if (c < MESH_COLS) { const q = at(r, c + 1); lines.push({ x1: p.x, y1: p.y, x2: q.x, y2: q.y }); }
+      if (r < MESH_ROWS) { const q = at(r + 1, c); lines.push({ x1: p.x, y1: p.y, x2: q.x, y2: q.y }); }
+    }
+  }
+
+  return (
+    <div
+      className="pointer-events-none absolute inset-0 overflow-hidden rounded-[2rem]"
+      style={{
+        WebkitMaskImage: 'radial-gradient(ellipse 22% 24% at 51% 37%, black 55%, transparent 100%)',
+        maskImage: 'radial-gradient(ellipse 22% 24% at 51% 37%, black 55%, transparent 100%)',
+      }}
+      aria-hidden="true"
+    >
+      <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="face-scan-mesh absolute inset-0 h-full w-full">
+        {lines.map((l, i) => (
+          <line key={i} x1={l.x1} y1={l.y1} x2={l.x2} y2={l.y2} stroke="rgba(255,255,255,0.55)" strokeWidth={0.15} />
+        ))}
+        {nodes.map((n, i) => (
+          <circle
+            key={i}
+            cx={n.x}
+            cy={n.y}
+            r={0.55}
+            fill="#e9d5ff"
+            className="face-scan-node"
+            style={{ animationDelay: `${(i % 12) * 0.15}s` }}
+          />
+        ))}
+      </svg>
+      <div className="face-scan-line" />
+    </div>
+  );
+}
+
 interface Props {
   previewUrl: string | null;
   cameraError: string | null;
@@ -104,7 +163,10 @@ const UploadZone = forwardRef<UploadZoneHandle, Props>(function UploadZone(
               )}
             </>
           ) : (
-            <Image src="/model.png" alt="" fill priority className="object-cover" sizes="(min-width: 1024px) 50vw, 100vw" />
+            <>
+              <Image src="/big.png" alt="" fill priority className="object-cover" sizes="(min-width: 1024px) 50vw, 100vw" />
+              <FaceScanOverlay />
+            </>
           )}
 
           <AnimatePresence>
