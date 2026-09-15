@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Inter, Playfair_Display } from "next/font/google";
+import { Inter, Playfair_Display, Quicksand } from "next/font/google";
 import { ClerkProvider } from "@clerk/nextjs";
 
 import "./globals.css";
@@ -15,10 +15,16 @@ const playfair = Playfair_Display({
   style: ["normal", "italic"],
 });
 
+const quicksand = Quicksand({
+  variable: "--font-quicksand",
+  subsets: ["latin"],
+  weight: ["500", "600", "700"],
+});
+
 export const metadata: Metadata = {
   metadataBase: new URL("https://www.personalcolor.mn"),
 
-  title: "Personal Color AI",
+  title: "Personal Color",
 
   description:
     "AI-powered personal color analysis — discover your seasonal palette and make better choices.",
@@ -33,9 +39,9 @@ export const metadata: Metadata = {
   },
 
   openGraph: {
-    title: "Personal Color AI",
+    title: "Personal Color",
     description:
-      "AI-powered personal color analysis — discover your seasonal palette and make better choices.",
+      "Discover your seasonal palette and make better choices.",
     images: [
       {
         url: "/personal%20(6).png",
@@ -49,7 +55,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Personal Color AI",
     description:
-      "AI-powered personal color analysis — discover your seasonal palette and make better choices.",
+      "Discover your seasonal palette and make better choices.",
     images: ["/personal%20(6).png"],
   },
 };
@@ -64,7 +70,7 @@ export default function RootLayout({
 
       <html
         lang="en"
-        className={`${inter.variable} ${playfair.variable} h-full antialiased`}
+        className={`${inter.variable} ${playfair.variable} ${quicksand.variable} h-full antialiased`}
       >
         <body
           suppressHydrationWarning
