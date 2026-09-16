@@ -2,6 +2,7 @@ import Benefits from './components/Benefits';
 import FAQ from './components/Faq';
 import Header from './components/Header';
 import HeroSection from './components/Herosection';
+import LiveAnalysisDemo from './components/LiveAnalysisDemo';
 import SearchResult from './components/SearchResult';
 import HowItWorks from './components/HowItWorks';
 import ScienceSection from './components/ScienceSection';
@@ -18,6 +19,7 @@ export default function Home() {
       <HeroSection />
       {/* <ColorShowcase /> */}
       {/* <ScienceSection /> */}
+      <LiveAnalysisDemo />
       <Benefits />
       <Testimonials />
       <HowItWorks />

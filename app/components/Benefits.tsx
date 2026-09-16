@@ -1,7 +1,6 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import Image from 'next/image';
 import { ShoppingBag, Sparkles, Wallet } from 'lucide-react';
 
 const benefits = [
@@ -52,7 +51,9 @@ const cardVariant = {
 
 export default function Benefits() {
   return (
-    <section className="relative bg-white py-24 overflow-hidden">
+    <section className="relative py-24 overflow-hidden">
+      <div className="absolute inset-0 -z-10 bg-white" />
+
       <div className="pointer-events-none absolute inset-0">
         <div className="absolute -top-32 -right-32 w-[500px] h-[500px] rounded-full bg-violet-100/40 blur-[100px]" />
         <div className="absolute -bottom-32 -left-32 w-[400px] h-[400px] rounded-full bg-rose-100/30 blur-[100px]" />
@@ -80,27 +81,7 @@ export default function Benefits() {
           </p>
         </motion.div>
 
-        <div className="flex flex-col items-center gap-10 lg:flex-row lg:justify-center lg:items-start lg:gap-32">
-          {/* LEFT — image */}
-          <motion.div
-            initial={{ opacity: 0, x: -32 }}
-            whileInView={{ opacity: 1, x: 0 }}
-            viewport={{ once: true, amount: 0.2 }}
-            transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
-            className="relative w-full max-w-[360px] shrink-0 lg:w-[400px] lg:max-w-none"
-          >
-            <div className="relative aspect-[4/5] w-full overflow-hidden rounded-[2rem] shadow-[0_24px_64px_-12px_rgba(0,0,0,0.15)]">
-              <Image
-                src="/nice2.png"
-                alt="Editorial portrait with color-matched makeup swatches"
-                fill
-                className="object-cover"
-                sizes="(min-width: 1024px) 400px, 360px"
-              />
-            </div>
-          </motion.div>
-
-          {/* RIGHT — stacked cards */}
+        <div className="flex justify-center">
           <motion.div
             className="flex w-full max-w-lg flex-col gap-5"
             variants={container}
